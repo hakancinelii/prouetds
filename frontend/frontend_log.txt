@@ -1,0 +1,34 @@
+
+> frontend@0.1.0 dev
+> next dev -p 3001
+
+  ▲ Next.js 14.2.35
+  - Local:        http://localhost:3001
+
+ ✓ Starting...
+ ✓ Ready in 2.1s
+ ○ Compiling / ...
+ ✓ Compiled / in 2.6s (601 modules)
+ GET / 200 in 2999ms
+ ✓ Compiled in 359ms (290 modules)
+ ○ Compiling /favicon.ico ...
+ ✓ Compiled /favicon.ico in 1537ms (811 modules)
+ GET /favicon.ico 200 in 1447ms
+ ✓ Compiled /_not-found in 269ms (814 modules)
+ GET /.well-known/appspecific/com.chrome.devtools.json 404 in 391ms
+  ▲ Next.js 14.2.35
+  - Local:        http://localhost:3001
+
+ ✓ Starting...
+ ✓ Ready in 1511ms
+ ○ Compiling /login ...
+ ✓ Compiled /login in 1653ms (789 modules)
+ GET /login 200 in 2291ms
+ ✓ Compiled in 515ms (350 modules)
+ ✓ Compiled /_not-found in 308ms (778 modules)
+ GET /.well-known/appspecific/com.chrome.devtools.json 404 in 407ms
+ ✓ Compiled /favicon.ico in 241ms (472 modules)
+ GET /favicon.ico 200 in 314ms
+ GET /login 200 in 1559ms
+ GET /.well-known/appspecific/com.chrome.devtools.json 404 in 186ms
+ GET /favicon.ico 200 in 68ms

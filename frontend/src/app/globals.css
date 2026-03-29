@@ -1,0 +1,96 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --foreground-rgb: 226, 232, 240;
+  --background-start-rgb: 2, 6, 23;
+  --background-end-rgb: 15, 23, 42;
+}
+
+body {
+  color: rgb(var(--foreground-rgb));
+  background: linear-gradient(
+    135deg,
+    rgb(var(--background-start-rgb)),
+    rgb(var(--background-end-rgb))
+  );
+  min-height: 100vh;
+}
+
+/* Custom scrollbar */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background: rgba(148, 163, 184, 0.2);
+  border-radius: 3px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(148, 163, 184, 0.4);
+}
+
+/* Glass card */
+.glass-card {
+  @apply bg-slate-800/50 backdrop-blur-xl border border-slate-700/50 rounded-2xl shadow-xl;
+}
+
+/* Status badges */
+.badge {
+  @apply inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium;
+}
+.badge-draft {
+  @apply bg-slate-500/20 text-slate-300 border border-slate-500/30;
+}
+.badge-ready {
+  @apply bg-blue-500/20 text-blue-300 border border-blue-500/30;
+}
+.badge-sending {
+  @apply bg-amber-500/20 text-amber-300 border border-amber-500/30 animate-pulse;
+}
+.badge-sent {
+  @apply bg-emerald-500/20 text-emerald-300 border border-emerald-500/30;
+}
+.badge-error {
+  @apply bg-red-500/20 text-red-300 border border-red-500/30;
+}
+.badge-cancelled {
+  @apply bg-gray-500/20 text-gray-400 border border-gray-500/30;
+}
+
+/* Input styling */
+.input-field {
+  @apply w-full bg-slate-700/50 border border-slate-600/50 rounded-xl px-4 py-2.5 text-sm text-slate-200 placeholder:text-slate-500 focus:outline-none focus:ring-2 focus:ring-emerald-500/50 focus:border-emerald-500/50 transition-all;
+}
+
+/* Button styling */
+.btn-primary {
+  @apply bg-gradient-to-r from-emerald-500 to-cyan-500 hover:from-emerald-400 hover:to-cyan-400 text-white font-medium py-2.5 px-5 rounded-xl shadow-lg shadow-emerald-500/25 transition-all duration-200 hover:shadow-emerald-500/40 disabled:opacity-50 disabled:cursor-not-allowed;
+}
+.btn-secondary {
+  @apply bg-slate-700/50 hover:bg-slate-600/50 text-slate-300 font-medium py-2.5 px-5 rounded-xl border border-slate-600/50 transition-all;
+}
+.btn-danger {
+  @apply bg-red-500/20 hover:bg-red-500/30 text-red-400 font-medium py-2.5 px-5 rounded-xl border border-red-500/30 transition-all;
+}
+
+/* Animations */
+@keyframes slideIn {
+  from { opacity: 0; transform: translateY(10px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+.animate-slide-in {
+  animation: slideIn 0.3s ease-out;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+.animate-fade-in {
+  animation: fadeIn 0.5s ease-out;
+}
