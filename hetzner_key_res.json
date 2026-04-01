@@ -1,0 +1,13 @@
+{
+ "error": {
+  "code": "uniqueness_error",
+  "message": "SSH key not unique",
+  "details": {
+   "fields": [
+    {
+     "name": "name"
+    }
+   ]
+  }
+ }
+}

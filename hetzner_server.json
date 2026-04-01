@@ -1,0 +1,7 @@
+{
+ "error": {
+  "code": "invalid_input",
+  "message": "server type 104 is deprecated",
+  "details": {}
+ }
+}

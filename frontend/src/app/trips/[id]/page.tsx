@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
-import { tripsApi } from '@/lib/api';
+import { tripsApi, driversApi } from '@/lib/api';
 import toast from 'react-hot-toast';
 import {
   ArrowLeft,
@@ -28,12 +28,14 @@ export default function TripDetailPage() {
   const tripId = params.id as string;
 
   const [trip, setTrip] = useState<any>(null);
+  const [drivers, setDrivers] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [sending, setSending] = useState(false);
   const [showTextParser, setShowTextParser] = useState(false);
   const [pasteText, setPasteText] = useState('');
   const [parsedResults, setParsedResults] = useState<any>(null);
   const [selectedGroupId, setSelectedGroupId] = useState('');
+  const [showAddPersonnel, setShowAddPersonnel] = useState(false);
 
   // File upload refs
   const [uploading, setUploading] = useState(false);
@@ -59,7 +61,33 @@ export default function TripDetailPage() {
     } catch {
       toast.error('Sefer yüklenemedi');
     }
-    setLoading(false);
+  };
+
+  const fetchDrivers = async () => {
+    try {
+      const res = await driversApi.list();
+      setDrivers(res.data);
+    } catch { }
+  };
+
+  const handleAddPersonnel = async (driver: any) => {
+    try {
+      await tripsApi.addPersonnel(tripId, {
+        driverId: driver.id,
+        firstName: driver.firstName,
+        lastName: driver.lastName,
+        tcPassportNo: driver.tcKimlikNo,
+        nationalityCode: driver.nationalityCode || 'TR',
+        gender: driver.gender || 'E',
+        phone: driver.phone,
+        personnelType: 0, // 0 for Driver
+      });
+      toast.success('Şoför eklendi');
+      setShowAddPersonnel(false);
+      fetchTrip();
+    } catch (err: any) {
+      toast.error(err.response?.data?.message || 'Şoför eklenemedi');
+    }
   };
 
   const handleExcelUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -99,7 +127,12 @@ export default function TripDetailPage() {
   };
 
   useEffect(() => {
-    fetchTrip();
+    const init = async () => {
+      setLoading(true);
+      await Promise.all([fetchTrip(), fetchDrivers()]);
+      setLoading(false);
+    };
+    init();
   }, [tripId]);
 
   const handleSendToUetds = async () => {
@@ -305,6 +338,63 @@ export default function TripDetailPage() {
           <p className="text-lg font-bold text-emerald-400 mt-1 font-mono">
             {trip.uetdsSeferRefNo || 'Henüz yok'}
           </p>
+        </div>
+      </div>
+
+      {/* Personnel Section */}
+      <div className="glass-card overflow-hidden">
+        <div className="p-5 border-b border-slate-700/50 flex items-center justify-between">
+          <h2 className="text-lg font-semibold flex items-center gap-2">
+            <Users size={20} className="text-blue-400" />
+            Personel / Şoförler ({trip.personnel?.length || 0})
+          </h2>
+          {trip.status !== 'sent' && trip.status !== 'cancelled' && (
+            <button
+              onClick={() => setShowAddPersonnel(true)}
+              className="btn-secondary text-sm flex items-center gap-1.5"
+            >
+              <Plus size={14} />
+              Şoför Seç
+            </button>
+          )}
+        </div>
+        <div className="overflow-x-auto">
+          <table className="w-full">
+            <thead>
+              <tr className="text-left text-xs text-slate-400 uppercase tracking-wider border-b border-slate-700/50">
+                <th className="px-5 py-3">Ad Soyad</th>
+                <th className="px-5 py-3">TC Kimlik</th>
+                <th className="px-5 py-3">Tip</th>
+                <th className="px-5 py-3">Telefon</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-slate-700/30">
+              {trip.personnel?.length > 0 ? (
+                trip.personnel.map((p: any) => (
+                  <tr key={p.id} className="hover:bg-slate-700/20 transition">
+                    <td className="px-5 py-3 text-sm font-medium text-white">
+                      {p.firstName} {p.lastName}
+                    </td>
+                    <td className="px-5 py-3 text-sm text-slate-300 font-mono">
+                      {p.tcPassportNo}
+                    </td>
+                    <td className="px-5 py-3 text-sm text-slate-300">
+                      {p.personnelType === 0 ? 'Sürücü' : 'Diğer'}
+                    </td>
+                    <td className="px-5 py-3 text-sm text-slate-300">
+                      {p.phone || '-'}
+                    </td>
+                  </tr>
+                ))
+              ) : (
+                <tr>
+                  <td colSpan={4} className="px-5 py-8 text-center text-slate-500">
+                    Henüz personel eklenmemiş (Şoför eklemeden UETDS'ye gönderemezsiniz)
+                  </td>
+                </tr>
+              )}
+            </tbody>
+          </table>
         </div>
       </div>
 
@@ -549,6 +639,47 @@ export default function TripDetailPage() {
                   setPasteText('');
                 }}
                 className="btn-secondary"
+              >
+                Kapat
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+      {/* Add Personnel Modal */}
+      {showAddPersonnel && (
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+          <div className="glass-card w-full max-w-md p-6 animate-slide-in">
+            <h3 className="text-lg font-bold mb-4">Şoför Seç</h3>
+            <div className="space-y-2 max-h-96 overflow-y-auto">
+              {drivers.length === 0 ? (
+                <div className="p-4 text-center text-slate-400">
+                  Kayıtlı şoför bulunamadı. Önce Şoförler sayfasından ekleyin.
+                </div>
+              ) : (
+                drivers.map((d) => (
+                  <button
+                    key={d.id}
+                    onClick={() => handleAddPersonnel(d)}
+                    className="w-full flex items-center justify-between p-3 rounded-lg bg-slate-700/30 hover:bg-slate-700/50 border border-slate-600/30 transition group"
+                  >
+                    <div className="text-left">
+                      <p className="text-sm font-medium text-white group-hover:text-emerald-400">
+                        {d.firstName} {d.lastName}
+                      </p>
+                      <p className="text-xs text-slate-500 font-mono">
+                        {d.tcKimlikNo}
+                      </p>
+                    </div>
+                    <Plus size={16} className="text-slate-500 group-hover:text-emerald-400" />
+                  </button>
+                ))
+              )}
+            </div>
+            <div className="pt-4">
+              <button
+                onClick={() => setShowAddPersonnel(false)}
+                className="btn-secondary w-full"
               >
                 Kapat
               </button>

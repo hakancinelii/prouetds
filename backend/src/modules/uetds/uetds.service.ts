@@ -105,7 +105,11 @@ export class UetdsService implements OnModuleInit {
           );
         }
 
-        const [result] = await currentClient[`${methodName}Async`](args);
+        const [rawResult] = await currentClient[`${methodName}Async`](args);
+        
+        // UETDS responds with a "return" object containing the actual data
+        const result = rawResult?.return || rawResult;
+        
         const responseTimeMs = Date.now() - startTime;
 
         // Log request/response
@@ -114,7 +118,7 @@ export class UetdsService implements OnModuleInit {
           tripId,
           methodName,
           args,
-          result,
+          rawResult,
           responseTimeMs,
         );
 
@@ -255,7 +259,12 @@ export class UetdsService implements OnModuleInit {
       'seferEkle',
       {
         wsuser: this.getWsUser(username, password),
-        ariziSeferBilgileriInput: seferInput,
+        ariziSeferBilgileriInput: {
+          ...seferInput,
+          aracPlaka: (seferInput.aracPlaka || '').trim().replace(/\s/g, ''),
+          hareketTarihi: this.formatDateForUetds(seferInput.hareketTarihi),
+          seferBitisTarihi: this.formatDateForUetds(seferInput.seferBitisTarihi),
+        },
       },
       tenantId,
       tripId,
@@ -720,5 +729,15 @@ export class UetdsService implements OnModuleInit {
       tenantId,
       tripId,
     );
+  }
+
+  private formatDateForUetds(date: any): string {
+    if (!date) return '';
+    const d = new Date(date);
+    if (isNaN(d.getTime())) return '';
+    const day = String(d.getDate()).padStart(2, '0');
+    const month = String(d.getMonth() + 1).padStart(2, '0');
+    const year = d.getFullYear();
+    return `${day}/${month}/${year}`;
   }
 }
