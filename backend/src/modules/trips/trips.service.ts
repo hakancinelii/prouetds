@@ -20,6 +20,14 @@ import { UetdsService } from '../uetds/uetds.service';
 export class TripsService {
   private readonly logger = new Logger(TripsService.name);
 
+  private buildLocationText(ilCode?: number | null, ilceCode?: number | null) {
+    const il = ilCode ? String(ilCode) : '';
+    const ilce = ilceCode ? String(ilceCode) : '';
+
+    if (il && ilce) return `${il}/${ilce}`;
+    return il || ilce || 'Merkez';
+  }
+
   constructor(
     @InjectRepository(Trip) private tripRepo: Repository<Trip>,
     @InjectRepository(TripGroup) private groupRepo: Repository<TripGroup>,
@@ -110,10 +118,15 @@ export class TripsService {
       originCountryCode: 'TR',
       originIlCode: savedTrip.originIlCode,
       originIlceCode: savedTrip.originIlceCode,
+      originPlace: this.buildLocationText(
+        savedTrip.originIlCode,
+        savedTrip.originIlceCode,
+      ),
       destCountryCode: 'TR',
       destIlCode: savedTrip.destIlCode,
       destIlceCode: savedTrip.destIlceCode,
-      groupFee: 0
+      destPlace: this.buildLocationText(savedTrip.destIlCode, savedTrip.destIlceCode),
+      groupFee: 0,
     });
 
     return savedTrip;
@@ -138,9 +151,14 @@ export class TripsService {
         originCountryCode: 'TR',
         originIlCode: savedTrip.originIlCode,
         originIlceCode: savedTrip.originIlceCode,
+        originPlace: this.buildLocationText(
+          savedTrip.originIlCode,
+          savedTrip.originIlceCode,
+        ),
         destCountryCode: 'TR',
         destIlCode: savedTrip.destIlCode,
         destIlceCode: savedTrip.destIlceCode,
+        destPlace: this.buildLocationText(savedTrip.destIlCode, savedTrip.destIlceCode),
       });
     }
 
