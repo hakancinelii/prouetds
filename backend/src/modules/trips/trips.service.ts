@@ -127,7 +127,24 @@ export class TripsService {
       );
     }
     Object.assign(trip, data);
-    return this.tripRepo.save(trip);
+    const savedTrip = await this.tripRepo.save(trip);
+
+    const defaultGroup = savedTrip.groups?.find(
+      (group) => group.groupName === 'Genel Yolcular',
+    );
+
+    if (defaultGroup) {
+      await this.groupRepo.update(defaultGroup.id, {
+        originCountryCode: 'TR',
+        originIlCode: savedTrip.originIlCode,
+        originIlceCode: savedTrip.originIlceCode,
+        destCountryCode: 'TR',
+        destIlCode: savedTrip.destIlCode,
+        destIlceCode: savedTrip.destIlceCode,
+      });
+    }
+
+    return this.findOne(id, tenantId);
   }
 
   async addGroup(tripId: string, tenantId: string, data: Partial<TripGroup>) {
