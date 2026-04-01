@@ -37,6 +37,10 @@ export default function TripsPage() {
     endTime: '',
     description: '',
     firmTripNumber: '',
+    originIlCode: 34, // İstanbul
+    originIlceCode: 1444, // Kadıköy
+    destIlCode: 34,
+    destIlceCode: 1444,
   });
 
   const fetchTrips = async () => {
@@ -72,7 +76,13 @@ export default function TripsPage() {
   const handleCreate = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
-      const res = await tripsApi.create(form);
+      const res = await tripsApi.create({
+        ...form,
+        originIlCode: Number(form.originIlCode),
+        originIlceCode: Number(form.originIlceCode),
+        destIlCode: Number(form.destIlCode),
+        destIlceCode: Number(form.destIlceCode),
+      });
       toast.success('Sefer oluşturuldu');
       setShowCreateModal(false);
       setForm({
@@ -83,6 +93,10 @@ export default function TripsPage() {
         endTime: '',
         description: '',
         firmTripNumber: '',
+        originIlCode: 34,
+        originIlceCode: 1444,
+        destIlCode: 34,
+        destIlceCode: 1444,
       });
       router.push(`/trips/${res.data.id}`);
     } catch (err: any) {
@@ -376,7 +390,61 @@ export default function TripsPage() {
                   />
                 </div>
               </div>
-              <div className="flex gap-3 pt-2">
+              <div className="grid grid-cols-2 gap-4">
+                <div className="bg-slate-700/30 p-3 rounded-lg space-y-3">
+                  <span className="text-xs font-semibold text-emerald-400 uppercase tracking-wider">Kalkış Noktası</span>
+                  <div>
+                    <label className="block text-[11px] text-slate-400 mb-0.5">İl Kodu (MERNIS)</label>
+                    <input
+                      type="number"
+                      value={form.originIlCode}
+                      onChange={(e) => setForm({ ...form, originIlCode: Number(e.target.value) })}
+                      className="input-field py-1.5"
+                      placeholder="Örn: 34"
+                      required
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-[11px] text-slate-400 mb-0.5">İlçe Kodu (MERNIS)</label>
+                    <input
+                      type="number"
+                      value={form.originIlceCode}
+                      onChange={(e) => setForm({ ...form, originIlceCode: Number(e.target.value) })}
+                      className="input-field py-1.5"
+                      placeholder="Örn: 1444"
+                      required
+                    />
+                  </div>
+                </div>
+
+                <div className="bg-slate-700/30 p-3 rounded-lg space-y-3">
+                  <span className="text-xs font-semibold text-blue-400 uppercase tracking-wider">Varış Noktası</span>
+                  <div>
+                    <label className="block text-[11px] text-slate-400 mb-0.5">İl Kodu (MERNIS)</label>
+                    <input
+                      type="number"
+                      value={form.destIlCode}
+                      onChange={(e) => setForm({ ...form, destIlCode: Number(e.target.value) })}
+                      className="input-field py-1.5"
+                      placeholder="Örn: 34"
+                      required
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-[11px] text-slate-400 mb-0.5">İlçe Kodu (MERNIS)</label>
+                    <input
+                      type="number"
+                      value={form.destIlceCode}
+                      onChange={(e) => setForm({ ...form, destIlceCode: Number(e.target.value) })}
+                      className="input-field py-1.5"
+                      placeholder="Örn: 1444"
+                      required
+                    />
+                  </div>
+                </div>
+              </div>
+
+              <div className="flex justify-end gap-3 mt-6">
                 <button type="submit" className="btn-primary flex-1">
                   Oluştur
                 </button>
