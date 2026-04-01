@@ -1,4 +1,5 @@
 'use client';
+// Version: 1.0.4-force-deploy
 
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
