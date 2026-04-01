@@ -14,7 +14,7 @@ import {
 } from '@nestjs/common';
 import { AuthGuard } from '@nestjs/passport';
 import { FileInterceptor } from '@nestjs/platform-express';
-import { Response } from 'express';
+import type { Response } from 'express';
 import { TripsService } from './trips.service';
 import { CurrentUser, TenantId } from '../../common/decorators/user.decorator';
 import { Roles } from '../../common/decorators/roles.decorator';

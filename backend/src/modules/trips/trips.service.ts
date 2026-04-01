@@ -360,7 +360,7 @@ export class TripsService {
       await this.tripRepo.update(tripId, {
         status: TripStatus.SENT,
         uetdsSentAt: new Date(),
-        uetdsErrorMessage: null,
+        uetdsErrorMessage: '',
       });
 
       return {
