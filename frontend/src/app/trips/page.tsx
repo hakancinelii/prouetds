@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { tripsApi } from '@/lib/api';
+import { tripsApi, vehiclesApi } from '@/lib/api';
 import toast from 'react-hot-toast';
 import {
   Plus,
@@ -26,6 +26,7 @@ export default function TripsPage() {
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState('');
   const [showCreateModal, setShowCreateModal] = useState(false);
+  const [vehicles, setVehicles] = useState<any[]>([]);
 
   // Create form
   const [form, setForm] = useState({
@@ -54,8 +55,18 @@ export default function TripsPage() {
     setLoading(false);
   };
 
+  const fetchVehicles = async () => {
+    try {
+      const res = await vehiclesApi.list();
+      setVehicles(res.data);
+    } catch {
+      console.error('Araçlar yüklenemedi');
+    }
+  };
+
   useEffect(() => {
     fetchTrips();
+    fetchVehicles();
   }, [page, statusFilter]);
 
   const handleCreate = async (e: React.FormEvent) => {
@@ -276,15 +287,21 @@ export default function TripsPage() {
                   <label className="block text-sm text-slate-300 mb-1">
                     Araç Plaka
                   </label>
-                  <input
+                  <select
                     value={form.vehiclePlate}
                     onChange={(e) =>
-                      setForm({ ...form, vehiclePlate: e.target.value.toUpperCase() })
+                      setForm({ ...form, vehiclePlate: e.target.value })
                     }
-                    className="input-field"
-                    placeholder="34 ABC 123"
+                    className="input-field appearance-none"
                     required
-                  />
+                  >
+                    <option value="">Araç Seçiniz</option>
+                    {vehicles.map((v) => (
+                      <option key={v.id} value={v.plate}>
+                        {v.plate} {v.brand ? `(${v.brand})` : ''}
+                      </option>
+                    ))}
+                  </select>
                 </div>
                 <div>
                   <label className="block text-sm text-slate-300 mb-1">
