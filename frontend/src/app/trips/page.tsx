@@ -287,21 +287,23 @@ export default function TripsPage() {
                   <label className="block text-sm text-slate-300 mb-1">
                     Araç Plaka
                   </label>
-                  <select
+                  <input
+                    list="registered-vehicles"
                     value={form.vehiclePlate}
                     onChange={(e) =>
-                      setForm({ ...form, vehiclePlate: e.target.value })
+                      setForm({ ...form, vehiclePlate: e.target.value.toUpperCase() })
                     }
-                    className="input-field appearance-none"
+                    className="input-field"
+                    placeholder="Listeden seçin veya elle yazın (örn: 34ABC123)"
                     required
-                  >
-                    <option value="">Araç Seçiniz</option>
+                  />
+                  <datalist id="registered-vehicles">
                     {vehicles.map((v) => (
                       <option key={v.id} value={v.plateNumber}>
-                        {v.plateNumber} {v.brand ? `(${v.brand})` : ''}
+                        {v.brand ? `${v.plateNumber} (${v.brand})` : v.plateNumber}
                       </option>
                     ))}
-                  </select>
+                  </datalist>
                 </div>
                 <div>
                   <label className="block text-sm text-slate-300 mb-1">
