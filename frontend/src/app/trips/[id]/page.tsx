@@ -34,7 +34,7 @@ export default function TripDetailPage() {
   const [pasteText, setPasteText] = useState('');
   const [parsedResults, setParsedResults] = useState<any>(null);
   const [selectedGroupId, setSelectedGroupId] = useState('');
-  
+
   // File upload refs
   const [uploading, setUploading] = useState(false);
 
@@ -65,7 +65,7 @@ export default function TripDetailPage() {
   const handleExcelUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file || !selectedGroupId) return;
-    
+
     setUploading(true);
     const toastId = toast.loading('Excel/CSV işleniyor...');
     try {
@@ -83,7 +83,7 @@ export default function TripDetailPage() {
   const handlePassportUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file || !selectedGroupId) return;
-    
+
     setUploading(true);
     const toastId = toast.loading('Pasaport OCR ile taranıyor...');
     try {
@@ -352,11 +352,10 @@ export default function TripDetailPage() {
               <button
                 key={g.id}
                 onClick={() => setSelectedGroupId(g.id)}
-                className={`text-sm px-3 py-1.5 rounded-lg transition ${
-                  selectedGroupId === g.id
-                    ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/30'
-                    : 'bg-slate-700/30 text-slate-400 border border-slate-600/30 hover:bg-slate-700/50'
-                }`}
+                className={`text-sm px-3 py-1.5 rounded-lg transition ${selectedGroupId === g.id
+                  ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/30'
+                  : 'bg-slate-700/30 text-slate-400 border border-slate-600/30 hover:bg-slate-700/50'
+                  }`}
               >
                 {g.groupName} ({g.passengers?.length || 0})
               </button>
@@ -402,14 +401,14 @@ export default function TripDetailPage() {
                     </td>
                   </tr>
                 )) || (
-                <tr>
-                  <td colSpan={6} className="px-5 py-8 text-center text-slate-500">
-                    {trip.groups?.length === 0
-                      ? 'Önce bir yolcu grubu ekleyin'
-                      : 'Bu grupta yolcu yok'}
-                  </td>
-                </tr>
-              )}
+                  <tr>
+                    <td colSpan={6} className="px-5 py-8 text-center text-slate-500">
+                      {trip.groups?.length === 0
+                        ? 'Önce bir yolcu grubu ekleyin'
+                        : 'Bu grupta yolcu yok'}
+                    </td>
+                  </tr>
+                )}
             </tbody>
           </table>
         </div>

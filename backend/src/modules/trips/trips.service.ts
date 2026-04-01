@@ -27,7 +27,7 @@ export class TripsService {
     @InjectRepository(Passenger) private passengerRepo: Repository<Passenger>,
     @InjectRepository(Tenant) private tenantRepo: Repository<Tenant>,
     private uetdsService: UetdsService,
-  ) {}
+  ) { }
 
   async findAll(tenantId: string, query: any = {}) {
     const qb = this.tripRepo
@@ -100,7 +100,19 @@ export class TripsService {
       createdById: userId,
       status: TripStatus.DRAFT,
     });
-    return this.tripRepo.save(trip);
+
+    const savedTrip = await this.tripRepo.save(trip);
+
+    // Her yeni seferde otomatik bir varsayılan grup oluştururalım
+    await this.addGroup(savedTrip.id, tenantId, {
+      groupName: 'Genel Yolcular',
+      groupDescription: 'Varsayılan Grup',
+      originCountryCode: 'TR',
+      destCountryCode: 'TR',
+      groupFee: 0
+    });
+
+    return savedTrip;
   }
 
   async update(id: string, tenantId: string, data: Partial<Trip>) {
