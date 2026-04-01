@@ -106,10 +106,10 @@ export class UetdsService implements OnModuleInit {
         }
 
         const [rawResult] = await currentClient[`${methodName}Async`](args);
-        
+
         // UETDS responds with a "return" object containing the actual data
         const result = rawResult?.return || rawResult;
-        
+
         const responseTimeMs = Date.now() - startTime;
 
         // Log request/response
@@ -738,6 +738,6 @@ export class UetdsService implements OnModuleInit {
     const day = String(d.getDate()).padStart(2, '0');
     const month = String(d.getMonth() + 1).padStart(2, '0');
     const year = d.getFullYear();
-    return `${day}/${month}/${year}`;
+    return `${year}-${month}-${day}`;
   }
 }
