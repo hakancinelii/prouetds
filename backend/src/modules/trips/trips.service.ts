@@ -103,12 +103,16 @@ export class TripsService {
 
     const savedTrip = await this.tripRepo.save(trip);
 
-    // Her yeni seferde otomatik bir varsayılan grup oluştururalım
+    // Her yeni seferde otomatik bir varsayılan grup oluşturalım
     await this.addGroup(savedTrip.id, tenantId, {
       groupName: 'Genel Yolcular',
       groupDescription: 'Varsayılan Grup',
       originCountryCode: 'TR',
+      originIlCode: savedTrip.originIlCode,
+      originIlceCode: savedTrip.originIlceCode,
       destCountryCode: 'TR',
+      destIlCode: savedTrip.destIlCode,
+      destIlceCode: savedTrip.destIlceCode,
       groupFee: 0
     });
 
