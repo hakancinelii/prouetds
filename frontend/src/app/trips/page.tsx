@@ -297,8 +297,8 @@ export default function TripsPage() {
                   >
                     <option value="">Araç Seçiniz</option>
                     {vehicles.map((v) => (
-                      <option key={v.id} value={v.plate}>
-                        {v.plate} {v.brand ? `(${v.brand})` : ''}
+                      <option key={v.id} value={v.plateNumber}>
+                        {v.plateNumber} {v.brand ? `(${v.brand})` : ''}
                       </option>
                     ))}
                   </select>
