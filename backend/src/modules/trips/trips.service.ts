@@ -394,18 +394,28 @@ export class TripsService {
 
       // STEP 5: Verify with bildirimOzeti
       this.logger.log(`[UETDS] Step 5: bildirimOzeti`);
-      const ozet = await this.uetdsService.bildirimOzeti(
-        username,
-        password,
-        tenantId,
-        tripId,
-        seferRefNo,
-        environment,
-      );
+      let ozet: any = null;
+      try {
+        ozet = await this.uetdsService.bildirimOzeti(
+          username,
+          password,
+          tenantId,
+          tripId,
+          seferRefNo,
+          environment,
+        );
+      } catch (summaryError) {
+        const summaryMessage =
+          summaryError instanceof Error ? summaryError.message : String(summaryError);
+        this.logger.warn(
+          `[UETDS] bildirimOzeti warning for trip ${tripId}: ${summaryMessage}`,
+        );
+      }
 
       // Update trip as SENT
       await this.tripRepo.update(tripId, {
         status: TripStatus.SENT,
+        uetdsSeferRefNo: seferRefNo,
         uetdsSentAt: new Date(),
         uetdsErrorMessage: '',
       });
@@ -416,15 +426,16 @@ export class TripsService {
         summary: ozet,
       };
     } catch (error) {
-      this.logger.error(`UETDS send failed for trip ${tripId}: ${error.message}`);
+      const errorMessage = error instanceof Error ? error.message : String(error);
+      this.logger.error(`UETDS send failed for trip ${tripId}: ${errorMessage}`);
       await this.tripRepo.update(tripId, {
         status: TripStatus.ERROR,
-        uetdsErrorMessage: error.message,
+        uetdsErrorMessage: errorMessage,
       });
 
       throw new BadRequestException({
         message: 'UETDS gönderimi başarısız',
-        details: error.message,
+        details: errorMessage,
       });
     }
   }
