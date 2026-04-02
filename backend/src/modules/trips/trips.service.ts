@@ -20,12 +20,19 @@ import { UetdsService } from '../uetds/uetds.service';
 export class TripsService {
   private readonly logger = new Logger(TripsService.name);
 
-  private buildLocationText(ilCode?: number | null, ilceCode?: number | null) {
+  private buildLocationText(
+    ilCode?: number | null,
+    ilceCode?: number | null,
+    explicitPlace?: string | null,
+  ) {
+    const place = explicitPlace?.trim();
+    if (place) return place;
+
     const il = ilCode ? String(ilCode) : '';
     const ilce = ilceCode ? String(ilceCode) : '';
 
-    if (il && ilce) return `${il}/${ilce}`;
-    return il || ilce || 'Merkez';
+    if (il && ilce) return `${ilce}/${il}`;
+    return ilce || il || 'Merkez';
   }
 
   private buildGroupDescription(group: TripGroup) {
@@ -106,8 +113,13 @@ export class TripsService {
   }
 
   async create(tenantId: string, userId: string, data: Partial<Trip>) {
+    const tripData = data as Partial<Trip> & {
+      originPlace?: string;
+      destPlace?: string;
+    };
+
     const trip = this.tripRepo.create({
-      ...data,
+      ...tripData,
       tenantId,
       createdById: userId,
       status: TripStatus.DRAFT,
@@ -125,11 +137,16 @@ export class TripsService {
       originPlace: this.buildLocationText(
         savedTrip.originIlCode,
         savedTrip.originIlceCode,
+        (savedTrip as any).originPlace,
       ),
       destCountryCode: 'TR',
       destIlCode: savedTrip.destIlCode,
       destIlceCode: savedTrip.destIlceCode,
-      destPlace: this.buildLocationText(savedTrip.destIlCode, savedTrip.destIlceCode),
+      destPlace: this.buildLocationText(
+        savedTrip.destIlCode,
+        savedTrip.destIlceCode,
+        (savedTrip as any).destPlace,
+      ),
       groupFee: 0,
     });
 
@@ -137,13 +154,17 @@ export class TripsService {
   }
 
   async update(id: string, tenantId: string, data: Partial<Trip>) {
+    const tripData = data as Partial<Trip> & {
+      originPlace?: string;
+      destPlace?: string;
+    };
     const trip = await this.findOne(id, tenantId);
     if (trip.status === TripStatus.SENT) {
       throw new BadRequestException(
         "UETDS'ye gönderilmiş sefer düzenlenemez. Önce iptal edin.",
       );
     }
-    Object.assign(trip, data);
+    Object.assign(trip, tripData);
     const savedTrip = await this.tripRepo.save(trip);
 
     const defaultGroup = savedTrip.groups?.find(
@@ -158,11 +179,16 @@ export class TripsService {
         originPlace: this.buildLocationText(
           savedTrip.originIlCode,
           savedTrip.originIlceCode,
+          (savedTrip as any).originPlace,
         ),
         destCountryCode: 'TR',
         destIlCode: savedTrip.destIlCode,
         destIlceCode: savedTrip.destIlceCode,
-        destPlace: this.buildLocationText(savedTrip.destIlCode, savedTrip.destIlceCode),
+        destPlace: this.buildLocationText(
+          savedTrip.destIlCode,
+          savedTrip.destIlceCode,
+          (savedTrip as any).destPlace,
+        ),
       });
     }
 
@@ -305,15 +331,19 @@ export class TripsService {
             baslangicUlke: group.originCountryCode,
             baslangicIl: group.originIlCode,
             baslangicIlce: group.originIlceCode,
-            baslangicYer:
-              group.originPlace ||
-              this.buildLocationText(group.originIlCode, group.originIlceCode),
+            baslangicYer: this.buildLocationText(
+              group.originIlCode,
+              group.originIlceCode,
+              group.originPlace,
+            ),
             bitisUlke: group.destCountryCode,
             bitisIl: group.destIlCode,
             bitisIlce: group.destIlceCode,
-            bitisYer:
-              group.destPlace ||
-              this.buildLocationText(group.destIlCode, group.destIlceCode),
+            bitisYer: this.buildLocationText(
+              group.destIlCode,
+              group.destIlceCode,
+              group.destPlace,
+            ),
             grupUcret: String(group.groupFee || '0'),
           },
           environment,
@@ -334,7 +364,7 @@ export class TripsService {
         `[UETDS] Step 3: personelEkle for ${trip.personnel.length} personnel`,
       );
       for (const person of trip.personnel) {
-        await this.uetdsService.personelEkle(
+        const personelResult = await this.uetdsService.personelEkle(
           username,
           password,
           tenantId,
@@ -342,15 +372,19 @@ export class TripsService {
           seferRefNo,
           {
             turKodu: person.personnelType,
-            uyrukUlke: person.nationalityCode,
+            uyrukUlke: person.nationalityCode || 'TR',
             tcKimlikPasaportno: person.tcPassportNo,
-            cinsiyet: person.gender,
+            cinsiyet: person.gender || 'E',
             adi: person.firstName,
             soyadi: person.lastName,
             telefon: person.phone,
             adres: person.address,
           },
         );
+
+        if (personelResult?.sonucKodu !== undefined && personelResult.sonucKodu !== 0) {
+          throw new Error(`personelEkle failed: ${personelResult.sonucMesaji}`);
+        }
       }
 
       // STEP 4: Add passengers per group (batch)
@@ -359,9 +393,9 @@ export class TripsService {
         if (!group.passengers || group.passengers.length === 0) continue;
 
         const yolcuBilgileri = group.passengers.map((p) => ({
-          grupId: group.uetdsGrupRefNo,
-          uyrukUlke: p.nationalityCode,
-          cinsiyet: p.gender,
+          grupId: Number(group.uetdsGrupRefNo),
+          uyrukUlke: p.nationalityCode || 'TR',
+          cinsiyet: p.gender || 'E',
           tcKimlikPasaportNo: p.tcPassportNo,
           adi: p.firstName,
           soyadı: p.lastName,
@@ -378,6 +412,10 @@ export class TripsService {
           yolcuBilgileri,
           environment,
         );
+
+        if (yolcuResult?.sonucKodu !== undefined && ![0, 88].includes(yolcuResult.sonucKodu)) {
+          throw new Error(`yolcuEkleCoklu failed: ${yolcuResult.sonucMesaji}`);
+        }
 
         // Process individual results
         if (yolcuResult.uetdsYolcuSonuc) {

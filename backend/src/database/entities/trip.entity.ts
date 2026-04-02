@@ -29,92 +29,98 @@ export enum TripStatus {
 @Index(['tenantId', 'departureDate'])
 export class Trip {
   @PrimaryGeneratedColumn('uuid')
-  id: string;
+  id!: string;
 
   @Column({ type: 'uuid' })
-  tenantId: string;
+  tenantId!: string;
 
   @Column({ length: 50, nullable: true })
-  firmTripNumber: string;
+  firmTripNumber!: string;
 
   @Column({ length: 20 })
-  vehiclePlate: string;
+  vehiclePlate!: string;
 
   @Column({ type: 'uuid', nullable: true })
-  vehicleId: string;
+  vehicleId!: string;
 
   @Column({ type: 'date' })
-  departureDate: string;
+  departureDate!: string;
 
   @Column({ length: 10 })
-  departureTime: string;
+  departureTime!: string;
 
   @Column({ type: 'date' })
-  endDate: string;
+  endDate!: string;
 
   @Column({ length: 10 })
-  endTime: string;
+  endTime!: string;
 
   @Column({ length: 400, nullable: true })
-  description: string;
+  description!: string;
 
   @Column({ length: 20, nullable: true })
-  vehiclePhone: string;
+  vehiclePhone!: string;
 
   @Column({ type: 'bigint', nullable: true })
-  originIlCode: number;
+  originIlCode!: number;
 
   @Column({ type: 'bigint', nullable: true })
-  originIlceCode: number;
+  originIlceCode!: number;
 
   @Column({ type: 'bigint', nullable: true })
-  destIlCode: number;
+  destIlCode!: number;
 
   @Column({ type: 'bigint', nullable: true })
-  destIlceCode: number;
+  destIlceCode!: number;
+
+  @Column({ length: 200, nullable: true })
+  originPlace!: string;
+
+  @Column({ length: 200, nullable: true })
+  destPlace!: string;
 
   @Column({
     type: 'enum',
     enum: TripStatus,
     default: TripStatus.DRAFT,
   })
-  status: TripStatus;
+  status!: TripStatus;
 
   @Column({ type: 'bigint', nullable: true })
-  uetdsSeferRefNo: number;
+  uetdsSeferRefNo!: number;
 
   @Column({ type: 'text', nullable: true })
-  uetdsErrorMessage: string;
+  uetdsErrorMessage!: string;
 
   @Column({ type: 'timestamp', nullable: true })
-  uetdsSentAt: Date;
+  uetdsSentAt!: Date;
 
   @Column({ type: 'uuid', nullable: true })
-  createdById: string;
+  createdById!: string;
 
   @CreateDateColumn()
-  createdAt: Date;
+  createdAt!: Date;
 
   @UpdateDateColumn()
-  updatedAt: Date;
+  updatedAt!: Date;
 
   @ManyToOne(() => Tenant, (tenant) => tenant.trips)
   @JoinColumn({ name: 'tenantId' })
-  tenant: Tenant;
+  tenant!: Tenant;
 
   @ManyToOne(() => Vehicle, { nullable: true })
   @JoinColumn({ name: 'vehicleId' })
-  vehicle: Vehicle;
+  vehicle!: Vehicle;
 
   @ManyToOne(() => User, { nullable: true })
   @JoinColumn({ name: 'createdById' })
-  createdBy: User;
+  createdBy!: User;
 
   @OneToMany(() => TripGroup, (group) => group.trip, { cascade: true })
-  groups: TripGroup[];
+  groups!: TripGroup[];
 
   @OneToMany(() => TripPersonnel, (personnel) => personnel.trip, {
     cascade: true,
   })
-  personnel: TripPersonnel[];
+  personnel!: TripPersonnel[];
 }

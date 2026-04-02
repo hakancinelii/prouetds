@@ -40,8 +40,10 @@ export default function TripsPage() {
     firmTripNumber: '',
     originIlCode: 34, // İstanbul
     originIlceCode: 1444, // Kadıköy
+    originPlace: 'Kadıköy/İstanbul',
     destIlCode: 34,
     destIlceCode: 1444,
+    destPlace: 'Kadıköy/İstanbul',
   });
 
   const fetchTrips = async () => {
@@ -81,8 +83,10 @@ export default function TripsPage() {
         ...form,
         originIlCode: Number(form.originIlCode),
         originIlceCode: Number(form.originIlceCode),
+        originPlace: form.originPlace.trim(),
         destIlCode: Number(form.destIlCode),
         destIlceCode: Number(form.destIlceCode),
+        destPlace: form.destPlace.trim(),
       });
       toast.success('Sefer oluşturuldu');
       setShowCreateModal(false);
@@ -96,8 +100,10 @@ export default function TripsPage() {
         firmTripNumber: '',
         originIlCode: 34,
         originIlceCode: 1444,
+        originPlace: 'Kadıköy/İstanbul',
         destIlCode: 34,
         destIlceCode: 1444,
+        destPlace: 'Kadıköy/İstanbul',
       });
       router.push(`/trips/${res.data.id}`);
     } catch (err: any) {
@@ -416,6 +422,17 @@ export default function TripsPage() {
                       required
                     />
                   </div>
+                  <div>
+                    <label className="block text-[11px] text-slate-400 mb-0.5">Başlangıç Yeri (İlçe Adı / Havalimanı)</label>
+                    <input
+                      type="text"
+                      value={form.originPlace}
+                      onChange={(e) => setForm({ ...form, originPlace: e.target.value })}
+                      className="input-field py-1.5"
+                      placeholder="Örn: Bakırköy/İstanbul veya İstanbul Havalimanı/İSTANBUL"
+                      required
+                    />
+                  </div>
                 </div>
 
                 <div className="bg-slate-700/30 p-3 rounded-lg space-y-3">
@@ -439,6 +456,17 @@ export default function TripsPage() {
                       onChange={(e) => setForm({ ...form, destIlceCode: Number(e.target.value) })}
                       className="input-field py-1.5"
                       placeholder="Örn: 1444"
+                      required
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-[11px] text-slate-400 mb-0.5">Bitiş Yeri (İlçe Adı / Havalimanı)</label>
+                    <input
+                      type="text"
+                      value={form.destPlace}
+                      onChange={(e) => setForm({ ...form, destPlace: e.target.value })}
+                      className="input-field py-1.5"
+                      placeholder="Örn: Bakırköy/İstanbul veya İstanbul Havalimanı/İSTANBUL"
                       required
                     />
                   </div>
