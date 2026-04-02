@@ -28,6 +28,10 @@ export class TripsService {
     return il || ilce || 'Merkez';
   }
 
+  private buildGroupDescription(group: TripGroup) {
+    return group.groupDescription?.trim() || `${group.groupName} grubu`;
+  }
+
   constructor(
     @InjectRepository(Trip) private tripRepo: Repository<Trip>,
     @InjectRepository(TripGroup) private groupRepo: Repository<TripGroup>,
@@ -297,15 +301,19 @@ export class TripsService {
           seferRefNo,
           {
             grupAdi: group.groupName,
-            grupAciklama: group.groupDescription,
+            grupAciklama: this.buildGroupDescription(group),
             baslangicUlke: group.originCountryCode,
             baslangicIl: group.originIlCode,
             baslangicIlce: group.originIlceCode,
-            baslangicYer: group.originPlace,
+            baslangicYer:
+              group.originPlace ||
+              this.buildLocationText(group.originIlCode, group.originIlceCode),
             bitisUlke: group.destCountryCode,
             bitisIl: group.destIlCode,
             bitisIlce: group.destIlceCode,
-            bitisYer: group.destPlace,
+            bitisYer:
+              group.destPlace ||
+              this.buildLocationText(group.destIlCode, group.destIlceCode),
             grupUcret: String(group.groupFee || '0'),
           },
           environment,
