@@ -371,15 +371,16 @@ export class TripsService {
           tripId,
           seferRefNo,
           {
-            turKodu: person.personnelType,
-            uyrukUlke: person.nationalityCode || 'TR',
-            tcKimlikPasaportno: person.tcPassportNo,
-            cinsiyet: person.gender || 'E',
+            turKodu: Number(person.personnelType ?? 0),
+            uyrukUlke: (person.nationalityCode || 'TR').trim().toUpperCase(),
+            tcKimlikPasaportNo: person.tcPassportNo,
+            cinsiyet: (person.gender || 'E').trim().toUpperCase(),
             adi: person.firstName,
             soyadi: person.lastName,
             telefon: person.phone,
             adres: person.address,
           },
+          environment,
         );
 
         if (personelResult?.sonucKodu !== undefined && personelResult.sonucKodu !== 0) {
@@ -394,11 +395,11 @@ export class TripsService {
 
         const yolcuBilgileri = group.passengers.map((p) => ({
           grupId: Number(group.uetdsGrupRefNo),
-          uyrukUlke: p.nationalityCode || 'TR',
-          cinsiyet: p.gender || 'E',
+          uyrukUlke: (p.nationalityCode || 'TR').trim().toUpperCase(),
+          cinsiyet: (p.gender || 'E').trim().toUpperCase(),
           tcKimlikPasaportNo: p.tcPassportNo,
           adi: p.firstName,
-          soyadı: p.lastName,
+          soyadi: p.lastName,
           koltukNo: p.seatNumber,
           telefonNo: p.phone,
         }));

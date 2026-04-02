@@ -370,13 +370,14 @@ export class UetdsService implements OnModuleInit {
     personnelInput: {
       turKodu: number;
       uyrukUlke: string;
-      tcKimlikPasaportno: string;
+      tcKimlikPasaportNo: string;
       cinsiyet?: string;
       adi: string;
       soyadi: string;
       telefon?: string;
       adres?: string;
     },
+    environment?: string,
   ): Promise<any> {
     return this.executeSoapMethod(
       'personelEkle',
@@ -387,6 +388,7 @@ export class UetdsService implements OnModuleInit {
       },
       tenantId,
       tripId,
+      environment,
     );
   }
 
@@ -467,7 +469,7 @@ export class UetdsService implements OnModuleInit {
       cinsiyet?: string;
       tcKimlikPasaportNo: string;
       adi: string;
-      soyadı: string;
+      soyadi: string;
       koltukNo?: string;
       telefonNo?: string;
     },
@@ -503,7 +505,7 @@ export class UetdsService implements OnModuleInit {
       cinsiyet?: string;
       tcKimlikPasaportNo: string;
       adi: string;
-      soyadı: string;
+      soyadi: string;
       koltukNo?: string;
       telefonNo?: string;
     }>,
