@@ -2,6 +2,20 @@
 // Version: 1.0.4-force-deploy
 
 import { useEffect, useState } from 'react';
+
+const getDefaultTripDateTime = () => {
+  const now = new Date();
+  const localDate = new Date(now.getTime() - now.getTimezoneOffset() * 60000);
+  const date = localDate.toISOString().slice(0, 10);
+  const time = localDate.toISOString().slice(11, 16);
+
+  return {
+    departureDate: date,
+    departureTime: time,
+    endDate: date,
+    endTime: time,
+  };
+};
 import { useRouter } from 'next/navigation';
 import { tripsApi, vehiclesApi } from '@/lib/api';
 import toast from 'react-hot-toast';
@@ -32,10 +46,7 @@ export default function TripsPage() {
   // Create form
   const [form, setForm] = useState({
     vehiclePlate: '',
-    departureDate: '',
-    departureTime: '',
-    endDate: '',
-    endTime: '',
+    ...getDefaultTripDateTime(),
     description: '',
     firmTripNumber: '',
     originIlCode: 34, // İstanbul
@@ -92,10 +103,7 @@ export default function TripsPage() {
       setShowCreateModal(false);
       setForm({
         vehiclePlate: '',
-        departureDate: '',
-        departureTime: '',
-        endDate: '',
-        endTime: '',
+        ...getDefaultTripDateTime(),
         description: '',
         firmTripNumber: '',
         originIlCode: 34,
