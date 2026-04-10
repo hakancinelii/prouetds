@@ -140,7 +140,16 @@ export default function TripDetailPage() {
     setSending(true);
     try {
       const res = await tripsApi.sendToUetds(tripId);
-      toast.success(`UETDS\'ye gönderildi! Ref: ${res.data.uetdsSeferRefNo}`);
+      const passengerSummary = Array.isArray(res.data.passengerSummary)
+        ? res.data.passengerSummary
+            .map((item: any) => `${item.groupName}: ${item.successCount}/${item.expected}`)
+            .join(' · ')
+        : '';
+      toast.success(
+        passengerSummary
+          ? `UETDS'ye gönderildi! Ref: ${res.data.uetdsSeferRefNo} · ${passengerSummary}`
+          : `UETDS'ye gönderildi! Ref: ${res.data.uetdsSeferRefNo}`,
+      );
       fetchTrip();
     } catch (err: any) {
       toast.error(

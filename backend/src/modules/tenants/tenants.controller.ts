@@ -35,6 +35,12 @@ export class TenantsController {
     return this.tenantsService.create(data);
   }
 
+  @Patch('me')
+  @Roles(UserRole.SUPER_ADMIN, UserRole.COMPANY_ADMIN, UserRole.OPERATOR)
+  updateMe(@Body() data: any, @TenantId() tenantId: string) {
+    return this.tenantsService.update(tenantId, data);
+  }
+
   @Patch(':id')
   @Roles(UserRole.SUPER_ADMIN, UserRole.COMPANY_ADMIN)
   async update(
@@ -43,11 +49,13 @@ export class TenantsController {
     @TenantId() userTenantId: string,
     @CurrentUser('role') role: UserRole,
   ) {
+    const normalizedId = id === 'me' ? userTenantId : id;
+
     // If not super admin, must match tenant ID
-    if (role !== UserRole.SUPER_ADMIN && id !== userTenantId) {
+    if (role !== UserRole.SUPER_ADMIN && normalizedId !== userTenantId) {
       throw new ForbiddenException('Sadece kendi şirket bilgilerinizi güncelleyebilirsiniz');
     }
-    return this.tenantsService.update(id, data);
+    return this.tenantsService.update(normalizedId, data);
   }
 
   @Post(':id/toggle-active')

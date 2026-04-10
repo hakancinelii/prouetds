@@ -35,6 +35,50 @@ export class TripsService {
     return ilce || il || 'Merkez';
   }
 
+  private sanitizeMernisCode(value?: number | null) {
+    if (typeof value !== 'number' || !Number.isFinite(value)) {
+      return undefined;
+    }
+
+    const normalized = Math.trunc(value);
+    if (normalized <= 0) {
+      return undefined;
+    }
+
+    return normalized;
+  }
+
+  private buildGroupPayload(group: TripGroup) {
+    const baslangicIl = this.sanitizeMernisCode(group.originIlCode);
+    const baslangicIlce = this.sanitizeMernisCode(group.originIlceCode);
+    const bitisIl = this.sanitizeMernisCode(group.destIlCode);
+    const bitisIlce = this.sanitizeMernisCode(group.destIlceCode);
+
+    if (!baslangicIl || !baslangicIlce || !bitisIl || !bitisIlce) {
+      throw new BadRequestException(
+        'UETDS grup gönderimi için geçerli MERNİS il ve ilçe kodları zorunludur.',
+      );
+    }
+
+    return {
+      grupAdi: group.groupName,
+      grupAciklama: this.buildGroupDescription(group),
+      baslangicUlke: group.originCountryCode,
+      baslangicIl,
+      baslangicIlce,
+      baslangicYer: this.buildLocationText(
+        baslangicIl,
+        baslangicIlce,
+        group.originPlace,
+      ),
+      bitisUlke: group.destCountryCode,
+      bitisIl,
+      bitisIlce,
+      bitisYer: this.buildLocationText(bitisIl, bitisIlce, group.destPlace),
+      grupUcret: String(group.groupFee || '0'),
+    };
+  }
+
   private buildGroupDescription(group: TripGroup) {
     return group.groupDescription?.trim() || `${group.groupName} grubu`;
   }
@@ -49,13 +93,15 @@ export class TripsService {
   ) { }
 
   async findAll(tenantId: string, query: any = {}) {
+    const page = Number(query.page) > 0 ? Number(query.page) : 1;
+    const limit = Number(query.limit) > 0 ? Number(query.limit) : 20;
+
     const qb = this.tripRepo
       .createQueryBuilder('trip')
       .leftJoinAndSelect('trip.groups', 'groups')
       .leftJoinAndSelect('groups.passengers', 'passengers')
       .leftJoinAndSelect('trip.personnel', 'personnel')
-      .where('trip.tenantId = :tenantId', { tenantId })
-      .orderBy('trip.createdAt', 'DESC');
+      .where('trip.tenantId = :tenantId', { tenantId });
 
     if (query.status) {
       qb.andWhere('trip.status = :status', { status: query.status });
@@ -66,10 +112,14 @@ export class TripsService {
     if (query.toDate) {
       qb.andWhere('trip.departureDate <= :toDate', { toDate: query.toDate });
     }
+    if (query.search?.trim()) {
+      qb.andWhere(
+        '(trip.firmTripNumber ILIKE :search OR trip.vehiclePlate ILIKE :search)',
+        { search: `%${query.search.trim()}%` },
+      );
+    }
 
-    const page = query.page || 1;
-    const limit = query.limit || 20;
-    qb.skip((page - 1) * limit).take(limit);
+    qb.orderBy('trip.createdAt', 'DESC').skip((page - 1) * limit).take(limit);
 
     const [trips, total] = await qb.getManyAndCount();
     return { trips, total, page, limit };
@@ -118,8 +168,18 @@ export class TripsService {
       destPlace?: string;
     };
 
+    const normalizedVehiclePlate = (tripData.vehiclePlate || '')
+      .trim()
+      .toUpperCase()
+      .replace(/\s+/g, '');
+
+    if (!normalizedVehiclePlate) {
+      throw new BadRequestException('Araç plakası zorunludur');
+    }
+
     const trip = this.tripRepo.create({
       ...tripData,
+      vehiclePlate: normalizedVehiclePlate,
       tenantId,
       createdById: userId,
       status: TripStatus.DRAFT,
@@ -164,6 +224,14 @@ export class TripsService {
         "UETDS'ye gönderilmiş sefer düzenlenemez. Önce iptal edin.",
       );
     }
+
+    if (typeof tripData.vehiclePlate === 'string') {
+      tripData.vehiclePlate = tripData.vehiclePlate
+        .trim()
+        .toUpperCase()
+        .replace(/\s+/g, '');
+    }
+
     Object.assign(trip, tripData);
     const savedTrip = await this.tripRepo.save(trip);
 
@@ -325,27 +393,7 @@ export class TripsService {
           tenantId,
           tripId,
           seferRefNo,
-          {
-            grupAdi: group.groupName,
-            grupAciklama: this.buildGroupDescription(group),
-            baslangicUlke: group.originCountryCode,
-            baslangicIl: group.originIlCode,
-            baslangicIlce: group.originIlceCode,
-            baslangicYer: this.buildLocationText(
-              group.originIlCode,
-              group.originIlceCode,
-              group.originPlace,
-            ),
-            bitisUlke: group.destCountryCode,
-            bitisIl: group.destIlCode,
-            bitisIlce: group.destIlceCode,
-            bitisYer: this.buildLocationText(
-              group.destIlCode,
-              group.destIlceCode,
-              group.destPlace,
-            ),
-            grupUcret: String(group.groupFee || '0'),
-          },
+          this.buildGroupPayload(group),
           environment,
         );
 
@@ -363,6 +411,13 @@ export class TripsService {
       this.logger.log(
         `[UETDS] Step 3: personelEkle for ${trip.personnel.length} personnel`,
       );
+      const personnelResults: Array<{
+        personId: string;
+        fullName: string;
+        success: boolean;
+        message: string;
+      }> = [];
+
       for (const person of trip.personnel) {
         const personelResult = await this.uetdsService.personelEkle(
           username,
@@ -373,7 +428,7 @@ export class TripsService {
           {
             turKodu: Number(person.personnelType ?? 0),
             uyrukUlke: (person.nationalityCode || 'TR').trim().toUpperCase(),
-            tcKimlikPasaportNo: person.tcPassportNo,
+            tcKimlikPasaportno: person.tcPassportNo,
             cinsiyet: (person.gender || 'E').trim().toUpperCase(),
             adi: person.firstName,
             soyadi: person.lastName,
@@ -383,15 +438,37 @@ export class TripsService {
           environment,
         );
 
-        if (personelResult?.sonucKodu !== undefined && personelResult.sonucKodu !== 0) {
+        const personnelSuccess =
+          personelResult?.sonucKodu === undefined || personelResult.sonucKodu === 0;
+
+        personnelResults.push({
+          personId: person.id,
+          fullName: `${person.firstName} ${person.lastName}`.trim(),
+          success: personnelSuccess,
+          message: personelResult?.sonucMesaji || '',
+        });
+
+        if (!personnelSuccess) {
           throw new Error(`personelEkle failed: ${personelResult.sonucMesaji}`);
         }
       }
 
       // STEP 4: Add passengers per group (batch)
       this.logger.log(`[UETDS] Step 4: yolcuEkleCoklu`);
+      const passengerBatchResults: Array<{
+        groupId: string;
+        groupName: string;
+        expected: number;
+        successCount: number;
+        failed: Array<{ index: number; name: string; message: string }>;
+      }> = [];
+
       for (const group of trip.groups) {
         if (!group.passengers || group.passengers.length === 0) continue;
+
+        if (!group.uetdsGrupRefNo) {
+          throw new Error(`Grup referansı oluşmadı: ${group.groupName}`);
+        }
 
         const yolcuBilgileri = group.passengers.map((p) => ({
           grupId: Number(group.uetdsGrupRefNo),
@@ -399,7 +476,7 @@ export class TripsService {
           cinsiyet: (p.gender || 'E').trim().toUpperCase(),
           tcKimlikPasaportNo: p.tcPassportNo,
           adi: p.firstName,
-          soyadi: p.lastName,
+          soyadı: p.lastName,
           koltukNo: p.seatNumber,
           telefonNo: p.phone,
         }));
@@ -418,18 +495,57 @@ export class TripsService {
           throw new Error(`yolcuEkleCoklu failed: ${yolcuResult.sonucMesaji}`);
         }
 
-        // Process individual results
-        if (yolcuResult.uetdsYolcuSonuc) {
-          for (const sonuc of yolcuResult.uetdsYolcuSonuc) {
-            const passenger = group.passengers[sonuc.sira - 1]; // sira is 1-based
-            if (passenger && sonuc.sonucKodu === 0) {
-              await this.passengerRepo.update(passenger.id, {
-                uetdsYolcuRefNo: sonuc.uetdsBiletRefNo,
-              });
-            }
+        const individualResults = Array.isArray(yolcuResult?.uetdsYolcuSonuc)
+          ? yolcuResult.uetdsYolcuSonuc
+          : [];
+
+        const failed: Array<{ index: number; name: string; message: string }> = [];
+        let successCount = 0;
+
+        for (const [index, passenger] of group.passengers.entries()) {
+          const sonuc = individualResults.find((item) => item.sira === index + 1);
+          if (sonuc && sonuc.sonucKodu === 0) {
+            successCount += 1;
+            await this.passengerRepo.update(passenger.id, {
+              uetdsYolcuRefNo: sonuc.uetdsBiletRefNo,
+            });
+            continue;
           }
+
+          failed.push({
+            index: index + 1,
+            name: `${passenger.firstName} ${passenger.lastName}`.trim(),
+            message:
+              sonuc?.sonucMesaji ||
+              yolcuResult?.sonucMesaji ||
+              'Yolcu sonucu dönmedi',
+          });
+        }
+
+        passengerBatchResults.push({
+          groupId: group.id,
+          groupName: group.groupName,
+          expected: group.passengers.length,
+          successCount,
+          failed,
+        });
+
+        if (successCount !== group.passengers.length) {
+          throw new Error(
+            `yolcuEkleCoklu incomplete for ${group.groupName}: ${successCount}/${group.passengers.length} başarılı`,
+          );
         }
       }
+
+      // STEP 5: Verify with bildirimOzeti
+      const passengerSummary = passengerBatchResults
+        .map(
+          (result) =>
+            `${result.groupName}: ${result.successCount}/${result.expected} yolcu`,
+        )
+        .join(' | ');
+      const personnelSummary = `${personnelResults.filter((item) => item.success).length}/${personnelResults.length} personel`;
+      this.logger.log(`[UETDS] Validation snapshot -> ${personnelSummary}; ${passengerSummary}`);
 
       // STEP 5: Verify with bildirimOzeti
       this.logger.log(`[UETDS] Step 5: bildirimOzeti`);
@@ -463,6 +579,8 @@ export class TripsService {
         success: true,
         uetdsSeferRefNo: seferRefNo,
         summary: ozet,
+        personnelSummary: personnelResults,
+        passengerSummary: passengerBatchResults,
       };
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : String(error);
