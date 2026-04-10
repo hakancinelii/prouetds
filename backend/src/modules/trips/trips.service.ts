@@ -56,7 +56,14 @@ export class TripsService {
 
     if (!baslangicIl || !baslangicIlce || !bitisIl || !bitisIlce) {
       throw new BadRequestException(
-        'UETDS grup gönderimi için geçerli MERNİS il ve ilçe kodları zorunludur.',
+        `${group.groupName} için geçerli MERNİS il ve ilçe kodları zorunludur.`,
+      );
+    }
+
+    const normalizedFee = Number(group.groupFee || 0);
+    if (!Number.isFinite(normalizedFee) || normalizedFee <= 0) {
+      throw new BadRequestException(
+        `${group.groupName} için grup ücreti 0'dan büyük olmalıdır.`,
       );
     }
 
@@ -75,8 +82,311 @@ export class TripsService {
       bitisIl,
       bitisIlce,
       bitisYer: this.buildLocationText(bitisIl, bitisIlce, group.destPlace),
-      grupUcret: String(group.groupFee || '0'),
+      grupUcret: String(normalizedFee),
     };
+  }
+
+  private mergeTripLocationIntoGroup(group: TripGroup, trip: Trip) {
+    const nextOriginIlCode = group.originIlCode ?? trip.originIlCode;
+    const nextOriginIlceCode = group.originIlceCode ?? trip.originIlceCode;
+    const nextDestIlCode = group.destIlCode ?? trip.destIlCode;
+    const nextDestIlceCode = group.destIlceCode ?? trip.destIlceCode;
+    const nextOriginPlace = group.originPlace?.trim() || trip.originPlace;
+    const nextDestPlace = group.destPlace?.trim() || trip.destPlace;
+
+    group.originCountryCode = group.originCountryCode || 'TR';
+    group.destCountryCode = group.destCountryCode || 'TR';
+    group.originIlCode = nextOriginIlCode;
+    group.originIlceCode = nextOriginIlceCode;
+    group.destIlCode = nextDestIlCode;
+    group.destIlceCode = nextDestIlceCode;
+    group.originPlace = nextOriginPlace;
+    group.destPlace = nextDestPlace;
+
+    return {
+      originCountryCode: group.originCountryCode,
+      originIlCode: nextOriginIlCode,
+      originIlceCode: nextOriginIlceCode,
+      originPlace: nextOriginPlace,
+      destCountryCode: group.destCountryCode,
+      destIlCode: nextDestIlCode,
+      destIlceCode: nextDestIlceCode,
+      destPlace: nextDestPlace,
+    };
+  }
+
+  private ensureGroupsReadyForUetds(trip: Trip) {
+    return trip.groups.map((group) => ({
+      group,
+      updates: this.mergeTripLocationIntoGroup(group, trip),
+    }));
+  }
+
+  private validateTripForUetds(trip: Trip) {
+    const originIl = this.sanitizeMernisCode(trip.originIlCode);
+    const originIlce = this.sanitizeMernisCode(trip.originIlceCode);
+    const destIl = this.sanitizeMernisCode(trip.destIlCode);
+    const destIlce = this.sanitizeMernisCode(trip.destIlceCode);
+
+    if (!originIl || !originIlce || !destIl || !destIlce) {
+      throw new BadRequestException(
+        'Sefer gönderimi için kalkış ve varışta geçerli MERNİS il ve ilçe kodları zorunludur.',
+      );
+    }
+  }
+
+  private buildDefaultGroupData(trip: Trip) {
+    return {
+      groupName: '1. Grup',
+      groupDescription: trip.description?.trim() || 'Transfer',
+      originCountryCode: 'TR',
+      originIlCode: trip.originIlCode,
+      originIlceCode: trip.originIlceCode,
+      originPlace: this.buildLocationText(
+        trip.originIlCode,
+        trip.originIlceCode,
+        trip.originPlace,
+      ),
+      destCountryCode: 'TR',
+      destIlCode: trip.destIlCode,
+      destIlceCode: trip.destIlceCode,
+      destPlace: this.buildLocationText(
+        trip.destIlCode,
+        trip.destIlceCode,
+        trip.destPlace,
+      ),
+      groupFee: 500,
+    };
+  }
+
+  private getTripDetailRedirectError(tripId: string) {
+    return new BadRequestException({
+      message: 'UETDS gönderimi başarısız',
+      details: `Lütfen sefer detayında kalkış/varış ilçe kodlarını ve grup ücretini kontrol edin. Sefer: ${tripId}`,
+    });
+  }
+
+  private normalizeTripData(tripData: Partial<Trip> & { originPlace?: string; destPlace?: string }) {
+    return {
+      ...tripData,
+      originPlace: tripData.originPlace?.trim(),
+      destPlace: tripData.destPlace?.trim(),
+    };
+  }
+
+  private normalizeGroupInput(data: Partial<TripGroup>) {
+    return {
+      ...data,
+      originPlace: data.originPlace?.trim(),
+      destPlace: data.destPlace?.trim(),
+      groupDescription: data.groupDescription?.trim(),
+      groupName: data.groupName?.trim(),
+      groupFee:
+        data.groupFee !== undefined && data.groupFee !== null
+          ? Number(data.groupFee)
+          : data.groupFee,
+    };
+  }
+
+  private buildLocationValidationMessage(fieldLabel: string) {
+    return `${fieldLabel} zorunludur ve gerçek MERNİS ilçe / havalimanı kodu içermelidir.`;
+  }
+
+  private validateTripInput(tripData: Partial<Trip> & { originPlace?: string; destPlace?: string }) {
+    const originIl = this.sanitizeMernisCode(tripData.originIlCode);
+    const originIlce = this.sanitizeMernisCode(tripData.originIlceCode);
+    const destIl = this.sanitizeMernisCode(tripData.destIlCode);
+    const destIlce = this.sanitizeMernisCode(tripData.destIlceCode);
+
+    if (!originIl) {
+      throw new BadRequestException(this.buildLocationValidationMessage('Kalkış ili'));
+    }
+    if (!originIlce) {
+      throw new BadRequestException(this.buildLocationValidationMessage('Kalkış ilçesi'));
+    }
+    if (!destIl) {
+      throw new BadRequestException(this.buildLocationValidationMessage('Varış ili'));
+    }
+    if (!destIlce) {
+      throw new BadRequestException(this.buildLocationValidationMessage('Varış ilçesi'));
+    }
+  }
+
+  private validateGroupInput(data: Partial<TripGroup>) {
+    const originIl = this.sanitizeMernisCode(data.originIlCode);
+    const originIlce = this.sanitizeMernisCode(data.originIlceCode);
+    const destIl = this.sanitizeMernisCode(data.destIlCode);
+    const destIlce = this.sanitizeMernisCode(data.destIlceCode);
+    const groupFee = data.groupFee !== undefined && data.groupFee !== null
+      ? Number(data.groupFee)
+      : undefined;
+
+    if (!originIl) {
+      throw new BadRequestException(this.buildLocationValidationMessage('Grup kalkış ili'));
+    }
+    if (!originIlce) {
+      throw new BadRequestException(this.buildLocationValidationMessage('Grup kalkış ilçesi'));
+    }
+    if (!destIl) {
+      throw new BadRequestException(this.buildLocationValidationMessage('Grup varış ili'));
+    }
+    if (!destIlce) {
+      throw new BadRequestException(this.buildLocationValidationMessage('Grup varış ilçesi'));
+    }
+    if (!groupFee || groupFee <= 0) {
+      throw new BadRequestException('Grup ücreti 0\'dan büyük olmalıdır.');
+    }
+  }
+
+  private async persistPreparedGroups(preparedGroups: Array<{ group: TripGroup; updates: Partial<TripGroup> }>) {
+    for (const { group, updates } of preparedGroups) {
+      await this.groupRepo.update(group.id, updates);
+      Object.assign(group, updates);
+    }
+  }
+
+  private async prepareTripForUetds(trip: Trip) {
+    this.validateTripForUetds(trip);
+    const preparedGroups = this.ensureGroupsReadyForUetds(trip);
+    await this.persistPreparedGroups(preparedGroups);
+    return preparedGroups.map(({ group }) => group);
+  }
+
+  private buildCreateDefaultGroupPayload(savedTrip: Trip) {
+    return this.buildDefaultGroupData(savedTrip);
+  }
+
+  private getReadableGroupName(group: Partial<TripGroup>) {
+    return group.groupName?.trim() || 'Grup';
+  }
+
+  private ensureGroupHasMeaningfulDescription(group: Partial<TripGroup>, trip?: Partial<Trip>) {
+    const description = group.groupDescription?.trim() || trip?.description?.trim() || 'Transfer';
+    return description;
+  }
+
+  private ensureGroupHasMeaningfulName(group: Partial<TripGroup>) {
+    return group.groupName?.trim() || '1. Grup';
+  }
+
+  private ensureGroupFee(group: Partial<TripGroup>) {
+    const fee = group.groupFee !== undefined && group.groupFee !== null
+      ? Number(group.groupFee)
+      : 500;
+    return fee > 0 ? fee : 500;
+  }
+
+  private normalizeDefaultGroup(savedTrip: Trip) {
+    return {
+      ...this.buildCreateDefaultGroupPayload(savedTrip),
+      groupName: this.ensureGroupHasMeaningfulName({ groupName: '1. Grup' }),
+      groupDescription: this.ensureGroupHasMeaningfulDescription({}, savedTrip),
+      groupFee: this.ensureGroupFee({ groupFee: 500 }),
+    };
+  }
+
+  private normalizeExistingDefaultGroup(group: TripGroup, savedTrip: Trip) {
+    return {
+      originCountryCode: 'TR',
+      originIlCode: savedTrip.originIlCode,
+      originIlceCode: savedTrip.originIlceCode,
+      originPlace: this.buildLocationText(
+        savedTrip.originIlCode,
+        savedTrip.originIlceCode,
+        savedTrip.originPlace,
+      ),
+      destCountryCode: 'TR',
+      destIlCode: savedTrip.destIlCode,
+      destIlceCode: savedTrip.destIlceCode,
+      destPlace: this.buildLocationText(
+        savedTrip.destIlCode,
+        savedTrip.destIlceCode,
+        savedTrip.destPlace,
+      ),
+      groupName: this.ensureGroupHasMeaningfulName(group),
+      groupDescription: this.ensureGroupHasMeaningfulDescription(group, savedTrip),
+      groupFee: this.ensureGroupFee(group),
+    };
+  }
+
+  private shouldRefreshDefaultGroup(group: TripGroup) {
+    return group.groupName === 'Genel Yolcular' || group.groupName === '1. Grup';
+  }
+
+  private updateTripGroupsFromTrip(savedTrip: Trip) {
+    const defaultGroup = savedTrip.groups?.find(
+      (group) => this.shouldRefreshDefaultGroup(group),
+    );
+
+    if (!defaultGroup) return null;
+
+    return this.normalizeExistingDefaultGroup(defaultGroup, savedTrip);
+  }
+
+  private getTrimmedVehiclePlate(value?: string | null) {
+    return (value || '').trim().toUpperCase().replace(/\s+/g, '');
+  }
+
+  private normalizeTripFormData(tripData: Partial<Trip> & { originPlace?: string; destPlace?: string }) {
+    return {
+      ...this.normalizeTripData(tripData),
+      vehiclePlate: this.getTrimmedVehiclePlate(tripData.vehiclePlate),
+    };
+  }
+
+  private validateVehiclePlate(vehiclePlate: string) {
+    if (!vehiclePlate) {
+      throw new BadRequestException('Araç plakası zorunludur');
+    }
+  }
+
+  private validateUetdsGroupBeforeSend(group: TripGroup) {
+    this.validateGroupInput(group);
+  }
+
+  private async prepareGroupsBeforeSend(trip: Trip) {
+    const groups = await this.prepareTripForUetds(trip);
+    groups.forEach((group) => this.validateUetdsGroupBeforeSend(group));
+    return groups;
+  }
+
+  private buildSendFailureFromValidation(error: unknown, tripId: string) {
+    if (error instanceof BadRequestException) {
+      return error;
+    }
+    return this.getTripDetailRedirectError(tripId);
+  }
+
+  private getNormalizedGroupDescription(savedTrip: Trip) {
+    return this.ensureGroupHasMeaningfulDescription({}, savedTrip);
+  }
+
+  private getNormalizedDefaultGroupName() {
+    return '1. Grup';
+  }
+
+  private getDefaultGroupFee() {
+    return 500;
+  }
+
+  private buildNormalizedDefaultGroup(savedTrip: Trip) {
+    return {
+      ...this.buildCreateDefaultGroupPayload(savedTrip),
+      groupName: this.getNormalizedDefaultGroupName(),
+      groupDescription: this.getNormalizedGroupDescription(savedTrip),
+      groupFee: this.getDefaultGroupFee(),
+    };
+  }
+
+  private getUpdatedDefaultGroupPayload(defaultGroup: TripGroup, savedTrip: Trip) {
+    return {
+      ...this.normalizeExistingDefaultGroup(defaultGroup, savedTrip),
+      groupName: this.ensureGroupHasMeaningfulName(defaultGroup),
+    };
+  }
+
+  private isDefaultGroup(group: TripGroup) {
+    return group.groupName === 'Genel Yolcular' || group.groupName === '1. Grup';
   }
 
   private buildGroupDescription(group: TripGroup) {
@@ -163,23 +473,17 @@ export class TripsService {
   }
 
   async create(tenantId: string, userId: string, data: Partial<Trip>) {
-    const tripData = data as Partial<Trip> & {
+    const tripData = this.normalizeTripFormData(data as Partial<Trip> & {
       originPlace?: string;
       destPlace?: string;
-    };
+    });
 
-    const normalizedVehiclePlate = (tripData.vehiclePlate || '')
-      .trim()
-      .toUpperCase()
-      .replace(/\s+/g, '');
-
-    if (!normalizedVehiclePlate) {
-      throw new BadRequestException('Araç plakası zorunludur');
-    }
+    this.validateVehiclePlate(tripData.vehiclePlate || '');
+    this.validateTripInput(tripData);
 
     const trip = this.tripRepo.create({
       ...tripData,
-      vehiclePlate: normalizedVehiclePlate,
+      vehiclePlate: tripData.vehiclePlate,
       tenantId,
       createdById: userId,
       status: TripStatus.DRAFT,
@@ -188,36 +492,17 @@ export class TripsService {
     const savedTrip = await this.tripRepo.save(trip);
 
     // Her yeni seferde otomatik bir varsayılan grup oluşturalım
-    await this.addGroup(savedTrip.id, tenantId, {
-      groupName: 'Genel Yolcular',
-      groupDescription: 'Varsayılan Grup',
-      originCountryCode: 'TR',
-      originIlCode: savedTrip.originIlCode,
-      originIlceCode: savedTrip.originIlceCode,
-      originPlace: this.buildLocationText(
-        savedTrip.originIlCode,
-        savedTrip.originIlceCode,
-        (savedTrip as any).originPlace,
-      ),
-      destCountryCode: 'TR',
-      destIlCode: savedTrip.destIlCode,
-      destIlceCode: savedTrip.destIlceCode,
-      destPlace: this.buildLocationText(
-        savedTrip.destIlCode,
-        savedTrip.destIlceCode,
-        (savedTrip as any).destPlace,
-      ),
-      groupFee: 0,
-    });
+    await this.addGroup(savedTrip.id, tenantId, this.buildNormalizedDefaultGroup(savedTrip));
 
     return savedTrip;
   }
 
   async update(id: string, tenantId: string, data: Partial<Trip>) {
-    const tripData = data as Partial<Trip> & {
+    const tripData = this.normalizeTripData(data as Partial<Trip> & {
       originPlace?: string;
       destPlace?: string;
-    };
+    });
+    this.validateTripInput(tripData);
     const trip = await this.findOne(id, tenantId);
     if (trip.status === TripStatus.SENT) {
       throw new BadRequestException(
@@ -226,38 +511,21 @@ export class TripsService {
     }
 
     if (typeof tripData.vehiclePlate === 'string') {
-      tripData.vehiclePlate = tripData.vehiclePlate
-        .trim()
-        .toUpperCase()
-        .replace(/\s+/g, '');
+      tripData.vehiclePlate = this.getTrimmedVehiclePlate(tripData.vehiclePlate);
     }
 
     Object.assign(trip, tripData);
     const savedTrip = await this.tripRepo.save(trip);
 
-    const defaultGroup = savedTrip.groups?.find(
-      (group) => group.groupName === 'Genel Yolcular',
-    );
+    const defaultGroupUpdate = this.updateTripGroupsFromTrip(savedTrip);
 
-    if (defaultGroup) {
-      await this.groupRepo.update(defaultGroup.id, {
-        originCountryCode: 'TR',
-        originIlCode: savedTrip.originIlCode,
-        originIlceCode: savedTrip.originIlceCode,
-        originPlace: this.buildLocationText(
-          savedTrip.originIlCode,
-          savedTrip.originIlceCode,
-          (savedTrip as any).originPlace,
-        ),
-        destCountryCode: 'TR',
-        destIlCode: savedTrip.destIlCode,
-        destIlceCode: savedTrip.destIlceCode,
-        destPlace: this.buildLocationText(
-          savedTrip.destIlCode,
-          savedTrip.destIlceCode,
-          (savedTrip as any).destPlace,
-        ),
-      });
+    if (defaultGroupUpdate) {
+      const defaultGroup = savedTrip.groups?.find(
+        (group) => this.shouldRefreshDefaultGroup(group),
+      );
+      if (defaultGroup) {
+        await this.groupRepo.update(defaultGroup.id, defaultGroupUpdate);
+      }
     }
 
     return this.findOne(id, tenantId);
@@ -265,8 +533,19 @@ export class TripsService {
 
   async addGroup(tripId: string, tenantId: string, data: Partial<TripGroup>) {
     const trip = await this.findOne(tripId, tenantId);
+    const groupData = this.normalizeGroupInput(data);
+    const mergedGroupData = {
+      ...this.mergeTripLocationIntoGroup(groupData as TripGroup, trip),
+      ...groupData,
+      groupName: this.ensureGroupHasMeaningfulName(groupData),
+      groupDescription: this.ensureGroupHasMeaningfulDescription(groupData, trip),
+      groupFee: this.ensureGroupFee(groupData),
+      originCountryCode: groupData.originCountryCode || 'TR',
+      destCountryCode: groupData.destCountryCode || 'TR',
+    };
+    this.validateGroupInput(mergedGroupData as Partial<TripGroup>);
     const group = this.groupRepo.create({
-      ...data,
+      ...mergedGroupData,
       tripId: trip.id,
       tenantId,
     });
@@ -353,6 +632,13 @@ export class TripsService {
     const password = tenant.uetdsPasswordEncrypted; // TODO: decrypt
     const environment = tenant.settings?.uetdsEnvironment || 'test';
 
+    let groupsForSend: TripGroup[] = [];
+    try {
+      groupsForSend = await this.prepareGroupsBeforeSend(trip);
+    } catch (validationError) {
+      throw this.buildSendFailureFromValidation(validationError, tripId);
+    }
+
     // Update status to SENDING
     await this.tripRepo.update(tripId, { status: TripStatus.SENDING });
 
@@ -385,8 +671,8 @@ export class TripsService {
       await this.tripRepo.update(tripId, { uetdsSeferRefNo: seferRefNo });
 
       // STEP 2: Add groups
-      this.logger.log(`[UETDS] Step 2: seferGrupEkle for ${trip.groups.length} groups`);
-      for (const group of trip.groups) {
+      this.logger.log(`[UETDS] Step 2: seferGrupEkle for ${groupsForSend.length} groups`);
+      for (const group of groupsForSend) {
         const grupResult = await this.uetdsService.seferGrupEkle(
           username,
           password,

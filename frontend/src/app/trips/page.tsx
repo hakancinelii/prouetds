@@ -50,11 +50,11 @@ export default function TripsPage() {
     description: '',
     firmTripNumber: '',
     originIlCode: 34, // İstanbul
-    originIlceCode: 1444, // Kadıköy
-    originPlace: 'Kadıköy/İstanbul',
+    originIlceCode: '',
+    originPlace: '',
     destIlCode: 34,
-    destIlceCode: 1444,
-    destPlace: 'Kadıköy/İstanbul',
+    destIlceCode: '',
+    destPlace: '',
   });
 
   const fetchTrips = async () => {
@@ -64,6 +64,7 @@ export default function TripsPage() {
         page,
         limit: 15,
         status: statusFilter || undefined,
+        search: search.trim() || undefined,
       });
       setTrips(res.data.trips);
       setTotal(res.data.total);
@@ -87,16 +88,26 @@ export default function TripsPage() {
     fetchVehicles();
   }, [page, statusFilter]);
 
+  useEffect(() => {
+    const timeout = setTimeout(() => {
+      setPage(1);
+      fetchTrips();
+    }, 300);
+
+    return () => clearTimeout(timeout);
+  }, [search]);
+
   const handleCreate = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
       const res = await tripsApi.create({
         ...form,
+        vehiclePlate: form.vehiclePlate.trim().toUpperCase().replace(/\s+/g, ''),
         originIlCode: Number(form.originIlCode),
-        originIlceCode: Number(form.originIlceCode),
+        originIlceCode: form.originIlceCode ? Number(form.originIlceCode) : undefined,
         originPlace: form.originPlace.trim(),
         destIlCode: Number(form.destIlCode),
-        destIlceCode: Number(form.destIlceCode),
+        destIlceCode: form.destIlceCode ? Number(form.destIlceCode) : undefined,
         destPlace: form.destPlace.trim(),
       });
       toast.success('Sefer oluşturuldu');
@@ -107,11 +118,11 @@ export default function TripsPage() {
         description: '',
         firmTripNumber: '',
         originIlCode: 34,
-        originIlceCode: 1444,
-        originPlace: 'Kadıköy/İstanbul',
+        originIlceCode: '',
+        originPlace: '',
         destIlCode: 34,
-        destIlceCode: 1444,
-        destPlace: 'Kadıköy/İstanbul',
+        destIlceCode: '',
+        destPlace: '',
       });
       router.push(`/trips/${res.data.id}`);
     } catch (err: any) {
@@ -401,7 +412,8 @@ export default function TripsPage() {
                     }
                     className="input-field"
                     rows={2}
-                    placeholder="Sefer açıklaması (opsiyonel)"
+                    placeholder="Sefer açıklaması / grup açıklaması (örn: Transfer)"
+                    required
                   />
                 </div>
               </div>
@@ -424,9 +436,9 @@ export default function TripsPage() {
                     <input
                       type="number"
                       value={form.originIlceCode}
-                      onChange={(e) => setForm({ ...form, originIlceCode: Number(e.target.value) })}
+                      onChange={(e) => setForm({ ...form, originIlceCode: e.target.value })}
                       className="input-field py-1.5"
-                      placeholder="Örn: 1444"
+                      placeholder="Zorunlu: gerçek MERNİS ilçe / havalimanı kodu"
                       required
                     />
                   </div>
@@ -438,7 +450,6 @@ export default function TripsPage() {
                       onChange={(e) => setForm({ ...form, originPlace: e.target.value })}
                       className="input-field py-1.5"
                       placeholder="Örn: Bakırköy/İstanbul veya İstanbul Havalimanı/İSTANBUL"
-                      required
                     />
                   </div>
                 </div>
@@ -453,7 +464,6 @@ export default function TripsPage() {
                       onChange={(e) => setForm({ ...form, destIlCode: Number(e.target.value) })}
                       className="input-field py-1.5"
                       placeholder="Örn: 34"
-                      required
                     />
                   </div>
                   <div>
@@ -461,9 +471,9 @@ export default function TripsPage() {
                     <input
                       type="number"
                       value={form.destIlceCode}
-                      onChange={(e) => setForm({ ...form, destIlceCode: Number(e.target.value) })}
+                      onChange={(e) => setForm({ ...form, destIlceCode: e.target.value })}
                       className="input-field py-1.5"
-                      placeholder="Örn: 1444"
+                      placeholder="Zorunlu: gerçek MERNİS ilçe / havalimanı kodu"
                       required
                     />
                   </div>
