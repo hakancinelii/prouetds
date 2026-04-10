@@ -150,6 +150,7 @@ export default function TripDetailPage() {
           ? `UETDS'ye gönderildi! Ref: ${res.data.uetdsSeferRefNo} · ${passengerSummary}`
           : `UETDS'ye gönderildi! Ref: ${res.data.uetdsSeferRefNo}`,
       );
+      // Frontend deploy trigger for trip detail success summary
       fetchTrip();
     } catch (err: any) {
       toast.error(
