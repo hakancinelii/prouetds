@@ -2,14 +2,19 @@
   "version": 2,
   "builds": [
     {
-      "src": "api/index.ts",
-      "use": "@vercel/node"
+      "src": "backend/src/vercel-handler.ts",
+      "use": "@vercel/node",
+      "config": {
+        "includeFiles": [
+          "backend/src/**"
+        ]
+      }
     }
   ],
   "routes": [
     {
       "src": "/(.*)",
-      "dest": "api/index.ts"
+      "dest": "backend/src/vercel-handler.ts"
     }
   ]
 }

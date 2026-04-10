@@ -8,8 +8,8 @@ import {
   JoinColumn,
   Index,
 } from 'typeorm';
-import type { Trip  } from './trip.entity';
-import type { Passenger  } from './passenger.entity';
+import { Trip } from './trip.entity';
+import { Passenger } from './passenger.entity';
 
 @Entity('trip_groups')
 @Index(['tripId'])
@@ -65,11 +65,11 @@ export class TripGroup {
   @CreateDateColumn()
   createdAt: Date;
 
-  @ManyToOne(() => 'Trip', (trip) => trip.groups, { onDelete: 'CASCADE' })
+  @ManyToOne(() => Trip, (trip) => trip.groups, { onDelete: 'CASCADE' })
   @JoinColumn({ name: 'tripId' })
   trip: Trip;
 
-  @OneToMany(() => 'Passenger', (passenger) => passenger.tripGroup, {
+  @OneToMany(() => Passenger, (passenger) => passenger.tripGroup, {
     cascade: true,
   })
   passengers: Passenger[];

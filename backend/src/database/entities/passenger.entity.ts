@@ -7,7 +7,7 @@ import {
   JoinColumn,
   Index,
 } from 'typeorm';
-import type { TripGroup  } from './trip-group.entity';
+import { TripGroup } from './trip-group.entity';
 
 export enum PassengerSource {
   MANUAL = 'manual',
@@ -69,7 +69,7 @@ export class Passenger {
   @CreateDateColumn()
   createdAt: Date;
 
-  @ManyToOne(() => 'TripGroup', (group) => group.passengers, {
+  @ManyToOne(() => TripGroup, (group) => group.passengers, {
     onDelete: 'CASCADE',
   })
   @JoinColumn({ name: 'tripGroupId' })
