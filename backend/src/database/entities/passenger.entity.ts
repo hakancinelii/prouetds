@@ -7,7 +7,7 @@ import {
   JoinColumn,
   Index,
 } from 'typeorm';
-import { TripGroup } from './trip-group.entity';
+import type { TripGroup } from './trip-group.entity';
 
 export enum PassengerSource {
   MANUAL = 'manual',
@@ -21,57 +21,57 @@ export enum PassengerSource {
 @Index(['tenantId', 'tripGroupId'])
 export class Passenger {
   @PrimaryGeneratedColumn('uuid')
-  id: string;
+  id!: string;
 
   @Column({ type: 'uuid' })
-  tripGroupId: string;
+  tripGroupId!: string;
 
   @Column({ type: 'uuid' })
-  tenantId: string;
+  tenantId!: string;
 
   @Column({ length: 50 })
-  firstName: string;
+  firstName!: string;
 
   @Column({ length: 50 })
-  lastName: string;
+  lastName!: string;
 
   @Column({ length: 30 })
-  tcPassportNo: string;
+  tcPassportNo!: string;
 
   @Column({ length: 10 })
-  nationalityCode: string;
+  nationalityCode!: string;
 
   @Column({ length: 5, nullable: true })
-  gender: string;
+  gender!: string;
 
   @Column({ length: 20, nullable: true })
-  phone: string;
+  phone!: string;
 
   @Column({ length: 10, nullable: true })
-  seatNumber: string;
+  seatNumber!: string;
 
   @Column({ type: 'bigint', nullable: true })
-  uetdsYolcuRefNo: number;
+  uetdsYolcuRefNo!: number;
 
   @Column({ length: 20, default: 'active' })
-  status: string;
+  status!: string;
 
   @Column({
     type: 'enum',
     enum: PassengerSource,
     default: PassengerSource.MANUAL,
   })
-  source: PassengerSource;
+  source!: PassengerSource;
 
   @Column({ type: 'jsonb', nullable: true })
-  rawOcrData: Record<string, any>;
+  rawOcrData!: Record<string, any>;
 
   @CreateDateColumn()
-  createdAt: Date;
+  createdAt!: Date;
 
-  @ManyToOne(() => TripGroup, (group) => group.passengers, {
+  @ManyToOne('TripGroup', (group: any) => group.passengers, {
     onDelete: 'CASCADE',
   })
   @JoinColumn({ name: 'tripGroupId' })
-  tripGroup: TripGroup;
+  tripGroup!: TripGroup;
 }

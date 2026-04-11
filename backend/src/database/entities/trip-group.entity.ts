@@ -9,68 +9,68 @@ import {
   Index,
 } from 'typeorm';
 import { Trip } from './trip.entity';
-import { Passenger } from './passenger.entity';
+import type { Passenger } from './passenger.entity';
 
 @Entity('trip_groups')
 @Index(['tripId'])
 export class TripGroup {
   @PrimaryGeneratedColumn('uuid')
-  id: string;
+  id!: string;
 
   @Column({ type: 'uuid' })
-  tripId: string;
+  tripId!: string;
 
   @Column({ type: 'uuid' })
-  tenantId: string;
+  tenantId!: string;
 
   @Column({ length: 100 })
-  groupName: string;
+  groupName!: string;
 
   @Column({ length: 200 })
-  groupDescription: string;
+  groupDescription!: string;
 
   @Column({ length: 10 })
-  originCountryCode: string;
+  originCountryCode!: string;
 
   @Column({ type: 'bigint', nullable: true })
-  originIlCode: number;
+  originIlCode!: number;
 
   @Column({ type: 'bigint', nullable: true })
-  originIlceCode: number;
+  originIlceCode!: number;
 
   @Column({ length: 200, nullable: true })
-  originPlace: string;
+  originPlace!: string;
 
   @Column({ length: 10 })
-  destCountryCode: string;
+  destCountryCode!: string;
 
   @Column({ type: 'bigint', nullable: true })
-  destIlCode: number;
+  destIlCode!: number;
 
   @Column({ type: 'bigint', nullable: true })
-  destIlceCode: number;
+  destIlceCode!: number;
 
   @Column({ length: 200, nullable: true })
-  destPlace: string;
+  destPlace!: string;
 
   @Column({ type: 'decimal', precision: 10, scale: 2, default: 0 })
-  groupFee: number;
+  groupFee!: number;
 
   @Column({ type: 'bigint', nullable: true })
-  uetdsGrupRefNo: number;
+  uetdsGrupRefNo!: number;
 
   @Column({ length: 20, default: 'active' })
-  status: string;
+  status!: string;
 
   @CreateDateColumn()
-  createdAt: Date;
+  createdAt!: Date;
 
   @ManyToOne(() => Trip, (trip) => trip.groups, { onDelete: 'CASCADE' })
   @JoinColumn({ name: 'tripId' })
-  trip: Trip;
+  trip!: Trip;
 
-  @OneToMany(() => Passenger, (passenger) => passenger.tripGroup, {
+  @OneToMany('Passenger', (passenger: any) => passenger.tripGroup, {
     cascade: true,
   })
-  passengers: Passenger[];
+  passengers!: Passenger[];
 }
