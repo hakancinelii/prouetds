@@ -18,6 +18,7 @@ const getDefaultTripDateTime = () => {
 };
 import { useRouter } from 'next/navigation';
 import { tripsApi, vehiclesApi } from '@/lib/api';
+import { MERNIS_LOCATIONS, getProvinceByCode } from '@/lib/mernis-locations';
 import toast from 'react-hot-toast';
 import {
   Plus,
@@ -56,6 +57,11 @@ export default function TripsPage() {
     destIlceCode: '',
     destPlace: '',
   });
+
+  const originProvince = getProvinceByCode(Number(form.originIlCode));
+  const destProvince = getProvinceByCode(Number(form.destIlCode));
+  const originDistricts = originProvince?.districts || [];
+  const destDistricts = destProvince?.districts || [];
 
   const fetchTrips = async () => {
     setLoading(true);
@@ -194,6 +200,8 @@ export default function TripsPage() {
           />
         </div>
         <select
+          aria-label="Durum filtresi"
+          title="Durum filtresi"
           value={statusFilter}
           onChange={(e) => {
             setStatusFilter(e.target.value);
@@ -422,25 +430,58 @@ export default function TripsPage() {
                   <span className="text-xs font-semibold text-emerald-400 uppercase tracking-wider">Kalkış Noktası</span>
                   <div>
                     <label className="block text-[11px] text-slate-400 mb-0.5">İl Kodu (MERNIS)</label>
-                    <input
-                      type="number"
+                    <select
+                      id="origin-il-code"
+                      aria-label="Kalkış ili"
+                      title="Kalkış ili"
                       value={form.originIlCode}
-                      onChange={(e) => setForm({ ...form, originIlCode: Number(e.target.value) })}
+                      onChange={(e) =>
+                        setForm({
+                          ...form,
+                          originIlCode: Number(e.target.value),
+                          originIlceCode: '',
+                          originPlace: '',
+                        })
+                      }
                       className="input-field py-1.5"
-                      placeholder="Örn: 34"
                       required
-                    />
+                    >
+                      {MERNIS_LOCATIONS.map((province) => (
+                        <option key={province.code} value={province.code}>
+                          {province.name}
+                        </option>
+                      ))}
+                    </select>
                   </div>
                   <div>
                     <label className="block text-[11px] text-slate-400 mb-0.5">İlçe Kodu (MERNIS)</label>
-                    <input
-                      type="number"
+                    <select
+                      id="origin-ilce-code"
+                      aria-label="Kalkış ilçesi"
+                      title="Kalkış ilçesi"
                       value={form.originIlceCode}
-                      onChange={(e) => setForm({ ...form, originIlceCode: e.target.value })}
+                      onChange={(e) => {
+                        const selected = originDistricts.find(
+                          (district) => String(district.code) === e.target.value,
+                        );
+                        setForm({
+                          ...form,
+                          originIlceCode: e.target.value,
+                          originPlace: selected
+                            ? `${selected.name}/${originProvince?.name || ''}`
+                            : '',
+                        });
+                      }}
                       className="input-field py-1.5"
-                      placeholder="Zorunlu: gerçek MERNİS ilçe / havalimanı kodu"
                       required
-                    />
+                    >
+                      <option value="">İlçe seçiniz</option>
+                      {originDistricts.map((district) => (
+                        <option key={district.code} value={district.code}>
+                          {district.name} ({district.code})
+                        </option>
+                      ))}
+                    </select>
                   </div>
                   <div>
                     <label className="block text-[11px] text-slate-400 mb-0.5">Başlangıç Yeri (İlçe Adı / Havalimanı)</label>
@@ -449,7 +490,8 @@ export default function TripsPage() {
                       value={form.originPlace}
                       onChange={(e) => setForm({ ...form, originPlace: e.target.value })}
                       className="input-field py-1.5"
-                      placeholder="Örn: Bakırköy/İstanbul veya İstanbul Havalimanı/İSTANBUL"
+                      placeholder="İlçe seçimiyle otomatik dolar; gerekirse terminal / havaalanı detayını yazın"
+                      required
                     />
                   </div>
                 </div>
@@ -458,24 +500,58 @@ export default function TripsPage() {
                   <span className="text-xs font-semibold text-blue-400 uppercase tracking-wider">Varış Noktası</span>
                   <div>
                     <label className="block text-[11px] text-slate-400 mb-0.5">İl Kodu (MERNIS)</label>
-                    <input
-                      type="number"
+                    <select
+                      id="dest-il-code"
+                      aria-label="Varış ili"
+                      title="Varış ili"
                       value={form.destIlCode}
-                      onChange={(e) => setForm({ ...form, destIlCode: Number(e.target.value) })}
+                      onChange={(e) =>
+                        setForm({
+                          ...form,
+                          destIlCode: Number(e.target.value),
+                          destIlceCode: '',
+                          destPlace: '',
+                        })
+                      }
                       className="input-field py-1.5"
-                      placeholder="Örn: 34"
-                    />
+                      required
+                    >
+                      {MERNIS_LOCATIONS.map((province) => (
+                        <option key={province.code} value={province.code}>
+                          {province.name}
+                        </option>
+                      ))}
+                    </select>
                   </div>
                   <div>
                     <label className="block text-[11px] text-slate-400 mb-0.5">İlçe Kodu (MERNIS)</label>
-                    <input
-                      type="number"
+                    <select
+                      id="dest-ilce-code"
+                      aria-label="Varış ilçesi"
+                      title="Varış ilçesi"
                       value={form.destIlceCode}
-                      onChange={(e) => setForm({ ...form, destIlceCode: e.target.value })}
+                      onChange={(e) => {
+                        const selected = destDistricts.find(
+                          (district) => String(district.code) === e.target.value,
+                        );
+                        setForm({
+                          ...form,
+                          destIlceCode: e.target.value,
+                          destPlace: selected
+                            ? `${selected.name}/${destProvince?.name || ''}`
+                            : '',
+                        });
+                      }}
                       className="input-field py-1.5"
-                      placeholder="Zorunlu: gerçek MERNİS ilçe / havalimanı kodu"
                       required
-                    />
+                    >
+                      <option value="">İlçe seçiniz</option>
+                      {destDistricts.map((district) => (
+                        <option key={district.code} value={district.code}>
+                          {district.name} ({district.code})
+                        </option>
+                      ))}
+                    </select>
                   </div>
                   <div>
                     <label className="block text-[11px] text-slate-400 mb-0.5">Bitiş Yeri (İlçe Adı / Havalimanı)</label>
@@ -484,7 +560,7 @@ export default function TripsPage() {
                       value={form.destPlace}
                       onChange={(e) => setForm({ ...form, destPlace: e.target.value })}
                       className="input-field py-1.5"
-                      placeholder="Örn: Bakırköy/İstanbul veya İstanbul Havalimanı/İSTANBUL"
+                      placeholder="İlçe seçimiyle otomatik dolar; gerekirse terminal / havaalanı detayını yazın"
                       required
                     />
                   </div>
