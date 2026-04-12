@@ -773,6 +773,7 @@ export class TripsService {
             turKodu: Number(person.personnelType ?? 0),
             uyrukUlke: (person.nationalityCode || 'TR').trim().toUpperCase(),
             tcKimlikPasaportNo: person.tcPassportNo,
+            tcKimlikPasaportno: person.tcPassportNo,
             adi: person.firstName,
             soyadi: person.lastName,
             cinsiyet: (person.gender || 'E').trim().toUpperCase(),

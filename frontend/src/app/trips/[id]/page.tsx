@@ -740,10 +740,16 @@ export default function TripDetailPage() {
         <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
           <div className="glass-card w-full max-w-md p-6 animate-slide-in">
             <h3 className="text-lg font-bold mb-4">Personel Ekle</h3>
+            <div className="mb-4 p-3 rounded-lg bg-slate-800/50 border border-slate-700/50 text-xs text-slate-400 space-y-1">
+              <p>Seçilen personel tipi devlete turKodu olarak gider.</p>
+              <p>Şoför / Şoför Yardımcısı / Host / Hostes / Rehber türleri destekleniyor.</p>
+            </div>
             <div className="space-y-4">
               <div className="space-y-2">
                 <label className="block text-xs text-slate-400 uppercase tracking-wider">Personel Türü</label>
                 <select
+                  title="Personel türü"
+                  aria-label="Personel türü"
                   value={selectedPersonnelType}
                   onChange={(e) => setSelectedPersonnelType(Number(e.target.value))}
                   className="input-field"

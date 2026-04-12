@@ -377,6 +377,7 @@ export class UetdsService implements OnModuleInit {
       uyrukUlke: string;
       tcKimlikPasaportNo: string;
       tcKimlikPasaportno?: string;
+      tcKimlikNo?: string;
       cinsiyet?: string;
       adi: string;
       soyadi: string;
