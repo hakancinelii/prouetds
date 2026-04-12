@@ -158,7 +158,7 @@ export class UetdsService implements OnModuleInit {
       tripId,
       methodName,
       args,
-      { error: lastError.message },
+      { error: lastError?.message || 'Unknown Error' },
       Date.now() - startTime,
       -1,
     );
@@ -376,6 +376,7 @@ export class UetdsService implements OnModuleInit {
       soyadi: string;
       telefon?: string;
       adres?: string;
+      hesKodu?: string;
     },
     environment?: string,
   ): Promise<any> {
@@ -469,9 +470,10 @@ export class UetdsService implements OnModuleInit {
       cinsiyet?: string;
       tcKimlikPasaportNo: string;
       adi: string;
-      soyadi: string;
+      soyadı: string;
       koltukNo?: string;
       telefonNo?: string;
+      hesKodu?: string;
     },
     environment?: string,
   ): Promise<{
@@ -505,9 +507,10 @@ export class UetdsService implements OnModuleInit {
       cinsiyet?: string;
       tcKimlikPasaportNo: string;
       adi: string;
-      soyadi: string;
+      soyadı: string;
       koltukNo?: string;
       telefonNo?: string;
+      hesKodu?: string;
     }>,
     environment?: string,
   ): Promise<{
