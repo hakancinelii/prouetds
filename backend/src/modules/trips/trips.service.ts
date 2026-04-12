@@ -135,6 +135,20 @@ export class TripsService {
     const destIl = this.sanitizeMernisCode(trip.destIlCode);
     const destIlce = this.sanitizeMernisCode(trip.destIlceCode);
 
+    this.logger.warn(
+      `[UETDS][DEBUG] trip raw=${JSON.stringify({
+        originIlCode: trip.originIlCode,
+        originIlceCode: trip.originIlceCode,
+        destIlCode: trip.destIlCode,
+        destIlceCode: trip.destIlceCode,
+      })} normalized=${JSON.stringify({
+        originIl,
+        originIlce,
+        destIl,
+        destIlce,
+      })}`,
+    );
+
     if (!originIl || !originIlce || !destIl || !destIlce) {
       throw new BadRequestException(
         'Sefer gönderimi için kalkış ve varışta geçerli MERNİS il ve ilçe kodları zorunludur.',
@@ -228,6 +242,26 @@ export class TripsService {
       ? Number(data.groupFee)
       : undefined;
 
+    this.logger.warn(
+      `[UETDS][DEBUG] group raw=${JSON.stringify({
+        groupName: data.groupName,
+        originIlCode: data.originIlCode,
+        originIlceCode: data.originIlceCode,
+        destIlCode: data.destIlCode,
+        destIlceCode: data.destIlceCode,
+        originPlace: data.originPlace,
+        destPlace: data.destPlace,
+        groupFee: data.groupFee,
+      })} normalized=${JSON.stringify({
+        groupName: data.groupName,
+        originIl,
+        originIlce,
+        destIl,
+        destIlce,
+        groupFee,
+      })}`,
+    );
+
     if (!originIl) {
       throw new BadRequestException(this.buildLocationValidationMessage('Grup kalkış ili'));
     }
@@ -256,6 +290,23 @@ export class TripsService {
     this.validateTripForUetds(trip);
     const preparedGroups = this.ensureGroupsReadyForUetds(trip);
     await this.persistPreparedGroups(preparedGroups);
+    this.logger.warn(
+      `[UETDS][DEBUG] prepared groups=${JSON.stringify(
+        preparedGroups.map(({ group, updates }) => ({
+          groupId: group.id,
+          groupName: group.groupName,
+          tripOriginIlCode: trip.originIlCode,
+          tripOriginIlceCode: trip.originIlceCode,
+          tripDestIlCode: trip.destIlCode,
+          tripDestIlceCode: trip.destIlceCode,
+          groupOriginIlCode: group.originIlCode,
+          groupOriginIlceCode: group.originIlceCode,
+          groupDestIlCode: group.destIlCode,
+          groupDestIlceCode: group.destIlceCode,
+          updates,
+        })),
+      )}`,
+    );
     return preparedGroups.map(({ group }) => group);
   }
 
