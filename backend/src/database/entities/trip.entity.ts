@@ -9,11 +9,16 @@ import {
   JoinColumn,
   Index,
 } from 'typeorm';
-import { Tenant } from './tenant.entity';
-import { Vehicle } from './vehicle.entity';
-import { TripGroup } from './trip-group.entity';
-import { TripPersonnel } from './trip-personnel.entity';
-import { User } from './user.entity';
+import type { Tenant } from './tenant.entity';
+import type { Vehicle } from './vehicle.entity';
+import type { TripGroup } from './trip-group.entity';
+import type { TripPersonnel } from './trip-personnel.entity';
+import type { User } from './user.entity';
+const getTenantEntity = () => require('./tenant.entity').Tenant;
+const getVehicleEntity = () => require('./vehicle.entity').Vehicle;
+const getTripGroupEntity = () => require('./trip-group.entity').TripGroup;
+const getTripPersonnelEntity = () => require('./trip-personnel.entity').TripPersonnel;
+const getUserEntity = () => require('./user.entity').User;
 
 export enum TripStatus {
   DRAFT = 'draft',
@@ -104,22 +109,22 @@ export class Trip {
   @UpdateDateColumn()
   updatedAt!: Date;
 
-  @ManyToOne(() => Tenant, (tenant) => tenant.trips)
+  @ManyToOne(getTenantEntity, (tenant: any) => tenant.trips)
   @JoinColumn({ name: 'tenantId' })
   tenant!: Tenant;
 
-  @ManyToOne(() => Vehicle, { nullable: true })
+  @ManyToOne(getVehicleEntity, { nullable: true })
   @JoinColumn({ name: 'vehicleId' })
   vehicle!: Vehicle;
 
-  @ManyToOne(() => User, { nullable: true })
+  @ManyToOne(getUserEntity, { nullable: true })
   @JoinColumn({ name: 'createdById' })
   createdBy!: User;
 
-  @OneToMany(() => TripGroup, (group) => group.trip, { cascade: true })
+  @OneToMany(getTripGroupEntity, (group: any) => group.trip, { cascade: true })
   groups!: TripGroup[];
 
-  @OneToMany(() => TripPersonnel, (personnel) => personnel.trip, {
+  @OneToMany(getTripPersonnelEntity, (personnel: any) => personnel.trip, {
     cascade: true,
   })
   personnel!: TripPersonnel[];
