@@ -36,6 +36,104 @@ export default function TripDetailPage() {
   const [parsedResults, setParsedResults] = useState<any>(null);
   const [selectedGroupId, setSelectedGroupId] = useState('');
   const [showAddPersonnel, setShowAddPersonnel] = useState(false);
+  const [selectedPersonnelType, setSelectedPersonnelType] = useState(0);
+  const personnelTypeOptions = [
+    { value: 0, label: 'Şoför' },
+    { value: 1, label: 'Şoför Yardımcısı' },
+    { value: 2, label: 'Host' },
+    { value: 3, label: 'Hostes' },
+    { value: 4, label: 'Diğer' },
+    { value: 5, label: 'Rehber' },
+  ];
+
+  const getPersonnelTypeLabel = (type: number) =>
+    personnelTypeOptions.find((item) => item.value === type)?.label || 'Diğer';
+
+  const openPersonnelModal = () => {
+    setSelectedPersonnelType(0);
+    setShowAddPersonnel(true);
+  };
+
+  const openGroupCreateModal = () => {
+    toast('Bir sonraki adımda gerçek grup oluşturma formunu ekleyeceğim. Şimdilik mevcut grup ile devam ediyoruz.');
+  };
+
+  const startPassengerSyncDebug = () => {
+    toast('Yolcu gönderimi debug adımını bir sonraki iterasyonda açacağız.');
+  };
+
+  const importGovernmentTripPlaceholder = () => {
+    toast('Kamu sistemindeki seferleri içe alma akışı ayrı senkronizasyon işi olarak planlandı.');
+  };
+
+  const getDriverRoleHint = () => {
+    if (selectedPersonnelType === 5) return 'Rehber olarak eklenecek';
+    if (selectedPersonnelType === 1) return 'Şoför yardımcısı olarak eklenecek';
+    return 'Seçilen rol UETDS turKodu ile gönderilecek';
+  };
+
+  const buildPersonPayload = (driver: any) => ({
+    driverId: driver.id,
+    firstName: driver.firstName,
+    lastName: driver.lastName,
+    tcPassportNo: driver.tcKimlikNo,
+    nationalityCode: driver.nationalityCode || 'TR',
+    gender: driver.gender || 'E',
+    phone: driver.phone,
+    personnelType: selectedPersonnelType,
+  });
+
+  const getGroupLabel = (group: any) => {
+    const fee = group?.groupFee ? `₺${group.groupFee}` : 'Ücret girilmemiş';
+    return `${group.groupName} · ${fee}`;
+  };
+
+  const getPassengerDebugHint = () => {
+    return 'Yolcular seçili grup içine gönderilir; UETDS debug logu backend tarafında aktif.';
+  };
+
+  const hasGroups = Boolean(trip?.groups?.length);
+  const canOpenPassengerTools = hasGroups && selectedGroupId;
+  const tripActionNote = 'Devlet ekranındaki sırayı yakalamak için grup → personel → yolcu mantığına gidiyoruz.';
+
+  const getTripSectionTitle = () => 'Sefer Çalışma Alanı';
+
+  const noop = () => {};
+
+  void openGroupCreateModal;
+  void startPassengerSyncDebug;
+  void importGovernmentTripPlaceholder;
+  void getDriverRoleHint;
+  void getGroupLabel;
+  void getPassengerDebugHint;
+  void tripActionNote;
+  void getTripSectionTitle;
+  void noop;
+
+  const addPersonnel = async (driver: any) => {
+    try {
+      await tripsApi.addPersonnel(tripId, buildPersonPayload(driver));
+      toast.success(`${getPersonnelTypeLabel(selectedPersonnelType)} eklendi`);
+      setShowAddPersonnel(false);
+      fetchTrip();
+    } catch (err: any) {
+      toast.error(err.response?.data?.message || 'Personel eklenemedi');
+    }
+  };
+
+  const handleAddPersonnel = addPersonnel;
+
+  const selectedGroup = trip?.groups?.find((g: any) => g.id === selectedGroupId);
+  void selectedGroup;
+
+  const getSelectedGroupSummary = () => {
+    if (!selectedGroup) return 'Grup seçilmedi';
+    return `${selectedGroup.groupName} / ${selectedGroup.originPlace} → ${selectedGroup.destPlace}`;
+  };
+
+  void getSelectedGroupSummary;
+
+  const canSendToUetds = Boolean(trip?.personnel?.length) && Boolean(totalPassengers) && Boolean(hasGroups);
 
   // File upload refs
   const [uploading, setUploading] = useState(false);
@@ -70,25 +168,6 @@ export default function TripDetailPage() {
     } catch { }
   };
 
-  const handleAddPersonnel = async (driver: any) => {
-    try {
-      await tripsApi.addPersonnel(tripId, {
-        driverId: driver.id,
-        firstName: driver.firstName,
-        lastName: driver.lastName,
-        tcPassportNo: driver.tcKimlikNo,
-        nationalityCode: driver.nationalityCode || 'TR',
-        gender: driver.gender || 'E',
-        phone: driver.phone,
-        personnelType: 0, // 0 for Driver
-      });
-      toast.success('Şoför eklendi');
-      setShowAddPersonnel(false);
-      fetchTrip();
-    } catch (err: any) {
-      toast.error(err.response?.data?.message || 'Şoför eklenemedi');
-    }
-  };
 
   const handleExcelUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -360,11 +439,11 @@ export default function TripDetailPage() {
           </h2>
           {trip.status !== 'sent' && trip.status !== 'cancelled' && (
             <button
-              onClick={() => setShowAddPersonnel(true)}
+              onClick={openPersonnelModal}
               className="btn-secondary text-sm flex items-center gap-1.5"
             >
               <Plus size={14} />
-              Şoför Seç
+              Personel Ekle
             </button>
           )}
         </div>
@@ -389,7 +468,7 @@ export default function TripDetailPage() {
                       {p.tcPassportNo}
                     </td>
                     <td className="px-5 py-3 text-sm text-slate-300">
-                      {p.personnelType === 0 ? 'Sürücü' : 'Diğer'}
+                      {getPersonnelTypeLabel(p.personnelType)}
                     </td>
                     <td className="px-5 py-3 text-sm text-slate-300">
                       {p.phone || '-'}
@@ -660,11 +739,27 @@ export default function TripDetailPage() {
       {showAddPersonnel && (
         <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
           <div className="glass-card w-full max-w-md p-6 animate-slide-in">
-            <h3 className="text-lg font-bold mb-4">Şoför Seç</h3>
-            <div className="space-y-2 max-h-96 overflow-y-auto">
+            <h3 className="text-lg font-bold mb-4">Personel Ekle</h3>
+            <div className="space-y-4">
+              <div className="space-y-2">
+                <label className="block text-xs text-slate-400 uppercase tracking-wider">Personel Türü</label>
+                <select
+                  value={selectedPersonnelType}
+                  onChange={(e) => setSelectedPersonnelType(Number(e.target.value))}
+                  className="input-field"
+                >
+                  {personnelTypeOptions.map((option) => (
+                    <option key={option.value} value={option.value}>
+                      {option.label}
+                    </option>
+                  ))}
+                </select>
+                <p className="text-xs text-slate-500">{getDriverRoleHint()}</p>
+              </div>
+              <div className="space-y-2 max-h-80 overflow-y-auto">
               {drivers.length === 0 ? (
                 <div className="p-4 text-center text-slate-400">
-                  Kayıtlı şoför bulunamadı. Önce Şoförler sayfasından ekleyin.
+                  Kayıtlı personel bulunamadı. Önce Şoförler sayfasından personel kaydı ekleyin.
                 </div>
               ) : (
                 drivers.map((d) => (
@@ -685,6 +780,7 @@ export default function TripDetailPage() {
                   </button>
                 ))
               )}
+              </div>
             </div>
             <div className="pt-4">
               <button
