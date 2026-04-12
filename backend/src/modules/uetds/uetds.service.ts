@@ -371,6 +371,7 @@ export class UetdsService implements OnModuleInit {
       turKodu: number;
       uyrukUlke: string;
       tcKimlikPasaportNo: string;
+      tcKimlikPasaportno?: string;
       cinsiyet?: string;
       adi: string;
       soyadi: string;
@@ -385,7 +386,13 @@ export class UetdsService implements OnModuleInit {
       {
         wsuser: this.getWsUser(username, password),
         uetdsSeferReferansNo,
-        seferPersonelBilgileriInput: personnelInput,
+        seferPersonelBilgileriInput: {
+          ...personnelInput,
+          tcKimlikPasaportNo:
+            personnelInput.tcKimlikPasaportNo || personnelInput.tcKimlikPasaportno,
+          tcKimlikPasaportno:
+            personnelInput.tcKimlikPasaportno || personnelInput.tcKimlikPasaportNo,
+        },
       },
       tenantId,
       tripId,
