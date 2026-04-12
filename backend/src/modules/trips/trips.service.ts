@@ -35,12 +35,19 @@ export class TripsService {
     return ilce || il || 'Merkez';
   }
 
-  private sanitizeMernisCode(value?: number | null) {
-    if (typeof value !== 'number' || !Number.isFinite(value)) {
+  private sanitizeMernisCode(value?: number | string | null) {
+    if (value === undefined || value === null || value === '') {
       return undefined;
     }
 
-    const normalized = Math.trunc(value);
+    const numericValue =
+      typeof value === 'string' ? Number.parseInt(value, 10) : value;
+
+    if (typeof numericValue !== 'number' || !Number.isFinite(numericValue)) {
+      return undefined;
+    }
+
+    const normalized = Math.trunc(numericValue);
     if (normalized <= 0) {
       return undefined;
     }
