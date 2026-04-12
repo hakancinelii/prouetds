@@ -107,9 +107,9 @@ export class UetdsService implements OnModuleInit {
 
         const [rawResult] = await currentClient[`${methodName}Async`](args);
 
-        if (methodName === 'personelEkle') {
-          this.logger.warn(`[UETDS][DEBUG][personelEkle] args=${JSON.stringify(args)}`);
-          this.logger.warn(`[UETDS][DEBUG][personelEkle] lastRequest=${currentClient.lastRequest || ''}`);
+        if (methodName === 'personelEkle' || methodName === 'yolcuEkleCoklu') {
+          this.logger.warn(`[UETDS][DEBUG][${methodName}] args=${JSON.stringify(args)}`);
+          this.logger.warn(`[UETDS][DEBUG][${methodName}] lastRequest=${currentClient.lastRequest || ''}`);
         }
 
         // UETDS responds with a "return" object containing the actual data
