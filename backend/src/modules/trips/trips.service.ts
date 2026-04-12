@@ -523,7 +523,7 @@ export class TripsService {
   async findOne(id: string, tenantId: string) {
     const trip = await this.tripRepo.findOne({
       where: { id, tenantId },
-      relations: ['groups', 'groups.passengers', 'personnel', 'vehicle', 'createdBy'],
+      relations: ['groups', 'groups.passengers', 'personnel', 'personnel.driver', 'vehicle', 'createdBy'],
     });
 
     if (!trip) throw new NotFoundException('Sefer bulunamadı');
@@ -763,38 +763,74 @@ export class TripsService {
       }> = [];
 
       for (const person of trip.personnel) {
-        const personelResult = await this.uetdsService.personelEkle(
-          username,
-          password,
-          tenantId,
-          tripId,
-          seferRefNo,
-          {
-            turKodu: Number(person.personnelType ?? 0),
-            uyrukUlke: (person.nationalityCode || 'TR').trim().toUpperCase(),
-            tcKimlikPasaportNo: person.tcPassportNo,
-            tcKimlikPasaportno: person.tcPassportNo,
-            adi: person.firstName,
-            soyadi: person.lastName,
-            cinsiyet: (person.gender || 'E').trim().toUpperCase(),
-            telefon: person.phone,
-          },
-          environment,
+        const identityNo =
+          person.tcPassportNo?.trim() ||
+          person.driver?.tcKimlikNo?.trim() ||
+          person.driver?.id ||
+          '';
+
+        this.logger.warn(
+          `[UETDS][DEBUG][personelEkle][identity] ${JSON.stringify({
+            personId: person.id,
+            personnelType: person.personnelType,
+            firstName: person.firstName,
+            lastName: person.lastName,
+            tcPassportNo: person.tcPassportNo,
+            driverId: person.driverId,
+            driverTcKimlikNo: person.driver?.tcKimlikNo,
+            resolvedIdentityNo: identityNo,
+          })}`,
         );
 
-        const personnelSuccess =
-          personelResult?.sonucKodu === undefined || personelResult.sonucKodu === 0;
+        let personnelSuccess = false;
+        let personnelMessage = 'Personel gönderimi denenmedi';
+
+        if (!identityNo) {
+          personnelMessage = `TC Kimlik / Pasaport No eksik`;
+        } else {
+          const personelResult = await this.uetdsService.personelEkle(
+            username,
+            password,
+            tenantId,
+            tripId,
+            seferRefNo,
+            {
+              turKodu: Number(person.personnelType ?? 0),
+              uyrukUlke: (person.nationalityCode || 'TR').trim().toUpperCase(),
+              tcKimlikPasaportNo: identityNo,
+              tcKimlikPasaportno: identityNo,
+              adi: person.firstName,
+              soyadi: person.lastName,
+              cinsiyet: (person.gender || 'E').trim().toUpperCase(),
+              telefon: person.phone,
+            },
+            environment,
+          );
+
+          personnelSuccess =
+            personelResult?.sonucKodu === undefined || personelResult.sonucKodu === 0;
+          personnelMessage = personelResult?.sonucMesaji || '';
+        }
 
         personnelResults.push({
           personId: person.id,
           fullName: `${person.firstName} ${person.lastName}`.trim(),
           success: personnelSuccess,
-          message: personelResult?.sonucMesaji || '',
+          message: personnelMessage,
         });
 
         if (!personnelSuccess) {
-          throw new Error(`personelEkle failed: ${personelResult.sonucMesaji}`);
+          this.logger.warn(
+            `[UETDS] personelEkle warning for ${person.firstName} ${person.lastName}: ${personnelMessage}`,
+          );
         }
+      }
+
+      const successfulPersonnelCount = personnelResults.filter((item) => item.success).length;
+      if (successfulPersonnelCount === 0) {
+        this.logger.warn(
+          `[UETDS] No personnel records were accepted for trip ${tripId}. Continuing to group/yolcu steps for diagnostics.`,
+        );
       }
 
       // STEP 4: Add passengers per group (batch)
