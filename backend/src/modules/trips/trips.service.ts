@@ -775,6 +775,8 @@ export class TripsService {
             tcKimlikPasaportNo: person.tcPassportNo,
             adi: person.firstName,
             soyadi: person.lastName,
+            cinsiyet: (person.gender || 'E').trim().toUpperCase(),
+            telefon: person.phone,
           },
           environment,
         );
