@@ -393,11 +393,62 @@ export class UetdsService implements OnModuleInit {
         wsuser: this.getWsUser(username, password),
         uetdsSeferReferansNo,
         seferPersonelBilgileriInput: {
-          ...personnelInput,
+          turKodu: personnelInput.turKodu,
+          uyrukUlke: personnelInput.uyrukUlke,
           tcKimlikPasaportNo:
             personnelInput.tcKimlikPasaportNo || personnelInput.tcKimlikPasaportno,
           tcKimlikPasaportno:
             personnelInput.tcKimlikPasaportno || personnelInput.tcKimlikPasaportNo,
+          tcKimlikNo:
+            personnelInput.tcKimlikNo || personnelInput.tcKimlikPasaportNo || personnelInput.tcKimlikPasaportno,
+          adi: personnelInput.adi,
+          soyadi: personnelInput.soyadi,
+          cinsiyet: personnelInput.cinsiyet,
+          telefon: personnelInput.telefon,
+        },
+        seferPersonelBilgileriInputList: [
+          {
+            turKodu: personnelInput.turKodu,
+            uyrukUlke: personnelInput.uyrukUlke,
+            tcKimlikPasaportNo:
+              personnelInput.tcKimlikPasaportNo || personnelInput.tcKimlikPasaportno,
+            tcKimlikPasaportno:
+              personnelInput.tcKimlikPasaportno || personnelInput.tcKimlikPasaportNo,
+            tcKimlikNo:
+              personnelInput.tcKimlikNo || personnelInput.tcKimlikPasaportNo || personnelInput.tcKimlikPasaportno,
+            adi: personnelInput.adi,
+            soyadi: personnelInput.soyadi,
+            cinsiyet: personnelInput.cinsiyet,
+            telefon: personnelInput.telefon,
+          },
+        ],
+        personel: {
+          turKodu: personnelInput.turKodu,
+          uyrukUlke: personnelInput.uyrukUlke,
+          tcKimlikPasaportNo:
+            personnelInput.tcKimlikPasaportNo || personnelInput.tcKimlikPasaportno,
+          tcKimlikPasaportno:
+            personnelInput.tcKimlikPasaportno || personnelInput.tcKimlikPasaportNo,
+          tcKimlikNo:
+            personnelInput.tcKimlikNo || personnelInput.tcKimlikPasaportNo || personnelInput.tcKimlikPasaportno,
+          adi: personnelInput.adi,
+          soyadi: personnelInput.soyadi,
+          cinsiyet: personnelInput.cinsiyet,
+          telefon: personnelInput.telefon,
+        },
+        seferPersonel: {
+          turKodu: personnelInput.turKodu,
+          uyrukUlke: personnelInput.uyrukUlke,
+          tcKimlikPasaportNo:
+            personnelInput.tcKimlikPasaportNo || personnelInput.tcKimlikPasaportno,
+          tcKimlikPasaportno:
+            personnelInput.tcKimlikPasaportno || personnelInput.tcKimlikPasaportNo,
+          tcKimlikNo:
+            personnelInput.tcKimlikNo || personnelInput.tcKimlikPasaportNo || personnelInput.tcKimlikPasaportno,
+          adi: personnelInput.adi,
+          soyadi: personnelInput.soyadi,
+          cinsiyet: personnelInput.cinsiyet,
+          telefon: personnelInput.telefon,
         },
       },
       tenantId,
