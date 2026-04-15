@@ -402,7 +402,9 @@ export class UetdsService implements OnModuleInit {
           tcKimlikNo:
             personnelInput.tcKimlikNo || personnelInput.tcKimlikPasaportNo || personnelInput.tcKimlikPasaportno,
           adi: personnelInput.adi,
+          ad: personnelInput.adi,
           soyadi: personnelInput.soyadi,
+          soyad: personnelInput.soyadi,
           cinsiyet: personnelInput.cinsiyet,
           telefon: personnelInput.telefon,
         },
@@ -417,7 +419,9 @@ export class UetdsService implements OnModuleInit {
             tcKimlikNo:
               personnelInput.tcKimlikNo || personnelInput.tcKimlikPasaportNo || personnelInput.tcKimlikPasaportno,
             adi: personnelInput.adi,
+            ad: personnelInput.adi,
             soyadi: personnelInput.soyadi,
+            soyad: personnelInput.soyadi,
             cinsiyet: personnelInput.cinsiyet,
             telefon: personnelInput.telefon,
           },
@@ -432,7 +436,9 @@ export class UetdsService implements OnModuleInit {
           tcKimlikNo:
             personnelInput.tcKimlikNo || personnelInput.tcKimlikPasaportNo || personnelInput.tcKimlikPasaportno,
           adi: personnelInput.adi,
+          ad: personnelInput.adi,
           soyadi: personnelInput.soyadi,
+          soyad: personnelInput.soyadi,
           cinsiyet: personnelInput.cinsiyet,
           telefon: personnelInput.telefon,
         },
@@ -446,7 +452,139 @@ export class UetdsService implements OnModuleInit {
           tcKimlikNo:
             personnelInput.tcKimlikNo || personnelInput.tcKimlikPasaportNo || personnelInput.tcKimlikPasaportno,
           adi: personnelInput.adi,
+          ad: personnelInput.adi,
           soyadi: personnelInput.soyadi,
+          soyad: personnelInput.soyadi,
+          cinsiyet: personnelInput.cinsiyet,
+          telefon: personnelInput.telefon,
+        },
+        personelListesi: [
+          {
+            turKodu: personnelInput.turKodu,
+            uyrukUlke: personnelInput.uyrukUlke,
+            tcKimlikPasaportNo:
+              personnelInput.tcKimlikPasaportNo || personnelInput.tcKimlikPasaportno,
+            tcKimlikPasaportno:
+              personnelInput.tcKimlikPasaportno || personnelInput.tcKimlikPasaportNo,
+            adi: personnelInput.adi,
+            ad: personnelInput.adi,
+            soyadi: personnelInput.soyadi,
+            soyad: personnelInput.soyadi,
+            cinsiyet: personnelInput.cinsiyet,
+            telefon: personnelInput.telefon,
+          },
+        ],
+        personelBilgileri: {
+          turKodu: personnelInput.turKodu,
+          uyrukUlke: personnelInput.uyrukUlke,
+          tcKimlikPasaportNo:
+            personnelInput.tcKimlikPasaportNo || personnelInput.tcKimlikPasaportno,
+          tcKimlikPasaportno:
+            personnelInput.tcKimlikPasaportno || personnelInput.tcKimlikPasaportNo,
+          adi: personnelInput.adi,
+          ad: personnelInput.adi,
+          soyadi: personnelInput.soyadi,
+          soyad: personnelInput.soyadi,
+          cinsiyet: personnelInput.cinsiyet,
+          telefon: personnelInput.telefon,
+        },
+        seferPersonelBilgisi: {
+          turKodu: personnelInput.turKodu,
+          uyrukUlke: personnelInput.uyrukUlke,
+          tcKimlikPasaportNo:
+            personnelInput.tcKimlikPasaportNo || personnelInput.tcKimlikPasaportno,
+          tcKimlikPasaportno:
+            personnelInput.tcKimlikPasaportno || personnelInput.tcKimlikPasaportNo,
+          adi: personnelInput.adi,
+          ad: personnelInput.adi,
+          soyadi: personnelInput.soyadi,
+          soyad: personnelInput.soyadi,
+          cinsiyet: personnelInput.cinsiyet,
+          telefon: personnelInput.telefon,
+        },
+        personnelInput: {
+          turKodu: personnelInput.turKodu,
+          uyrukUlke: personnelInput.uyrukUlke,
+          tcKimlikPasaportNo:
+            personnelInput.tcKimlikPasaportNo || personnelInput.tcKimlikPasaportno,
+          tcKimlikPasaportno:
+            personnelInput.tcKimlikPasaportno || personnelInput.tcKimlikPasaportNo,
+          adi: personnelInput.adi,
+          ad: personnelInput.adi,
+          soyadi: personnelInput.soyadi,
+          soyad: personnelInput.soyadi,
+          cinsiyet: personnelInput.cinsiyet,
+          telefon: personnelInput.telefon,
+        },
+        personelInput: {
+          turKodu: personnelInput.turKodu,
+          uyrukUlke: personnelInput.uyrukUlke,
+          tcKimlikPasaportNo:
+            personnelInput.tcKimlikPasaportNo || personnelInput.tcKimlikPasaportno,
+          tcKimlikPasaportno:
+            personnelInput.tcKimlikPasaportno || personnelInput.tcKimlikPasaportNo,
+          adi: personnelInput.adi,
+          ad: personnelInput.adi,
+          soyadi: personnelInput.soyadi,
+          soyad: personnelInput.soyadi,
+          cinsiyet: personnelInput.cinsiyet,
+          telefon: personnelInput.telefon,
+        },
+        uetdsSeferPersonelBilgileriInput: {
+          turKodu: personnelInput.turKodu,
+          uyrukUlke: personnelInput.uyrukUlke,
+          tcKimlikPasaportNo:
+            personnelInput.tcKimlikPasaportNo || personnelInput.tcKimlikPasaportno,
+          tcKimlikPasaportno:
+            personnelInput.tcKimlikPasaportno || personnelInput.tcKimlikPasaportNo,
+          adi: personnelInput.adi,
+          ad: personnelInput.adi,
+          soyadi: personnelInput.soyadi,
+          soyad: personnelInput.soyadi,
+          cinsiyet: personnelInput.cinsiyet,
+          telefon: personnelInput.telefon,
+        },
+        uetdsSeferPersonelBilgileriInputList: [
+          {
+            turKodu: personnelInput.turKodu,
+            uyrukUlke: personnelInput.uyrukUlke,
+            tcKimlikPasaportNo:
+              personnelInput.tcKimlikPasaportNo || personnelInput.tcKimlikPasaportno,
+            tcKimlikPasaportno:
+              personnelInput.tcKimlikPasaportno || personnelInput.tcKimlikPasaportNo,
+            adi: personnelInput.adi,
+            ad: personnelInput.adi,
+            soyadi: personnelInput.soyadi,
+            soyad: personnelInput.soyadi,
+            cinsiyet: personnelInput.cinsiyet,
+            telefon: personnelInput.telefon,
+          },
+        ],
+        seferPersonelBilgileri: {
+          turKodu: personnelInput.turKodu,
+          uyrukUlke: personnelInput.uyrukUlke,
+          tcKimlikPasaportNo:
+            personnelInput.tcKimlikPasaportNo || personnelInput.tcKimlikPasaportno,
+          tcKimlikPasaportno:
+            personnelInput.tcKimlikPasaportno || personnelInput.tcKimlikPasaportNo,
+          adi: personnelInput.adi,
+          ad: personnelInput.adi,
+          soyadi: personnelInput.soyadi,
+          soyad: personnelInput.soyadi,
+          cinsiyet: personnelInput.cinsiyet,
+          telefon: personnelInput.telefon,
+        },
+        personelBilgileriInput: {
+          turKodu: personnelInput.turKodu,
+          uyrukUlke: personnelInput.uyrukUlke,
+          tcKimlikPasaportNo:
+            personnelInput.tcKimlikPasaportNo || personnelInput.tcKimlikPasaportno,
+          tcKimlikPasaportno:
+            personnelInput.tcKimlikPasaportno || personnelInput.tcKimlikPasaportNo,
+          adi: personnelInput.adi,
+          ad: personnelInput.adi,
+          soyadi: personnelInput.soyadi,
+          soyad: personnelInput.soyadi,
           cinsiyet: personnelInput.cinsiyet,
           telefon: personnelInput.telefon,
         },
