@@ -854,12 +854,21 @@ export class TripsService {
           grupId: Number(group.uetdsGrupRefNo),
           uyrukUlke: (p.nationalityCode || 'TR').trim().toUpperCase(),
           cinsiyet: (p.gender || 'E').trim().toUpperCase(),
-          tcKimlikPasaportNo: p.tcPassportNo,
+          tcKimlikPasaportNo: p.tcPassportNo?.trim(),
           adi: p.firstName,
           soyadı: p.lastName,
           koltukNo: p.seatNumber,
           telefonNo: p.phone,
         }));
+
+        const missingPassengerIdentity = yolcuBilgileri.find(
+          (p) => !p.tcKimlikPasaportNo,
+        );
+        if (missingPassengerIdentity) {
+          throw new Error(
+            `Yolcu TC Kimlik / Pasaport No eksik: ${missingPassengerIdentity.adi} ${missingPassengerIdentity.soyadı}`,
+          );
+        }
 
         const yolcuResult = await this.uetdsService.yolcuEkleCoklu(
           username,
