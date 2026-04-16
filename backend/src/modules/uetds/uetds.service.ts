@@ -382,8 +382,6 @@ export class UetdsService implements OnModuleInit {
       turKodu: number;
       uyrukUlke: string;
       tcKimlikPasaportNo: string;
-      tcKimlikPasaportno?: string;
-      tcKimlikNo?: string;
       cinsiyet?: string;
       adi: string;
       soyadi: string;
@@ -393,21 +391,16 @@ export class UetdsService implements OnModuleInit {
     },
     environment?: string,
   ): Promise<any> {
-    const identityNo =
-      personnelInput.tcKimlikPasaportNo ||
-      personnelInput.tcKimlikPasaportno ||
-      personnelInput.tcKimlikNo;
-
     const personelPayload = this.compactObject({
       turKodu: personnelInput.turKodu,
       uyrukUlke: personnelInput.uyrukUlke,
-      tcKimlikPasaportNo: identityNo,
-      tcKimlikPasaportno: identityNo,
-      tcKimlikNo: identityNo,
+      tcKimlikPasaportNo: personnelInput.tcKimlikPasaportNo,
+      cinsiyet: personnelInput.cinsiyet,
       adi: personnelInput.adi,
       soyadi: personnelInput.soyadi,
-      cinsiyet: personnelInput.cinsiyet,
       telefon: personnelInput.telefon,
+      adres: personnelInput.adres,
+      hesKodu: personnelInput.hesKodu,
     });
 
     return this.executeSoapMethod(
@@ -415,10 +408,7 @@ export class UetdsService implements OnModuleInit {
       {
         wsuser: this.getWsUser(username, password),
         uetdsSeferReferansNo,
-        seferPersonelBilgileriInput: personelPayload,
-        seferPersonelBilgileri: personelPayload,
-        personelBilgileriInput: personelPayload,
-        personelBilgileri: personelPayload,
+        seferPersonelBilgileriInput: [personelPayload],
       },
       tenantId,
       tripId,
