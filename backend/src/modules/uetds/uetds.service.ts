@@ -408,7 +408,7 @@ export class UetdsService implements OnModuleInit {
       {
         wsuser: this.getWsUser(username, password),
         uetdsSeferReferansNo,
-        seferPersonelBilgileriInput: [personelPayload],
+        seferPersonelBilgileriInput: personelPayload,
       },
       tenantId,
       tripId,
