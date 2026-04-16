@@ -1032,6 +1032,7 @@ export class TripsService {
   async getUetdsPdf(tripId: string, tenantId: string) {
     const trip = await this.findOne(tripId, tenantId);
     const tenant = await this.tenantRepo.findOne({ where: { id: tenantId } });
+    const environment = tenant?.settings?.uetdsEnvironment || 'test';
 
     if (!trip.uetdsSeferRefNo) {
       throw new BadRequestException('Bu sefer UETDS\'ye gönderilmemiş');
@@ -1043,6 +1044,7 @@ export class TripsService {
       tenantId,
       tripId,
       trip.uetdsSeferRefNo,
+      environment,
     );
   }
 }

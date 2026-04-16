@@ -92,8 +92,11 @@ export const tripsApi = {
   cancel: (tripId: string, reason: string) =>
     api.post(`/api/trips/${tripId}/cancel`, { reason }),
   getSummary: (tripId: string) => api.get(`/api/trips/${tripId}/summary`),
-  getPdf: (tripId: string) =>
-    api.get(`/api/trips/${tripId}/pdf`, { responseType: 'blob' }),
+  getPdf: (tripId: string, options?: { download?: boolean }) =>
+    api.get(`/api/trips/${tripId}/pdf`, {
+      responseType: 'blob',
+      params: options?.download ? { download: '1' } : undefined,
+    }),
 };
 
 export const driversApi = {

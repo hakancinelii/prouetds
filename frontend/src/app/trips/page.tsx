@@ -5,17 +5,74 @@ import { useEffect, useState } from 'react';
 
 const getDefaultTripDateTime = () => {
   const now = new Date();
-  const localDate = new Date(now.getTime() - now.getTimezoneOffset() * 60000);
-  const date = localDate.toISOString().slice(0, 10);
-  const time = localDate.toISOString().slice(11, 16);
+  const end = new Date(now.getTime() + 60 * 60 * 1000);
+
+  const toLocalInputDate = (value: Date) => {
+    const localDate = new Date(value.getTime() - value.getTimezoneOffset() * 60000);
+    return localDate.toISOString().slice(0, 10);
+  };
+
+  const toLocalInputTime = (value: Date) => {
+    const localDate = new Date(value.getTime() - value.getTimezoneOffset() * 60000);
+    return localDate.toISOString().slice(11, 16);
+  };
 
   return {
-    departureDate: date,
-    departureTime: time,
-    endDate: date,
-    endTime: time,
+    departureDate: toLocalInputDate(now),
+    departureTime: toLocalInputTime(now),
+    endDate: toLocalInputDate(end),
+    endTime: toLocalInputTime(end),
   };
 };
+
+const PRIORITY_ISTANBUL_DISTRICTS = [
+  'ARNAVUTKÖY',
+  'PENDİK',
+  'BEYOĞLU',
+  'ŞİŞLİ',
+  'FATİH',
+  'AVCILAR',
+  'BEYLİKDÜZÜ',
+  'ESENYURT',
+];
+
+const sortDistrictsForTripFlow = (
+  provinceCode: number,
+  districts: Array<{ code: number; name: string }>,
+) => {
+  if (provinceCode !== 34) return districts;
+
+  const priorityMap = new Map(
+    PRIORITY_ISTANBUL_DISTRICTS.map((name, index) => [name, index]),
+  );
+
+  return [...districts].sort((a, b) => {
+    const aPriority = priorityMap.get(a.name) ?? Number.MAX_SAFE_INTEGER;
+    const bPriority = priorityMap.get(b.name) ?? Number.MAX_SAFE_INTEGER;
+
+    if (aPriority !== bPriority) {
+      return aPriority - bPriority;
+    }
+
+    return a.name.localeCompare(b.name, 'tr');
+  });
+};
+
+const DEFAULT_TRIP_DESCRIPTION = 'İstanbul içi Transfer';
+
+const getDefaultCreateForm = () => ({
+  vehiclePlate: '',
+  ...getDefaultTripDateTime(),
+  description: DEFAULT_TRIP_DESCRIPTION,
+  firmTripNumber: '',
+  originIlCode: 34,
+  originIlceCode: '',
+  originPlace: '',
+  destIlCode: 34,
+  destIlceCode: '',
+  destPlace: '',
+});
+
 import { useRouter } from 'next/navigation';
 import { tripsApi, vehiclesApi } from '@/lib/api';
 import { MERNIS_LOCATIONS, getProvinceByCode } from '@/lib/mernis-locations';
@@ -45,23 +102,18 @@ export default function TripsPage() {
   const [vehicles, setVehicles] = useState<any[]>([]);
 
   // Create form
-  const [form, setForm] = useState({
-    vehiclePlate: '',
-    ...getDefaultTripDateTime(),
-    description: '',
-    firmTripNumber: '',
-    originIlCode: 34, // İstanbul
-    originIlceCode: '',
-    originPlace: '',
-    destIlCode: 34,
-    destIlceCode: '',
-    destPlace: '',
-  });
+  const [form, setForm] = useState(getDefaultCreateForm);
 
   const originProvince = getProvinceByCode(Number(form.originIlCode));
   const destProvince = getProvinceByCode(Number(form.destIlCode));
-  const originDistricts = originProvince?.districts || [];
-  const destDistricts = destProvince?.districts || [];
+  const originDistricts = sortDistrictsForTripFlow(
+    Number(form.originIlCode),
+    originProvince?.districts || [],
+  );
+  const destDistricts = sortDistrictsForTripFlow(
+    Number(form.destIlCode),
+    destProvince?.districts || [],
+  );
 
   const fetchTrips = async () => {
     setLoading(true);
@@ -118,18 +170,7 @@ export default function TripsPage() {
       });
       toast.success('Sefer oluşturuldu');
       setShowCreateModal(false);
-      setForm({
-        vehiclePlate: '',
-        ...getDefaultTripDateTime(),
-        description: '',
-        firmTripNumber: '',
-        originIlCode: 34,
-        originIlceCode: '',
-        originPlace: '',
-        destIlCode: 34,
-        destIlceCode: '',
-        destPlace: '',
-      });
+      setForm(getDefaultCreateForm());
       router.push(`/trips/${res.data.id}`);
     } catch (err: any) {
       toast.error(err.response?.data?.message || 'Sefer oluşturulamadı');
@@ -176,6 +217,7 @@ export default function TripsPage() {
           </p>
         </div>
         <button
+          type="button"
           onClick={() => setShowCreateModal(true)}
           className="btn-primary flex items-center gap-2"
         >
@@ -236,7 +278,7 @@ export default function TripsPage() {
                   <th className="px-5 py-3.5">Yolcu</th>
                   <th className="px-5 py-3.5">Durum</th>
                   <th className="px-5 py-3.5">UETDS Ref</th>
-                  <th className="px-5 py-3.5"></th>
+                  <th className="px-5 py-3.5 text-right">Aksiyon</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-700/30">
@@ -285,7 +327,12 @@ export default function TripsPage() {
                         {trip.uetdsSeferRefNo || '-'}
                       </td>
                       <td className="px-5 py-3.5">
-                        <button className="text-slate-400 hover:text-emerald-400 transition">
+                        <button
+                          type="button"
+                          title="Sefer detayını aç"
+                          aria-label="Sefer detayını aç"
+                          className="text-slate-400 hover:text-emerald-400 transition"
+                        >
                           <Eye size={16} />
                         </button>
                       </td>
@@ -301,6 +348,7 @@ export default function TripsPage() {
         {totalPages > 1 && (
           <div className="flex items-center justify-between px-5 py-3.5 border-t border-slate-700/50">
             <button
+              type="button"
               onClick={() => setPage(Math.max(1, page - 1))}
               disabled={page === 1}
               className="btn-secondary text-sm flex items-center gap-1 disabled:opacity-30"
@@ -311,6 +359,7 @@ export default function TripsPage() {
               {page} / {totalPages}
             </span>
             <button
+              type="button"
               onClick={() => setPage(Math.min(totalPages, page + 1))}
               disabled={page === totalPages}
               className="btn-secondary text-sm flex items-center gap-1 disabled:opacity-30"
@@ -359,6 +408,8 @@ export default function TripsPage() {
                   </label>
                   <input
                     type="date"
+                    title="Hareket tarihi"
+                    aria-label="Hareket tarihi"
                     value={form.departureDate}
                     onChange={(e) =>
                       setForm({ ...form, departureDate: e.target.value })
@@ -373,6 +424,8 @@ export default function TripsPage() {
                   </label>
                   <input
                     type="time"
+                    title="Hareket saati"
+                    aria-label="Hareket saati"
                     value={form.departureTime}
                     onChange={(e) =>
                       setForm({ ...form, departureTime: e.target.value })
@@ -387,6 +440,8 @@ export default function TripsPage() {
                   </label>
                   <input
                     type="date"
+                    title="Bitiş tarihi"
+                    aria-label="Bitiş tarihi"
                     value={form.endDate}
                     onChange={(e) =>
                       setForm({ ...form, endDate: e.target.value })
@@ -401,6 +456,8 @@ export default function TripsPage() {
                   </label>
                   <input
                     type="time"
+                    title="Bitiş saati"
+                    aria-label="Bitiş saati"
                     value={form.endTime}
                     onChange={(e) =>
                       setForm({ ...form, endTime: e.target.value })
@@ -420,9 +477,12 @@ export default function TripsPage() {
                     }
                     className="input-field"
                     rows={2}
-                    placeholder="Sefer açıklaması / grup açıklaması (örn: Transfer)"
+                    placeholder="Sefer açıklaması / grup açıklaması (örn: İstanbul içi Transfer)"
                     required
                   />
+                  <p className="mt-1 text-[11px] text-slate-500">
+                    Varsayılan açıklama hazır gelir; isterseniz sefere göre düzenleyebilirsiniz.
+                  </p>
                 </div>
               </div>
               <div className="grid grid-cols-2 gap-4">

@@ -246,17 +246,24 @@ export class TripsController {
   async getUetdsPdf(
     @Param('id') id: string,
     @TenantId() tenantId: string,
+    @Query('download') download: string,
     @Res() res: Response,
   ) {
     const result = await this.tripsService.getUetdsPdf(id, tenantId);
-    if (result.sonucPdf) {
-      res.set({
-        'Content-Type': 'application/pdf',
-        'Content-Disposition': `attachment; filename=sefer-${id}.pdf`,
-      });
-      res.send(Buffer.from(result.sonucPdf));
-    } else {
-      res.status(400).json({ message: result.sonucMesaji });
+    if (!result.sonucPdf) {
+      return res.status(400).json({ message: result.sonucMesaji });
     }
+
+    const pdfBuffer = Buffer.isBuffer(result.sonucPdf)
+      ? result.sonucPdf
+      : Buffer.from(result.sonucPdf, 'base64');
+
+    res.set({
+      'Content-Type': 'application/pdf',
+      'Content-Disposition': `${download === '1' ? 'attachment' : 'inline'}; filename=sefer-${id}.pdf`,
+      'Content-Length': String(pdfBuffer.length),
+    });
+
+    return res.send(pdfBuffer);
   }
 }

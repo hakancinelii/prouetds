@@ -20,6 +20,9 @@ import {
   Trash2,
   UploadCloud,
   ScanFace,
+  Eye,
+  ExternalLink,
+  ShieldCheck,
 } from 'lucide-react';
 
 export default function TripDetailPage() {
@@ -131,15 +134,47 @@ export default function TripDetailPage() {
     return `${selectedGroup.groupName} / ${selectedGroup.originPlace} → ${selectedGroup.destPlace}`;
   };
 
+  const getQuickFlowChecklist = (tripData: any, passengerCount: number) => [
+    {
+      title: '1. Seferi oluştur',
+      done: Boolean(tripData?.id),
+      detail: 'Plaka, saat, rota ve açıklamayı tek formdan tamamlayın.',
+    },
+    {
+      title: '2. Şoför / personel ekle',
+      done: Boolean(tripData?.personnel?.length),
+      detail: 'En az bir şoför eklenmeden UETDS gönderimi açılmıyor.',
+    },
+    {
+      title: '3. Yolcuları ekle',
+      done: passengerCount > 0,
+      detail: 'Manuel, metin, Excel veya OCR ile aynı ekrandan ekleyin.',
+    },
+    {
+      title: '4. UETDS’ye gönder',
+      done: tripData?.status === 'sent',
+      detail: 'Hazır olduğunda resmi gönderimi tamamlayın.',
+    },
+  ];
+
+  const getQuickFlowTone = (done: boolean) =>
+    done
+      ? 'border-emerald-500/30 bg-emerald-500/10 text-emerald-300'
+      : 'border-slate-700/60 bg-slate-900/40 text-slate-300';
+
   void getSelectedGroupSummary;
 
   const canSendToUetds = Boolean(trip?.personnel?.length) && Boolean(totalPassengers) && Boolean(hasGroups);
+  const quickFlowChecklist = getQuickFlowChecklist(trip, totalPassengers);
 
   // File upload refs
   const [uploading, setUploading] = useState(false);
 
   // Add passenger form
   const [showAddPassenger, setShowAddPassenger] = useState(false);
+  const [showPdfViewer, setShowPdfViewer] = useState(false);
+  const [pdfUrl, setPdfUrl] = useState<string | null>(null);
+  const [pdfLoading, setPdfLoading] = useState(false);
   const [passengerForm, setPassengerForm] = useState({
     firstName: '',
     lastName: '',
@@ -214,6 +249,42 @@ export default function TripDetailPage() {
     init();
   }, [tripId]);
 
+  useEffect(() => {
+    return () => {
+      if (pdfUrl) {
+        window.URL.revokeObjectURL(pdfUrl);
+      }
+    };
+  }, [pdfUrl]);
+
+  const parsePdfError = async (blob: Blob) => {
+    try {
+      const text = await blob.text();
+      const json = JSON.parse(text);
+      return json.message || json.sonucMesaji || 'PDF alınamadı';
+    } catch {
+      return 'PDF alınamadı';
+    }
+  };
+
+  const replacePdfUrl = (nextUrl: string | null) => {
+    setPdfUrl((currentUrl) => {
+      if (currentUrl) {
+        window.URL.revokeObjectURL(currentUrl);
+      }
+      return nextUrl;
+    });
+  };
+
+  const fetchPdfBlob = async (download = false) => {
+    const res = await tripsApi.getPdf(tripId, download ? { download: true } : undefined);
+    const contentType = res.headers['content-type'];
+    if (contentType && !contentType.includes('application/pdf')) {
+      throw new Error(await parsePdfError(res.data));
+    }
+    return res.data as Blob;
+  };
+
   const handleSendToUetds = async () => {
     if (!confirm('Sefer UETDS sistemine gönderilecek. Emin misiniz?')) return;
     setSending(true);
@@ -239,18 +310,51 @@ export default function TripDetailPage() {
     setSending(false);
   };
 
+  const triggerPdfDownload = (url: string) => {
+    const link = document.createElement('a');
+    link.href = url;
+    link.setAttribute('download', `sefer-${tripId}.pdf`);
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
+  };
+
+  const handleOpenPdfInNewTab = () => {
+    if (!pdfUrl) return;
+    window.open(pdfUrl, '_blank', 'noopener,noreferrer');
+  };
+
+  const handleOpenPdf = async () => {
+    setPdfLoading(true);
+    try {
+      const pdfBlob = await fetchPdfBlob();
+      replacePdfUrl(window.URL.createObjectURL(pdfBlob));
+      setShowPdfViewer(true);
+    } catch (err: any) {
+      toast.error(err.message || 'PDF görüntülenemedi');
+    } finally {
+      setPdfLoading(false);
+    }
+  };
+
+  const handleClosePdfViewer = () => {
+    setShowPdfViewer(false);
+    replacePdfUrl(null);
+  };
+
   const handleDownloadPdf = async () => {
     try {
-      const res = await tripsApi.getPdf(tripId);
-      const url = window.URL.createObjectURL(new Blob([res.data]));
-      const link = document.createElement('a');
-      link.href = url;
-      link.setAttribute('download', `sefer-${tripId}.pdf`);
-      document.body.appendChild(link);
-      link.click();
-      link.remove();
-    } catch {
-      toast.error('PDF indirilemedi');
+      if (pdfUrl) {
+        triggerPdfDownload(pdfUrl);
+        return;
+      }
+
+      const pdfBlob = await fetchPdfBlob(true);
+      const downloadUrl = window.URL.createObjectURL(pdfBlob);
+      triggerPdfDownload(downloadUrl);
+      window.setTimeout(() => window.URL.revokeObjectURL(downloadUrl), 1000);
+    } catch (err: any) {
+      toast.error(err.message || 'PDF indirilemedi');
     }
   };
 
@@ -338,6 +442,9 @@ export default function TripDetailPage() {
       <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
         <div className="flex items-center gap-4">
           <button
+            type="button"
+            title="Listeye geri dön"
+            aria-label="Listeye geri dön"
             onClick={() => router.back()}
             className="text-slate-400 hover:text-white transition"
           >
@@ -358,6 +465,7 @@ export default function TripDetailPage() {
         <div className="flex items-center gap-2">
           {(trip.status === 'draft' || trip.status === 'error') && (
             <button
+              type="button"
               onClick={handleSendToUetds}
               disabled={sending}
               className="btn-primary flex items-center gap-2"
@@ -371,22 +479,14 @@ export default function TripDetailPage() {
             </button>
           )}
           {trip.status === 'sent' && (
-            <>
-              <button
-                onClick={handleDownloadPdf}
-                className="btn-secondary flex items-center gap-2"
-              >
-                <FileDown size={16} />
-                PDF İndir
-              </button>
-              <button
-                onClick={handleCancel}
-                className="btn-danger flex items-center gap-2"
-              >
-                <XCircle size={16} />
-                İptal Et
-              </button>
-            </>
+            <button
+              type="button"
+              onClick={handleCancel}
+              className="btn-danger flex items-center gap-2"
+            >
+              <XCircle size={16} />
+              İptal Et
+            </button>
           )}
         </div>
       </div>
@@ -402,6 +502,55 @@ export default function TripDetailPage() {
                 {trip.uetdsErrorMessage}
               </p>
             </div>
+          </div>
+        </div>
+      )}
+
+      {showPdfViewer && pdfUrl && (
+        <div className="fixed inset-0 z-50 bg-slate-950/80 backdrop-blur-sm flex items-center justify-center p-4">
+          <div className="glass-card w-full max-w-6xl h-[85vh] flex flex-col overflow-hidden border border-white/10">
+            <div className="flex items-center justify-between gap-3 px-4 py-3 border-b border-white/10">
+              <div>
+                <p className="text-sm font-medium text-white">UETDS PDF Önizleme</p>
+                <p className="text-xs text-slate-400">Sefer {trip.firmTripNumber || trip.vehiclePlate}</p>
+              </div>
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={handleOpenPdfInNewTab}
+                  disabled={!pdfUrl}
+                  className="btn-secondary flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  <ExternalLink size={16} />
+                  Yeni sekmede aç
+                </button>
+                <button
+                  type="button"
+                  onClick={handleDownloadPdf}
+                  className="btn-secondary flex items-center gap-2"
+                >
+                  <FileDown size={16} />
+                  İndir
+                </button>
+                <button
+                  type="button"
+                  onClick={handleClosePdfViewer}
+                  className="btn-danger flex items-center gap-2"
+                >
+                  <XCircle size={16} />
+                  Kapat
+                </button>
+              </div>
+            </div>
+            <div className="px-4 py-2 border-b border-white/10 bg-slate-900/40 flex flex-wrap items-center justify-between gap-2 text-xs text-slate-400">
+              <span>Belge yüklendi. Gerekirse yeni sekmede açarak tarayıcının yerel PDF aracını kullanabilirsiniz.</span>
+              <span className="font-mono text-slate-300">Ref: {trip.uetdsSeferRefNo || '—'}</span>
+            </div>
+            <iframe
+              src={pdfUrl}
+              title="UETDS PDF"
+              className="w-full flex-1 bg-white"
+            />
           </div>
         </div>
       )}
@@ -430,6 +579,76 @@ export default function TripDetailPage() {
         </div>
       </div>
 
+      {trip.status === 'sent' && (
+        <div className="glass-card p-5 border-emerald-500/20 bg-[radial-gradient(circle_at_top_left,rgba(16,185,129,0.16),transparent_45%),rgba(16,185,129,0.05)]">
+          <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
+            <div className="space-y-3">
+              <div className="flex items-center gap-2 text-emerald-300">
+                <ShieldCheck size={18} />
+                <span className="text-sm font-semibold">UETDS resmi çıktısı hazır</span>
+              </div>
+              <div>
+                <p className="text-sm text-slate-200">
+                  Belgeyi uygulama içinde görüntüleyebilir veya doğrudan indirebilirsiniz.
+                </p>
+                <p className="text-xs text-slate-400 mt-1">
+                  Referans: <span className="font-mono text-slate-300">{trip.uetdsSeferRefNo || 'Henüz yok'}</span>
+                </p>
+              </div>
+            </div>
+            <div className="flex flex-wrap items-center gap-2 lg:justify-end">
+              <button
+                type="button"
+                onClick={handleOpenPdf}
+                disabled={pdfLoading}
+                className="btn-secondary flex items-center gap-2"
+              >
+                {pdfLoading ? <Loader2 size={16} className="animate-spin" /> : <Eye size={16} />}
+                {pdfLoading ? 'Belge hazırlanıyor...' : 'PDF Görüntüle'}
+              </button>
+              <button
+                type="button"
+                onClick={handleDownloadPdf}
+                className="btn-secondary flex items-center gap-2"
+              >
+                <FileDown size={16} />
+                PDF İndir
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {trip.status !== 'sent' && trip.status !== 'cancelled' && (
+        <div className="glass-card p-5 border-white/10 bg-slate-900/30">
+          <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
+            <div>
+              <p className="text-sm font-semibold text-white">Hızlı UETDS akışı</p>
+              <p className="text-xs text-slate-400 mt-1">
+                Aynı ekranda seferi tamamlayıp şoför, yolcu ve gönderim adımlarını sırayla bitirin.
+              </p>
+            </div>
+            <div className="text-xs text-slate-500">
+              Amaç: manuel UETDS gönderim adımlarına en yakın hızlı operasyon akışı.
+            </div>
+          </div>
+          <div className="mt-4 grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-3">
+            {quickFlowChecklist.map((item) => (
+              <div
+                key={item.title}
+                className={`rounded-2xl border px-4 py-3 ${getQuickFlowTone(item.done)}`}
+              >
+                <div className="flex items-center justify-between gap-3">
+                  <p className="text-sm font-semibold">{item.title}</p>
+                  {item.done ? <CheckCircle2 size={16} /> : <AlertCircle size={16} />}
+                </div>
+                <p className="mt-2 text-xs leading-5 opacity-80">{item.detail}</p>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
       {/* Personnel Section */}
       <div className="glass-card overflow-hidden">
         <div className="p-5 border-b border-slate-700/50 flex items-center justify-between">
@@ -439,6 +658,7 @@ export default function TripDetailPage() {
           </h2>
           {trip.status !== 'sent' && trip.status !== 'cancelled' && (
             <button
+              type="button"
               onClick={openPersonnelModal}
               className="btn-secondary text-sm flex items-center gap-1.5"
             >
@@ -497,6 +717,7 @@ export default function TripDetailPage() {
           {trip.status !== 'sent' && trip.status !== 'cancelled' && (
             <div className="flex gap-2">
               <button
+                type="button"
                 onClick={() => setShowAddPassenger(true)}
                 className="btn-secondary text-sm flex items-center gap-1.5"
               >
@@ -504,6 +725,7 @@ export default function TripDetailPage() {
                 Manuel Ekle
               </button>
               <button
+                type="button"
                 onClick={() => setShowTextParser(true)}
                 className="btn-secondary text-sm flex items-center gap-1.5"
               >
@@ -606,6 +828,7 @@ export default function TripDetailPage() {
                 <div>
                   <label className="block text-xs text-slate-400 mb-1">Ad</label>
                   <input
+                    aria-label="Yolcu adı"
                     value={passengerForm.firstName}
                     onChange={(e) =>
                       setPassengerForm({ ...passengerForm, firstName: e.target.value })
@@ -617,6 +840,7 @@ export default function TripDetailPage() {
                 <div>
                   <label className="block text-xs text-slate-400 mb-1">Soyad</label>
                   <input
+                    aria-label="Yolcu soyadı"
                     value={passengerForm.lastName}
                     onChange={(e) =>
                       setPassengerForm({ ...passengerForm, lastName: e.target.value })
@@ -631,6 +855,7 @@ export default function TripDetailPage() {
                   TC Kimlik / Pasaport No
                 </label>
                 <input
+                  aria-label="Yolcu TC kimlik veya pasaport numarası"
                   value={passengerForm.tcPassportNo}
                   onChange={(e) =>
                     setPassengerForm({ ...passengerForm, tcPassportNo: e.target.value })
@@ -657,6 +882,7 @@ export default function TripDetailPage() {
                 <div>
                   <label className="block text-xs text-slate-400 mb-1">Cinsiyet</label>
                   <select
+                    aria-label="Yolcu cinsiyeti"
                     value={passengerForm.gender}
                     onChange={(e) =>
                       setPassengerForm({ ...passengerForm, gender: e.target.value })
@@ -715,6 +941,7 @@ export default function TripDetailPage() {
             )}
             <div className="flex gap-3 pt-4">
               <button
+                type="button"
                 onClick={handleParseText}
                 className="btn-primary flex-1 flex items-center justify-center gap-2"
               >
@@ -722,6 +949,7 @@ export default function TripDetailPage() {
                 Parse Et ve Ekle
               </button>
               <button
+                type="button"
                 onClick={() => {
                   setShowTextParser(false);
                   setParsedResults(null);
@@ -770,6 +998,7 @@ export default function TripDetailPage() {
               ) : (
                 drivers.map((d) => (
                   <button
+                    type="button"
                     key={d.id}
                     onClick={() => handleAddPersonnel(d)}
                     className="w-full flex items-center justify-between p-3 rounded-lg bg-slate-700/30 hover:bg-slate-700/50 border border-slate-600/30 transition group"
