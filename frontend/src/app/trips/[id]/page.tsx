@@ -164,9 +164,6 @@ export default function TripDetailPage() {
 
   void getSelectedGroupSummary;
 
-  const canSendToUetds = Boolean(trip?.personnel?.length) && Boolean(totalPassengers) && Boolean(hasGroups);
-  const quickFlowChecklist = getQuickFlowChecklist(trip, totalPassengers);
-
   // File upload refs
   const [uploading, setUploading] = useState(false);
 
@@ -435,6 +432,8 @@ export default function TripDetailPage() {
       (sum: number, g: any) => sum + (g.passengers?.length || 0),
       0,
     ) || 0;
+  const canSendToUetds = Boolean(trip?.personnel?.length) && Boolean(totalPassengers) && Boolean(hasGroups);
+  const quickFlowChecklist = getQuickFlowChecklist(trip, totalPassengers);
 
   return (
     <div className="p-6 lg:p-8 space-y-6 animate-fade-in">
