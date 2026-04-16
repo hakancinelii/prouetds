@@ -393,11 +393,17 @@ export class UetdsService implements OnModuleInit {
     },
     environment?: string,
   ): Promise<any> {
+    const identityNo =
+      personnelInput.tcKimlikPasaportNo ||
+      personnelInput.tcKimlikPasaportno ||
+      personnelInput.tcKimlikNo;
+
     const personelPayload = this.compactObject({
       turKodu: personnelInput.turKodu,
       uyrukUlke: personnelInput.uyrukUlke,
-      tcKimlikPasaportNo:
-        personnelInput.tcKimlikPasaportNo || personnelInput.tcKimlikPasaportno,
+      tcKimlikPasaportNo: identityNo,
+      tcKimlikPasaportno: identityNo,
+      tcKimlikNo: identityNo,
       adi: personnelInput.adi,
       soyadi: personnelInput.soyadi,
       cinsiyet: personnelInput.cinsiyet,
@@ -410,6 +416,9 @@ export class UetdsService implements OnModuleInit {
         wsuser: this.getWsUser(username, password),
         uetdsSeferReferansNo,
         seferPersonelBilgileriInput: personelPayload,
+        seferPersonelBilgileri: personelPayload,
+        personelBilgileriInput: personelPayload,
+        personelBilgileri: personelPayload,
       },
       tenantId,
       tripId,

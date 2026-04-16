@@ -799,6 +799,7 @@ export class TripsService {
               uyrukUlke: (person.nationalityCode || 'TR').trim().toUpperCase(),
               tcKimlikPasaportNo: identityNo,
               tcKimlikPasaportno: identityNo,
+              tcKimlikNo: identityNo,
               adi: person.firstName,
               soyadi: person.lastName,
               cinsiyet: (person.gender || 'E').trim().toUpperCase(),
