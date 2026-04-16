@@ -116,6 +116,7 @@ export class UetdsService implements OnModuleInit {
         if (methodName === 'personelEkle' || methodName === 'yolcuEkleCoklu') {
           this.logger.warn(`[UETDS][DEBUG][${methodName}] args=${JSON.stringify(args)}`);
           this.logger.warn(`[UETDS][DEBUG][${methodName}] lastRequest=${currentClient.lastRequest || ''}`);
+          this.logger.warn(`[UETDS][DEBUG][${methodName}] rawResult=${JSON.stringify(rawResult)}`);
         }
 
         // UETDS responds with a "return" object containing the actual data
@@ -493,7 +494,7 @@ export class UetdsService implements OnModuleInit {
       cinsiyet?: string;
       tcKimlikPasaportNo: string;
       adi: string;
-      soyadı: string;
+      soyadi: string;
       koltukNo?: string;
       telefonNo?: string;
       hesKodu?: string;
@@ -530,7 +531,7 @@ export class UetdsService implements OnModuleInit {
       cinsiyet?: string;
       tcKimlikPasaportNo: string;
       adi: string;
-      soyadı: string;
+      soyadi: string;
       koltukNo?: string;
       telefonNo?: string;
       hesKodu?: string;
@@ -558,7 +559,7 @@ export class UetdsService implements OnModuleInit {
             cinsiyet: yolcu.cinsiyet,
             tcKimlikPasaportNo: yolcu.tcKimlikPasaportNo,
             adi: yolcu.adi,
-            soyadı: yolcu.soyadı,
+            soyadi: yolcu.soyadi,
             koltukNo: yolcu.koltukNo,
             telefonNo: yolcu.telefonNo,
             hesKodu: yolcu.hesKodu,

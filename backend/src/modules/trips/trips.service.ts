@@ -855,7 +855,7 @@ export class TripsService {
           cinsiyet: (p.gender || 'E').trim().toUpperCase(),
           tcKimlikPasaportNo: p.tcPassportNo?.trim(),
           adi: p.firstName,
-          soyadı: p.lastName,
+          soyadi: p.lastName,
           koltukNo: p.seatNumber,
           telefonNo: p.phone,
         }));
@@ -865,7 +865,7 @@ export class TripsService {
         );
         if (missingPassengerIdentity) {
           throw new Error(
-            `Yolcu TC Kimlik / Pasaport No eksik: ${missingPassengerIdentity.adi} ${missingPassengerIdentity.soyadı}`,
+            `Yolcu TC Kimlik / Pasaport No eksik: ${missingPassengerIdentity.adi} ${missingPassengerIdentity.soyadi}`,
           );
         }
 
