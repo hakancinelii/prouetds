@@ -299,17 +299,17 @@ export default function TripsPage() {
 
       {/* Filters */}
       <div className="glass-card p-4 flex flex-col sm:flex-row gap-3 theme-panel-border">
-        <div className="relative flex-1">
+        <div className="search-input-shell flex-1">
           <Search
             size={16}
-            className="absolute left-3 top-1/2 -translate-y-1/2 theme-icon-muted"
+            className="input-icon-left-search theme-icon-muted"
           />
           <input
             type="text"
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             placeholder="Sefer ara (plaka, numara...)"
-            className="input-field pl-9"
+            className="input-field input-with-icon"
           />
         </div>
         <select

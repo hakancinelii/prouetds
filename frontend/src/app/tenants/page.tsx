@@ -192,12 +192,12 @@ export default function TenantsPage() {
           </div>
         </div>
         <div className="glass-card p-6 flex items-center gap-2 bg-slate-800/10">
-          <div className="relative flex-1">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-500" size={18} />
+          <div className="search-input-shell flex-1">
+            <Search className="input-icon-left-search text-slate-500" size={18} />
             <input
               type="text"
               placeholder="Şirket adı veya VKN ile ara..."
-              className="w-full bg-slate-900/50 border border-slate-700/50 rounded-xl py-3 pl-10 pr-4 text-sm focus:ring-2 focus:ring-emerald-500/50 focus:border-emerald-500 outline-none transition-all placeholder:text-slate-600"
+              className="w-full bg-slate-900/50 border border-slate-700/50 rounded-xl py-3 pr-4 text-sm focus:ring-2 focus:ring-emerald-500/50 focus:border-emerald-500 outline-none transition-all placeholder:text-slate-600 input-with-icon"
               value={search}
               onChange={(e) => setSearch(e.target.value)}
             />
