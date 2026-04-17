@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { tripsApi, driversApi } from '@/lib/api';
+import { MERNIS_LOCATIONS, getProvinceByCode } from '@/lib/mernis-locations';
 import toast from 'react-hot-toast';
 import {
   ArrowLeft,
@@ -23,7 +24,96 @@ import {
   Eye,
   ExternalLink,
   ShieldCheck,
+  Pencil,
 } from 'lucide-react';
+
+const PRIORITY_ISTANBUL_DISTRICTS = [
+  'ARNAVUTKÖY',
+  'PENDİK',
+  'BEYOĞLU',
+  'ŞİŞLİ',
+  'FATİH',
+  'AVCILAR',
+  'BEYLİKDÜZÜ',
+  'ESENYURT',
+];
+
+const sortDistrictsForTripFlow = (
+  provinceCode: number,
+  districts: Array<{ code: number; name: string }>,
+) => {
+  if (provinceCode !== 34) return districts;
+
+  const priorityMap = new Map(
+    PRIORITY_ISTANBUL_DISTRICTS.map((name, index) => [name, index]),
+  );
+
+  return [...districts].sort((a, b) => {
+    const aPriority = priorityMap.get(a.name) ?? Number.MAX_SAFE_INTEGER;
+    const bPriority = priorityMap.get(b.name) ?? Number.MAX_SAFE_INTEGER;
+
+    if (aPriority !== bPriority) {
+      return aPriority - bPriority;
+    }
+
+    return a.name.localeCompare(b.name, 'tr');
+  });
+};
+
+const getEditTripForm = (trip: any) => ({
+  vehiclePlate: trip?.vehiclePlate || '',
+  departureDate: trip?.departureDate || '',
+  departureTime: trip?.departureTime || '',
+  endDate: trip?.endDate || '',
+  endTime: trip?.endTime || '',
+  description: trip?.description || 'İstanbul içi Transfer',
+  originIlCode: trip?.originIlCode || 34,
+  originIlceCode: trip?.originIlceCode ? String(trip.originIlceCode) : '',
+  originPlace: trip?.originPlace || '',
+  destIlCode: trip?.destIlCode || 34,
+  destIlceCode: trip?.destIlceCode ? String(trip.destIlceCode) : '',
+  destPlace: trip?.destPlace || '',
+});
+
+const getTripEditabilityNote = (status: string) =>
+  status === 'sent'
+    ? 'Bu sefer UETDS’ye gönderildiği için doğrudan düzenlenemez.'
+    : status === 'cancelled'
+      ? 'İptal edilmiş seferlerde yalnızca geçmiş kayıt görüntülenir.'
+      : 'Sefer bilgilerini bu ekranda güncelleyebilirsiniz.';
+
+const getTripEditabilityTone = (status: string) =>
+  status === 'sent'
+    ? 'border-amber-500/30 bg-amber-500/10 text-amber-200'
+    : status === 'cancelled'
+      ? 'border-slate-600/40 bg-slate-800/30 text-slate-300'
+      : 'border-cyan-500/20 bg-cyan-500/10 text-cyan-100';
+
+const DEFAULT_TRIP_DESCRIPTION = 'İstanbul içi Transfer';
+
+const getPlaceFromDistrict = (
+  districtCode: string,
+  province: { name: string } | undefined,
+  districts: Array<{ code: number; name: string }>,
+) => {
+  const selected = districts.find((district) => String(district.code) === districtCode);
+  return selected ? `${selected.name}/${province?.name || ''}` : '';
+};
+
+const getTripFormPayload = (form: any) => ({
+  vehiclePlate: form.vehiclePlate.trim().toUpperCase().replace(/\s+/g, ''),
+  departureDate: form.departureDate,
+  departureTime: form.departureTime,
+  endDate: form.endDate,
+  endTime: form.endTime,
+  description: form.description.trim(),
+  originIlCode: Number(form.originIlCode),
+  originIlceCode: form.originIlceCode ? Number(form.originIlceCode) : undefined,
+  originPlace: form.originPlace.trim(),
+  destIlCode: Number(form.destIlCode),
+  destIlceCode: form.destIlceCode ? Number(form.destIlceCode) : undefined,
+  destPlace: form.destPlace.trim(),
+});
 
 export default function TripDetailPage() {
   const params = useParams();
@@ -39,7 +129,17 @@ export default function TripDetailPage() {
   const [parsedResults, setParsedResults] = useState<any>(null);
   const [selectedGroupId, setSelectedGroupId] = useState('');
   const [showAddPersonnel, setShowAddPersonnel] = useState(false);
+  const [showEditTrip, setShowEditTrip] = useState(false);
+  const [savingTrip, setSavingTrip] = useState(false);
   const [selectedPersonnelType, setSelectedPersonnelType] = useState(0);
+  const [editTripForm, setEditTripForm] = useState(() => getEditTripForm(null));
+  const [editOriginDistricts, setEditOriginDistricts] = useState<Array<{ code: number; name: string }>>([]);
+  const [editDestDistricts, setEditDestDistricts] = useState<Array<{ code: number; name: string }>>([]);
+  const canEditTrip = trip?.status !== 'sent' && trip?.status !== 'cancelled';
+  const tripEditabilityNote = getTripEditabilityNote(trip?.status || 'draft');
+  const tripEditabilityTone = getTripEditabilityTone(trip?.status || 'draft');
+  const editOriginProvince = getProvinceByCode(Number(editTripForm.originIlCode));
+  const editDestProvince = getProvinceByCode(Number(editTripForm.destIlCode));
   const personnelTypeOptions = [
     { value: 0, label: 'Şoför' },
     { value: 1, label: 'Şoför Yardımcısı' },
@@ -185,6 +285,7 @@ export default function TripDetailPage() {
     try {
       const res = await tripsApi.get(tripId);
       setTrip(res.data);
+      setEditTripForm(getEditTripForm(res.data));
       if (res.data.groups?.length > 0 && !selectedGroupId) {
         setSelectedGroupId(res.data.groups[0].id);
       }
@@ -253,6 +354,23 @@ export default function TripDetailPage() {
       }
     };
   }, [pdfUrl]);
+
+  useEffect(() => {
+    const originProvince = getProvinceByCode(Number(editTripForm.originIlCode));
+    const destProvince = getProvinceByCode(Number(editTripForm.destIlCode));
+    setEditOriginDistricts(
+      sortDistrictsForTripFlow(
+        Number(editTripForm.originIlCode),
+        originProvince?.districts || [],
+      ),
+    );
+    setEditDestDistricts(
+      sortDistrictsForTripFlow(
+        Number(editTripForm.destIlCode),
+        destProvince?.districts || [],
+      ),
+    );
+  }, [editTripForm.originIlCode, editTripForm.destIlCode]);
 
   const parsePdfError = async (blob: Blob) => {
     try {
@@ -396,7 +514,36 @@ export default function TripDetailPage() {
       toast.success("UETDS'de iptal edildi");
       fetchTrip();
     } catch (err: any) {
-      toast.error(err.response?.data?.message || err.response?.data?.details || 'İptal başarısız');
+      const rawMessage = err.response?.data?.message || err.response?.data?.details || 'İptal başarısız';
+      const readableMessage = rawMessage.includes('Servis kullanımı yetkisi için servis sağlayıcısı kurum ile görüşünüz')
+        ? 'Bu UETDS hesabında sefer iptal servisi yetkisi tanımlı değil. Kurum yetkisi açılmadan iptal gönderimi yapılamaz.'
+        : rawMessage;
+      toast.error(readableMessage);
+    }
+  };
+
+  const handleOpenEditTrip = () => {
+    setEditTripForm(getEditTripForm(trip));
+    setShowEditTrip(true);
+  };
+
+  const handleCloseEditTrip = () => {
+    setShowEditTrip(false);
+    setEditTripForm(getEditTripForm(trip));
+  };
+
+  const handleUpdateTrip = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setSavingTrip(true);
+    try {
+      await tripsApi.update(tripId, getTripFormPayload(editTripForm));
+      toast.success('Sefer bilgileri güncellendi');
+      setShowEditTrip(false);
+      fetchTrip();
+    } catch (err: any) {
+      toast.error(err.response?.data?.message || 'Sefer güncellenemedi');
+    } finally {
+      setSavingTrip(false);
     }
   };
 
@@ -553,6 +700,27 @@ export default function TripDetailPage() {
           </div>
         </div>
       )}
+
+      <div className={`glass-card p-5 border ${tripEditabilityTone}`}>
+        <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
+          <div>
+            <p className="text-sm font-semibold text-white">Sefer bilgileri</p>
+            <p className="text-xs mt-1 opacity-90">{tripEditabilityNote}</p>
+          </div>
+          <div className="flex flex-wrap items-center gap-2">
+            {canEditTrip && (
+              <button
+                type="button"
+                onClick={handleOpenEditTrip}
+                className="btn-secondary flex items-center gap-2"
+              >
+                <Pencil size={16} />
+                Seferi Düzenle
+              </button>
+            )}
+          </div>
+        </div>
+      </div>
 
       {/* Trip Info Cards */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
@@ -962,6 +1130,223 @@ export default function TripDetailPage() {
           </div>
         </div>
       )}
+      {showEditTrip && (
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+          <div className="glass-card w-full max-w-3xl p-6 animate-slide-in max-h-[90vh] overflow-y-auto">
+            <h3 className="text-lg font-bold mb-4 flex items-center gap-2">
+              <Pencil size={18} className="text-cyan-400" />
+              Seferi Düzenle
+            </h3>
+            <form onSubmit={handleUpdateTrip} className="space-y-4">
+              <div className="grid grid-cols-2 gap-4">
+                <div className="col-span-2">
+                  <label className="block text-sm text-slate-300 mb-1">Araç Plaka</label>
+                  <input
+                    value={editTripForm.vehiclePlate}
+                    onChange={(e) =>
+                      setEditTripForm({ ...editTripForm, vehiclePlate: e.target.value.toUpperCase() })
+                    }
+                    className="input-field"
+                    placeholder="34ABC123"
+                    required
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm text-slate-300 mb-1">Hareket Tarihi</label>
+                  <input
+                    type="date"
+                    title="Hareket tarihi"
+                    aria-label="Hareket tarihi"
+                    value={editTripForm.departureDate}
+                    onChange={(e) => setEditTripForm({ ...editTripForm, departureDate: e.target.value })}
+                    className="input-field"
+                    required
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm text-slate-300 mb-1">Hareket Saati</label>
+                  <input
+                    type="time"
+                    title="Hareket saati"
+                    aria-label="Hareket saati"
+                    value={editTripForm.departureTime}
+                    onChange={(e) => setEditTripForm({ ...editTripForm, departureTime: e.target.value })}
+                    className="input-field"
+                    required
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm text-slate-300 mb-1">Bitiş Tarihi</label>
+                  <input
+                    type="date"
+                    title="Bitiş tarihi"
+                    aria-label="Bitiş tarihi"
+                    value={editTripForm.endDate}
+                    onChange={(e) => setEditTripForm({ ...editTripForm, endDate: e.target.value })}
+                    className="input-field"
+                    required
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm text-slate-300 mb-1">Bitiş Saati</label>
+                  <input
+                    type="time"
+                    title="Bitiş saati"
+                    aria-label="Bitiş saati"
+                    value={editTripForm.endTime}
+                    onChange={(e) => setEditTripForm({ ...editTripForm, endTime: e.target.value })}
+                    className="input-field"
+                    required
+                  />
+                </div>
+                <div className="col-span-2">
+                  <label className="block text-sm text-slate-300 mb-1">Açıklama</label>
+                  <textarea
+                    title="Sefer açıklaması"
+                    aria-label="Sefer açıklaması"
+                    value={editTripForm.description}
+                    onChange={(e) => setEditTripForm({ ...editTripForm, description: e.target.value })}
+                    className="input-field"
+                    rows={2}
+                    required
+                  />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="bg-slate-700/30 p-3 rounded-lg space-y-3">
+                  <span className="text-xs font-semibold text-emerald-400 uppercase tracking-wider">Kalkış Noktası</span>
+                  <select
+                    title="Kalkış ili"
+                    aria-label="Kalkış ili"
+                    value={editTripForm.originIlCode}
+                    onChange={(e) =>
+                      setEditTripForm({
+                        ...editTripForm,
+                        originIlCode: Number(e.target.value),
+                        originIlceCode: '',
+                        originPlace: '',
+                      })
+                    }
+                    className="input-field py-1.5"
+                    required
+                  >
+                    {MERNIS_LOCATIONS.map((province) => (
+                      <option key={province.code} value={province.code}>
+                        {province.name}
+                      </option>
+                    ))}
+                  </select>
+                  <select
+                    title="Kalkış ilçesi"
+                    aria-label="Kalkış ilçesi"
+                    value={editTripForm.originIlceCode}
+                    onChange={(e) =>
+                      setEditTripForm({
+                        ...editTripForm,
+                        originIlceCode: e.target.value,
+                        originPlace: getPlaceFromDistrict(
+                          e.target.value,
+                          editOriginProvince,
+                          editOriginDistricts,
+                        ),
+                      })
+                    }
+                    className="input-field py-1.5"
+                    required
+                  >
+                    <option value="">İlçe seçiniz</option>
+                    {editOriginDistricts.map((district) => (
+                      <option key={district.code} value={district.code}>
+                        {district.name} ({district.code})
+                      </option>
+                    ))}
+                  </select>
+                  <input
+                    title="Kalkış yeri"
+                    aria-label="Kalkış yeri"
+                    value={editTripForm.originPlace}
+                    onChange={(e) => setEditTripForm({ ...editTripForm, originPlace: e.target.value })}
+                    className="input-field py-1.5"
+                    placeholder="İlçe adı / terminal / havalimanı"
+                    required
+                  />
+                </div>
+
+                <div className="bg-slate-700/30 p-3 rounded-lg space-y-3">
+                  <span className="text-xs font-semibold text-blue-400 uppercase tracking-wider">Varış Noktası</span>
+                  <select
+                    title="Varış ili"
+                    aria-label="Varış ili"
+                    value={editTripForm.destIlCode}
+                    onChange={(e) =>
+                      setEditTripForm({
+                        ...editTripForm,
+                        destIlCode: Number(e.target.value),
+                        destIlceCode: '',
+                        destPlace: '',
+                      })
+                    }
+                    className="input-field py-1.5"
+                    required
+                  >
+                    {MERNIS_LOCATIONS.map((province) => (
+                      <option key={province.code} value={province.code}>
+                        {province.name}
+                      </option>
+                    ))}
+                  </select>
+                  <select
+                    title="Varış ilçesi"
+                    aria-label="Varış ilçesi"
+                    value={editTripForm.destIlceCode}
+                    onChange={(e) =>
+                      setEditTripForm({
+                        ...editTripForm,
+                        destIlceCode: e.target.value,
+                        destPlace: getPlaceFromDistrict(
+                          e.target.value,
+                          editDestProvince,
+                          editDestDistricts,
+                        ),
+                      })
+                    }
+                    className="input-field py-1.5"
+                    required
+                  >
+                    <option value="">İlçe seçiniz</option>
+                    {editDestDistricts.map((district) => (
+                      <option key={district.code} value={district.code}>
+                        {district.name} ({district.code})
+                      </option>
+                    ))}
+                  </select>
+                  <input
+                    title="Varış yeri"
+                    aria-label="Varış yeri"
+                    value={editTripForm.destPlace}
+                    onChange={(e) => setEditTripForm({ ...editTripForm, destPlace: e.target.value })}
+                    className="input-field py-1.5"
+                    placeholder="İlçe adı / terminal / havalimanı"
+                    required
+                  />
+                </div>
+              </div>
+
+              <div className="flex gap-3 pt-2">
+                <button type="submit" disabled={savingTrip} className="btn-primary flex-1 flex items-center justify-center gap-2">
+                  {savingTrip ? <Loader2 size={16} className="animate-spin" /> : <Pencil size={16} />}
+                  {savingTrip ? 'Kaydediliyor...' : 'Değişiklikleri Kaydet'}
+                </button>
+                <button type="button" onClick={handleCloseEditTrip} className="btn-secondary">
+                  Kapat
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
       {/* Add Personnel Modal */}
       {showAddPersonnel && (
         <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
@@ -1018,6 +1403,7 @@ export default function TripDetailPage() {
             </div>
             <div className="pt-4">
               <button
+                type="button"
                 onClick={() => setShowAddPersonnel(false)}
                 className="btn-secondary w-full"
               >

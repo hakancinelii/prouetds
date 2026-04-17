@@ -331,6 +331,10 @@ export default function TripsPage() {
                           type="button"
                           title="Sefer detayını aç"
                           aria-label="Sefer detayını aç"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            router.push(`/trips/${trip.id}`);
+                          }}
                           className="text-slate-400 hover:text-emerald-400 transition"
                         >
                           <Eye size={16} />
