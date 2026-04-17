@@ -41,6 +41,7 @@ export default function Sidebar() {
     useAuthStore();
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [theme, setTheme] = useState<'light' | 'dark'>('light');
+  const [touchStartX, setTouchStartX] = useState<number | null>(null);
 
   const applyTheme = (nextTheme: 'light' | 'dark') => {
     if (typeof document === 'undefined') return;
@@ -84,13 +85,35 @@ export default function Sidebar() {
     router.push('/login');
   };
 
+  const handleTouchStart = (event: React.TouchEvent<HTMLDivElement>) => {
+    setTouchStartX(event.touches[0]?.clientX ?? null);
+  };
+
+  const handleTouchEnd = (event: React.TouchEvent<HTMLDivElement>) => {
+    if (touchStartX === null) return;
+    const touchEndX = event.changedTouches[0]?.clientX ?? touchStartX;
+    const deltaX = touchEndX - touchStartX;
+
+    if (!sidebarOpen && touchStartX < 28 && deltaX > 72) {
+      setSidebarOpen(true);
+    }
+
+    if (sidebarOpen && deltaX < -72) {
+      setSidebarOpen(false);
+    }
+
+    setTouchStartX(null);
+  };
+
   return (
     <>
+      <div className="lg:hidden fixed inset-y-0 left-0 w-7 z-20" onTouchStart={handleTouchStart} onTouchEnd={handleTouchEnd} />
+
       {/* Mobile menu button */}
       <button
         type="button"
         onClick={() => setSidebarOpen(!sidebarOpen)}
-        className="fixed top-4 left-4 z-50 lg:hidden theme-panel text-[rgb(var(--foreground-rgb))] p-2 rounded-lg shadow-lg theme-menu-touch"
+        className="fixed top-5 left-4 z-50 lg:hidden mobile-menu-shell text-[rgb(var(--foreground-rgb))] p-2.5 rounded-2xl shadow-lg theme-menu-touch"
       >
         {sidebarOpen ? <X size={20} /> : <Menu size={20} />}
       </button>

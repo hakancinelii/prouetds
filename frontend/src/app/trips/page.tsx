@@ -372,19 +372,27 @@ export default function TripsPage() {
                     <div className="mt-4 grid grid-cols-2 gap-3 text-xs">
                       <div>
                         <p className="text-slate-500 dark:text-slate-400">Hareket</p>
-                        <p className="mt-1 font-medium text-slate-700 dark:text-slate-200">{trip.departureDate} {trip.departureTime}</p>
+                        <p className="mt-1 font-medium text-slate-700 dark:text-slate-100">{trip.departureDate} {trip.departureTime}</p>
                       </div>
                       <div>
                         <p className="text-slate-500 dark:text-slate-400">Bitiş</p>
-                        <p className="mt-1 font-medium text-slate-700 dark:text-slate-200">{trip.endDate} {trip.endTime}</p>
+                        <p className="mt-1 font-medium text-slate-700 dark:text-slate-100">{trip.endDate} {trip.endTime}</p>
+                      </div>
+                      <div>
+                        <p className="text-slate-500 dark:text-slate-400">Kalkış</p>
+                        <p className="mt-1 font-medium text-slate-700 dark:text-slate-100">{trip.originPlace || '-'}</p>
+                      </div>
+                      <div>
+                        <p className="text-slate-500 dark:text-slate-400">Varış</p>
+                        <p className="mt-1 font-medium text-slate-700 dark:text-slate-100">{trip.destPlace || '-'}</p>
                       </div>
                       <div>
                         <p className="text-slate-500 dark:text-slate-400">Yolcu</p>
-                        <p className="mt-1 font-medium text-slate-700 dark:text-slate-200">{passengerCount}</p>
+                        <p className="mt-1 font-medium text-slate-700 dark:text-slate-100">{passengerCount}</p>
                       </div>
                       <div>
                         <p className="text-slate-500 dark:text-slate-400">UETDS Ref</p>
-                        <p className="mt-1 font-medium font-mono text-slate-700 dark:text-slate-200">{trip.uetdsSeferRefNo || '-'}</p>
+                        <p className="mt-1 font-medium font-mono text-slate-700 dark:text-slate-100">{trip.uetdsSeferRefNo || '-'}</p>
                       </div>
                     </div>
                     <div className="mt-4 flex items-center justify-end gap-2 text-emerald-600 dark:text-emerald-300">

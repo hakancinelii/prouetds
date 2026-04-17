@@ -79,7 +79,7 @@ export default function RootLayout({
           }}
         />
         <Sidebar />
-        <main className="adaptive-page lg:ml-64 min-h-screen pt-[calc(env(safe-area-inset-top)+4.75rem)] pl-12 lg:pl-0 lg:pt-0">{children}</main>
+        <main className="adaptive-page lg:ml-64 min-h-screen pt-[calc(env(safe-area-inset-top)+4.75rem)] lg:pt-0">{children}</main>
       </body>
     </html>
   );
