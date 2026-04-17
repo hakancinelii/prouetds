@@ -60,7 +60,38 @@ const sortDistrictsForTripFlow = (
 
 const DEFAULT_TRIP_DESCRIPTION = 'İstanbul içi Transfer';
 
+const AIRPORT_OPTIONS = [
+  { key: 'airport:ist', label: 'İstanbul Havalimanı', districtCode: '2048', place: 'İstanbul Havalimanı' },
+  { key: 'airport:saw', label: 'Sabiha Gökçen Havalimanı', districtCode: '1835', place: 'Sabiha Gökçen Havalimanı' },
+];
+
+const getDistrictSelectOptions = (
+  provinceCode: number,
+  districts: Array<{ code: number; name: string }>,
+) => {
+  if (provinceCode !== 34) {
+    return districts.map((district) => ({
+      value: `district:${district.code}`,
+      label: `${district.name} (${district.code})`,
+      districtCode: String(district.code),
+      place: `${district.name}/İSTANBUL`,
+    }));
+  }
+
+  return [
+    ...AIRPORT_OPTIONS,
+    ...districts.map((district) => ({
+      value: `district:${district.code}`,
+      label: `${district.name} (${district.code})`,
+      districtCode: String(district.code),
+      place: `${district.name}/İSTANBUL`,
+    })),
+  ];
+};
+
 const getDefaultCreateForm = () => ({
+  originSelection: '',
+  destSelection: '',
   vehiclePlate: '',
   ...getDefaultTripDateTime(),
   description: DEFAULT_TRIP_DESCRIPTION,
@@ -114,6 +145,55 @@ export default function TripsPage() {
     Number(form.destIlCode),
     destProvince?.districts || [],
   );
+  const originDistrictOptions = getDistrictSelectOptions(Number(form.originIlCode), originDistricts);
+  const destDistrictOptions = getDistrictSelectOptions(Number(form.destIlCode), destDistricts);
+
+  const getOptionByValue = (value: string, options: Array<{ value: string; districtCode: string; place: string }>) =>
+    options.find((option) => option.value === value);
+
+  const originSelection = form.originSelection || (form.originIlceCode ? `district:${form.originIlceCode}` : '');
+  const destSelection = form.destSelection || (form.destIlceCode ? `district:${form.destIlceCode}` : '');
+
+  const getTripSubmitPayload = () => {
+    const originOption = getOptionByValue(originSelection, originDistrictOptions);
+    const destOption = getOptionByValue(destSelection, destDistrictOptions);
+
+    return {
+      ...form,
+      vehiclePlate: form.vehiclePlate.trim().toUpperCase().replace(/\s+/g, ''),
+      originIlCode: Number(form.originIlCode),
+      originIlceCode: originOption?.districtCode ? Number(originOption.districtCode) : undefined,
+      originPlace: (originOption?.place || form.originPlace).trim(),
+      destIlCode: Number(form.destIlCode),
+      destIlceCode: destOption?.districtCode ? Number(destOption.districtCode) : undefined,
+      destPlace: (destOption?.place || form.destPlace).trim(),
+    };
+  };
+
+  const handleDistrictSelection = (
+    field: 'originSelection' | 'destSelection',
+    value: string,
+    options: Array<{ value: string; districtCode: string; place: string }>,
+  ) => {
+    const selected = getOptionByValue(value, options);
+
+    if (field === 'originSelection') {
+      setForm({
+        ...form,
+        originSelection: value,
+        originIlceCode: selected?.districtCode || '',
+        originPlace: selected?.place || '',
+      });
+      return;
+    }
+
+    setForm({
+      ...form,
+      destSelection: value,
+      destIlceCode: selected?.districtCode || '',
+      destPlace: selected?.place || '',
+    });
+  };
 
   const fetchTrips = async () => {
     setLoading(true);
@@ -158,16 +238,7 @@ export default function TripsPage() {
   const handleCreate = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
-      const res = await tripsApi.create({
-        ...form,
-        vehiclePlate: form.vehiclePlate.trim().toUpperCase().replace(/\s+/g, ''),
-        originIlCode: Number(form.originIlCode),
-        originIlceCode: form.originIlceCode ? Number(form.originIlceCode) : undefined,
-        originPlace: form.originPlace.trim(),
-        destIlCode: Number(form.destIlCode),
-        destIlceCode: form.destIlceCode ? Number(form.destIlceCode) : undefined,
-        destPlace: form.destPlace.trim(),
-      });
+      const res = await tripsApi.create(getTripSubmitPayload());
       toast.success('Sefer oluşturuldu');
       setShowCreateModal(false);
       setForm(getDefaultCreateForm());
@@ -551,6 +622,7 @@ export default function TripsPage() {
                         setForm({
                           ...form,
                           originIlCode: Number(e.target.value),
+                          originSelection: '',
                           originIlceCode: '',
                           originPlace: '',
                         })
@@ -571,26 +643,17 @@ export default function TripsPage() {
                       id="origin-ilce-code"
                       aria-label="Kalkış ilçesi"
                       title="Kalkış ilçesi"
-                      value={form.originIlceCode}
-                      onChange={(e) => {
-                        const selected = originDistricts.find(
-                          (district) => String(district.code) === e.target.value,
-                        );
-                        setForm({
-                          ...form,
-                          originIlceCode: e.target.value,
-                          originPlace: selected
-                            ? `${selected.name}/${originProvince?.name || ''}`
-                            : '',
-                        });
-                      }}
+                      value={originSelection}
+                      onChange={(e) =>
+                        handleDistrictSelection('originSelection', e.target.value, originDistrictOptions)
+                      }
                       className="input-field py-1.5"
                       required
                     >
                       <option value="">İlçe seçiniz</option>
-                      {originDistricts.map((district) => (
-                        <option key={district.code} value={district.code}>
-                          {district.name} ({district.code})
+                      {originDistrictOptions.map((district) => (
+                        <option key={district.value} value={district.value}>
+                          {district.label}
                         </option>
                       ))}
                     </select>
@@ -621,6 +684,7 @@ export default function TripsPage() {
                         setForm({
                           ...form,
                           destIlCode: Number(e.target.value),
+                          destSelection: '',
                           destIlceCode: '',
                           destPlace: '',
                         })
@@ -641,26 +705,17 @@ export default function TripsPage() {
                       id="dest-ilce-code"
                       aria-label="Varış ilçesi"
                       title="Varış ilçesi"
-                      value={form.destIlceCode}
-                      onChange={(e) => {
-                        const selected = destDistricts.find(
-                          (district) => String(district.code) === e.target.value,
-                        );
-                        setForm({
-                          ...form,
-                          destIlceCode: e.target.value,
-                          destPlace: selected
-                            ? `${selected.name}/${destProvince?.name || ''}`
-                            : '',
-                        });
-                      }}
+                      value={destSelection}
+                      onChange={(e) =>
+                        handleDistrictSelection('destSelection', e.target.value, destDistrictOptions)
+                      }
                       className="input-field py-1.5"
                       required
                     >
                       <option value="">İlçe seçiniz</option>
-                      {destDistricts.map((district) => (
-                        <option key={district.code} value={district.code}>
-                          {district.name} ({district.code})
+                      {destDistrictOptions.map((district) => (
+                        <option key={district.value} value={district.value}>
+                          {district.label}
                         </option>
                       ))}
                     </select>

@@ -17,10 +17,59 @@ const getEmptyVehicleForm = () => ({
   plateNumber: '',
   brand: '',
   model: '',
+  hasInspectionDate: false,
+  inspectionExpiry: '',
 });
 
 const BULK_EXAMPLE = `34ABC123
 34XYZ987`;
+
+const getInspectionInfo = (inspectionExpiry?: string | null) => {
+  if (!inspectionExpiry) {
+    return {
+      label: 'Muayene tarihi girilmedi',
+      className: 'badge badge-cancelled',
+    };
+  }
+
+  const today = new Date();
+  const current = new Date(today.getFullYear(), today.getMonth(), today.getDate());
+  const expiry = new Date(`${inspectionExpiry}T00:00:00`);
+  const diffDays = Math.round((expiry.getTime() - current.getTime()) / (1000 * 60 * 60 * 24));
+
+  if (Number.isNaN(diffDays)) {
+    return {
+      label: 'Muayene tarihi okunamadı',
+      className: 'badge badge-error',
+    };
+  }
+
+  if (diffDays < 0) {
+    return {
+      label: `${Math.abs(diffDays)} gün geçti`,
+      className: 'badge badge-error',
+    };
+  }
+
+  if (diffDays === 0) {
+    return {
+      label: 'Bugün son gün',
+      className: 'badge badge-sending',
+    };
+  }
+
+  if (diffDays <= 30) {
+    return {
+      label: `${diffDays} gün kaldı`,
+      className: 'badge badge-ready',
+    };
+  }
+
+  return {
+    label: `${diffDays} gün kaldı`,
+    className: 'badge badge-sent',
+  };
+};
 
 export default function VehiclesPage() {
   const [vehicles, setVehicles] = useState<any[]>([]);
@@ -67,6 +116,7 @@ export default function VehiclesPage() {
         plateNumber: form.plateNumber.trim().toUpperCase().replace(/\s+/g, ''),
         brand: form.brand.trim(),
         model: form.model.trim(),
+        inspectionExpiry: form.hasInspectionDate ? form.inspectionExpiry : '',
       };
       if (editId) {
         await vehiclesApi.update(editId, data);
@@ -161,7 +211,9 @@ export default function VehiclesPage() {
           <div className="flex justify-center py-16"><Loader2 size={24} className="animate-spin text-emerald-400" /></div>
         ) : (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 p-5">
-            {vehicles.map((vehicle) => (
+            {vehicles.map((vehicle) => {
+              const inspectionInfo = getInspectionInfo(vehicle.inspectionExpiry);
+              return (
               <div key={vehicle.id} className="theme-card-soft rounded-xl p-4 transition group">
                 <div className="flex items-center justify-between mb-3">
                   <span className="text-lg theme-plate">{vehicle.plateNumber}</span>
@@ -173,6 +225,8 @@ export default function VehiclesPage() {
                           plateNumber: vehicle.plateNumber || '',
                           brand: vehicle.brand || '',
                           model: vehicle.model || '',
+                          hasInspectionDate: Boolean(vehicle.inspectionExpiry),
+                          inspectionExpiry: vehicle.inspectionExpiry || '',
                         });
                         setEditId(vehicle.id);
                         setShowModal(true);
@@ -197,8 +251,11 @@ export default function VehiclesPage() {
                   </div>
                 </div>
                 <p className="text-sm theme-text">{vehicle.brand || 'Marka girilmedi'} · {vehicle.model || 'Model girilmedi'}</p>
+                <div className="mt-3">
+                  <span className={inspectionInfo.className}>{inspectionInfo.label}</span>
+                </div>
               </div>
-            ))}
+            );})}
             {vehicles.length === 0 && <p className="col-span-full text-center theme-empty py-8">Henüz araç eklenmemiş</p>}
           </div>
         )}
@@ -241,6 +298,36 @@ export default function VehiclesPage() {
                     className="input-field"
                   />
                 </div>
+              </div>
+              <div className="theme-note rounded-xl p-3 space-y-3">
+                <label className="flex items-center gap-2 text-sm theme-text cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={form.hasInspectionDate}
+                    onChange={(e) =>
+                      setForm({
+                        ...form,
+                        hasInspectionDate: e.target.checked,
+                        inspectionExpiry: e.target.checked ? form.inspectionExpiry : '',
+                      })
+                    }
+                    className="accent-emerald-500"
+                  />
+                  Araç muayene tarihi eklemek ister misiniz?
+                </label>
+                {form.hasInspectionDate && (
+                  <div>
+                    <label htmlFor="vehicle-inspection" className="label-muted">Muayene Son Tarihi</label>
+                    <input
+                      id="vehicle-inspection"
+                      title="Muayene son tarihi"
+                      type="date"
+                      value={form.inspectionExpiry}
+                      onChange={(e) => setForm({ ...form, inspectionExpiry: e.target.value })}
+                      className="input-field"
+                    />
+                  </div>
+                )}
               </div>
               <div className="flex gap-3 pt-2">
                 <button type="submit" className="btn-primary flex-1" disabled={submitting}>

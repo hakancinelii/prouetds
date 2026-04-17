@@ -68,9 +68,11 @@ const getEditTripForm = (trip: any) => ({
   endTime: trip?.endTime || '',
   description: trip?.description || 'İstanbul içi Transfer',
   originIlCode: trip?.originIlCode || 34,
+  originSelection: trip?.originIlceCode ? `district:${trip.originIlceCode}` : '',
   originIlceCode: trip?.originIlceCode ? String(trip.originIlceCode) : '',
   originPlace: trip?.originPlace || '',
   destIlCode: trip?.destIlCode || 34,
+  destSelection: trip?.destIlceCode ? `district:${trip.destIlceCode}` : '',
   destIlceCode: trip?.destIlceCode ? String(trip.destIlceCode) : '',
   destPlace: trip?.destPlace || '',
 });
@@ -91,6 +93,30 @@ const getTripEditabilityTone = (status: string) =>
 
 const DEFAULT_TRIP_DESCRIPTION = 'İstanbul içi Transfer';
 
+const AIRPORT_OPTIONS = [
+  { value: 'airport:ist', label: 'İstanbul Havalimanı', districtCode: '2048', place: 'İstanbul Havalimanı' },
+  { value: 'airport:saw', label: 'Sabiha Gökçen Havalimanı', districtCode: '1835', place: 'Sabiha Gökçen Havalimanı' },
+];
+
+const getDistrictSelectOptions = (
+  provinceCode: number,
+  provinceName: string,
+  districts: Array<{ code: number; name: string }>,
+) => {
+  const baseOptions = districts.map((district) => ({
+    value: `district:${district.code}`,
+    label: `${district.name} (${district.code})`,
+    districtCode: String(district.code),
+    place: `${district.name}/${provinceName}`,
+  }));
+
+  if (provinceCode !== 34) {
+    return baseOptions;
+  }
+
+  return [...AIRPORT_OPTIONS, ...baseOptions];
+};
+
 const getPlaceFromDistrict = (
   districtCode: string,
   province: { name: string } | undefined,
@@ -100,20 +126,29 @@ const getPlaceFromDistrict = (
   return selected ? `${selected.name}/${province?.name || ''}` : '';
 };
 
-const getTripFormPayload = (form: any) => ({
-  vehiclePlate: form.vehiclePlate.trim().toUpperCase().replace(/\s+/g, ''),
-  departureDate: form.departureDate,
-  departureTime: form.departureTime,
-  endDate: form.endDate,
-  endTime: form.endTime,
-  description: form.description.trim(),
-  originIlCode: Number(form.originIlCode),
-  originIlceCode: form.originIlceCode ? Number(form.originIlceCode) : undefined,
-  originPlace: form.originPlace.trim(),
-  destIlCode: Number(form.destIlCode),
-  destIlceCode: form.destIlceCode ? Number(form.destIlceCode) : undefined,
-  destPlace: form.destPlace.trim(),
-});
+const getTripFormPayload = (
+  form: any,
+  originOptions: Array<{ value: string; districtCode: string; place: string }>,
+  destOptions: Array<{ value: string; districtCode: string; place: string }>,
+) => {
+  const originOption = originOptions.find((option) => option.value === form.originSelection);
+  const destOption = destOptions.find((option) => option.value === form.destSelection);
+
+  return {
+    vehiclePlate: form.vehiclePlate.trim().toUpperCase().replace(/\s+/g, ''),
+    departureDate: form.departureDate,
+    departureTime: form.departureTime,
+    endDate: form.endDate,
+    endTime: form.endTime,
+    description: form.description.trim(),
+    originIlCode: Number(form.originIlCode),
+    originIlceCode: originOption?.districtCode ? Number(originOption.districtCode) : undefined,
+    originPlace: (originOption?.place || form.originPlace).trim(),
+    destIlCode: Number(form.destIlCode),
+    destIlceCode: destOption?.districtCode ? Number(destOption.districtCode) : undefined,
+    destPlace: (destOption?.place || form.destPlace).trim(),
+  };
+};
 
 export default function TripDetailPage() {
   const params = useParams();
@@ -140,6 +175,41 @@ export default function TripDetailPage() {
   const tripEditabilityTone = getTripEditabilityTone(trip?.status || 'draft');
   const editOriginProvince = getProvinceByCode(Number(editTripForm.originIlCode));
   const editDestProvince = getProvinceByCode(Number(editTripForm.destIlCode));
+  const editOriginDistrictOptions = getDistrictSelectOptions(
+    Number(editTripForm.originIlCode),
+    editOriginProvince?.name || '',
+    editOriginDistricts,
+  );
+  const editDestDistrictOptions = getDistrictSelectOptions(
+    Number(editTripForm.destIlCode),
+    editDestProvince?.name || '',
+    editDestDistricts,
+  );
+
+  const handleEditDistrictSelection = (
+    field: 'originSelection' | 'destSelection',
+    value: string,
+    options: Array<{ value: string; districtCode: string; place: string }>,
+  ) => {
+    const selected = options.find((option) => option.value === value);
+
+    if (field === 'originSelection') {
+      setEditTripForm({
+        ...editTripForm,
+        originSelection: value,
+        originIlceCode: selected?.districtCode || '',
+        originPlace: selected?.place || '',
+      });
+      return;
+    }
+
+    setEditTripForm({
+      ...editTripForm,
+      destSelection: value,
+      destIlceCode: selected?.districtCode || '',
+      destPlace: selected?.place || '',
+    });
+  };
   const personnelTypeOptions = [
     { value: 0, label: 'Şoför' },
     { value: 1, label: 'Şoför Yardımcısı' },
@@ -536,7 +606,10 @@ export default function TripDetailPage() {
     e.preventDefault();
     setSavingTrip(true);
     try {
-      await tripsApi.update(tripId, getTripFormPayload(editTripForm));
+      await tripsApi.update(
+        tripId,
+        getTripFormPayload(editTripForm, editOriginDistrictOptions, editDestDistrictOptions),
+      );
       toast.success('Sefer bilgileri güncellendi');
       setShowEditTrip(false);
       fetchTrip();
@@ -1224,6 +1297,7 @@ export default function TripDetailPage() {
                       setEditTripForm({
                         ...editTripForm,
                         originIlCode: Number(e.target.value),
+                        originSelection: '',
                         originIlceCode: '',
                         originPlace: '',
                       })
@@ -1240,25 +1314,17 @@ export default function TripDetailPage() {
                   <select
                     title="Kalkış ilçesi"
                     aria-label="Kalkış ilçesi"
-                    value={editTripForm.originIlceCode}
+                    value={editTripForm.originSelection || (editTripForm.originIlceCode ? `district:${editTripForm.originIlceCode}` : '')}
                     onChange={(e) =>
-                      setEditTripForm({
-                        ...editTripForm,
-                        originIlceCode: e.target.value,
-                        originPlace: getPlaceFromDistrict(
-                          e.target.value,
-                          editOriginProvince,
-                          editOriginDistricts,
-                        ),
-                      })
+                      handleEditDistrictSelection('originSelection', e.target.value, editOriginDistrictOptions)
                     }
                     className="input-field py-1.5"
                     required
                   >
                     <option value="">İlçe seçiniz</option>
-                    {editOriginDistricts.map((district) => (
-                      <option key={district.code} value={district.code}>
-                        {district.name} ({district.code})
+                    {editOriginDistrictOptions.map((district) => (
+                      <option key={district.value} value={district.value}>
+                        {district.label}
                       </option>
                     ))}
                   </select>
@@ -1283,6 +1349,7 @@ export default function TripDetailPage() {
                       setEditTripForm({
                         ...editTripForm,
                         destIlCode: Number(e.target.value),
+                        destSelection: '',
                         destIlceCode: '',
                         destPlace: '',
                       })
@@ -1299,25 +1366,17 @@ export default function TripDetailPage() {
                   <select
                     title="Varış ilçesi"
                     aria-label="Varış ilçesi"
-                    value={editTripForm.destIlceCode}
+                    value={editTripForm.destSelection || (editTripForm.destIlceCode ? `district:${editTripForm.destIlceCode}` : '')}
                     onChange={(e) =>
-                      setEditTripForm({
-                        ...editTripForm,
-                        destIlceCode: e.target.value,
-                        destPlace: getPlaceFromDistrict(
-                          e.target.value,
-                          editDestProvince,
-                          editDestDistricts,
-                        ),
-                      })
+                      handleEditDistrictSelection('destSelection', e.target.value, editDestDistrictOptions)
                     }
                     className="input-field py-1.5"
                     required
                   >
                     <option value="">İlçe seçiniz</option>
-                    {editDestDistricts.map((district) => (
-                      <option key={district.code} value={district.code}>
-                        {district.name} ({district.code})
+                    {editDestDistrictOptions.map((district) => (
+                      <option key={district.value} value={district.value}>
+                        {district.label}
                       </option>
                     ))}
                   </select>

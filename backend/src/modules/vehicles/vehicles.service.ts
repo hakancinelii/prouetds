@@ -24,11 +24,17 @@ export class VehiclesService {
     const plateNumber = data.plateNumber ? this.normalizePlate(data.plateNumber) : '';
     const brand = data.brand?.trim() || null;
     const model = data.model?.trim() || null;
+    const inspectionExpiry = data.inspectionExpiry?.trim() || null;
+
+    if (inspectionExpiry && !/^\d{4}-\d{2}-\d{2}$/.test(inspectionExpiry)) {
+      throw new BadRequestException('Muayene tarihi YYYY-MM-DD formatında olmalı');
+    }
 
     return {
       plateNumber,
       brand,
       model,
+      inspectionExpiry,
       year: data.year ?? null,
       seatCapacity: data.seatCapacity ?? null,
     };
@@ -52,6 +58,10 @@ export class VehiclesService {
       existingVehicle.isActive = true;
       existingVehicle.brand = normalized.brand || existingVehicle.brand;
       existingVehicle.model = normalized.model || existingVehicle.model;
+      existingVehicle.inspectionExpiry =
+        normalized.inspectionExpiry === null && data.inspectionExpiry !== undefined
+          ? null
+          : normalized.inspectionExpiry || existingVehicle.inspectionExpiry;
       await this.vehicleRepo.save(existingVehicle);
       return 'reactivated';
     }
@@ -164,7 +174,13 @@ export class VehiclesService {
   async update(id: string, tenantId: string, data: Partial<Vehicle>) {
     const vehicle = await this.findOne(id, tenantId);
     const normalized = this.normalizeVehiclePayload(data);
-    Object.assign(vehicle, normalized);
+    Object.assign(vehicle, {
+      ...normalized,
+      inspectionExpiry:
+        normalized.inspectionExpiry === null && data.inspectionExpiry !== undefined
+          ? null
+          : normalized.inspectionExpiry || vehicle.inspectionExpiry,
+    });
     return this.vehicleRepo.save(vehicle);
   }
 
