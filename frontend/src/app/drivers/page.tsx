@@ -64,7 +64,7 @@ export default function DriversPage() {
           <Users size={24} className="text-emerald-400" />
           Şoförler
         </h1>
-        <button onClick={() => { setEditId(null); setForm({ firstName: '', lastName: '', tcKimlikNo: '', phone: '', nationalityCode: 'TR', gender: 'E', srcCertificate: '', address: '' }); setShowModal(true); }} className="btn-primary flex items-center gap-2">
+        <button type="button" onClick={() => { setEditId(null); setForm({ firstName: '', lastName: '', tcKimlikNo: '', phone: '', nationalityCode: 'TR', gender: 'E', srcCertificate: '', address: '' }); setShowModal(true); }} className="btn-primary flex items-center gap-2">
           <Plus size={18} /> Yeni Şoför
         </button>
       </div>
@@ -73,31 +73,61 @@ export default function DriversPage() {
         {loading ? (
           <div className="flex justify-center py-16"><Loader2 size={24} className="animate-spin text-emerald-400" /></div>
         ) : (
-          <table className="w-full">
-            <thead>
-              <tr className="text-left text-xs theme-text-soft uppercase tracking-wider theme-table-head">
-                <th className="px-5 py-3.5">Ad Soyad</th>
-                <th className="px-5 py-3.5">TC Kimlik</th>
-                <th className="px-5 py-3.5">Telefon</th>
-                <th className="px-5 py-3.5">SRC</th>
-                <th className="px-5 py-3.5"></th>
-              </tr>
-            </thead>
-            <tbody className="divide-y theme-table-body">
-              {drivers.map((d) => (
-                <tr key={d.id} className="theme-table-row transition">
-                  <td className="px-5 py-3.5 text-sm font-medium theme-table-cell-strong">{d.firstName} {d.lastName}</td>
-                  <td className="px-5 py-3.5 text-sm theme-table-code">{d.tcKimlikNo}</td>
-                  <td className="px-5 py-3.5 text-sm theme-table-cell">{d.phone}</td>
-                  <td className="px-5 py-3.5 text-sm theme-table-cell">{d.srcCertificate || '-'}</td>
-                  <td className="px-5 py-3.5 flex gap-2">
-                    <button onClick={() => handleEdit(d)} className="theme-text-soft hover:text-blue-500 transition"><Edit size={15} /></button>
-                    <button onClick={() => handleDelete(d.id)} className="theme-text-soft hover:text-red-500 transition"><Trash2 size={15} /></button>
-                  </td>
-                </tr>
+          <>
+            <div className="theme-driver-mobile-list p-4">
+              {drivers.map((driver) => (
+                <div key={driver.id} className="theme-driver-mobile-card rounded-2xl p-4 theme-safe-shadow">
+                  <div className="flex items-start justify-between gap-3">
+                    <div>
+                      <p className="text-lg font-semibold theme-table-cell-strong">{driver.firstName} {driver.lastName}</p>
+                      <p className="mt-1 text-sm theme-table-code">{driver.tcKimlikNo}</p>
+                    </div>
+                    <div className="flex gap-2">
+                      <button type="button" title="Şoförü düzenle" aria-label="Şoförü düzenle" onClick={() => handleEdit(driver)} className="theme-icon-button theme-mobile-control rounded-xl p-2"><Edit size={15} /></button>
+                      <button type="button" title="Şoförü sil" aria-label="Şoförü sil" onClick={() => handleDelete(driver.id)} className="theme-icon-button theme-mobile-control rounded-xl p-2"><Trash2 size={15} /></button>
+                    </div>
+                  </div>
+                  <div className="mt-4 grid grid-cols-2 gap-3 text-sm">
+                    <div>
+                      <p className="theme-card-copy-soft">Telefon</p>
+                      <p className="mt-1 theme-card-value-bold">{driver.phone || '-'}</p>
+                    </div>
+                    <div>
+                      <p className="theme-card-copy-soft">SRC</p>
+                      <p className="mt-1 theme-card-value-bold">{driver.srcCertificate || '-'}</p>
+                    </div>
+                  </div>
+                </div>
               ))}
-            </tbody>
-          </table>
+            </div>
+            <div className="theme-driver-desktop-list">
+              <table className="w-full">
+                <thead>
+                  <tr className="text-left text-xs theme-text-soft uppercase tracking-wider theme-table-head">
+                    <th className="px-5 py-3.5">Ad Soyad</th>
+                    <th className="px-5 py-3.5">TC Kimlik</th>
+                    <th className="px-5 py-3.5">Telefon</th>
+                    <th className="px-5 py-3.5">SRC</th>
+                    <th className="px-5 py-3.5"><span className="sr-only">İşlemler</span></th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y theme-table-body">
+                  {drivers.map((d) => (
+                    <tr key={d.id} className="theme-table-row transition">
+                      <td className="px-5 py-3.5 text-sm font-medium theme-table-cell-strong">{d.firstName} {d.lastName}</td>
+                      <td className="px-5 py-3.5 text-sm theme-table-code">{d.tcKimlikNo}</td>
+                      <td className="px-5 py-3.5 text-sm theme-table-cell">{d.phone}</td>
+                      <td className="px-5 py-3.5 text-sm theme-table-cell">{d.srcCertificate || '-'}</td>
+                      <td className="px-5 py-3.5 flex gap-2">
+                        <button type="button" title="Şoförü düzenle" aria-label="Şoförü düzenle" onClick={() => handleEdit(d)} className="theme-text-soft hover:text-blue-500 transition"><Edit size={15} /></button>
+                        <button type="button" title="Şoförü sil" aria-label="Şoförü sil" onClick={() => handleDelete(d.id)} className="theme-text-soft hover:text-red-500 transition"><Trash2 size={15} /></button>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </>
         )}
       </div>
 

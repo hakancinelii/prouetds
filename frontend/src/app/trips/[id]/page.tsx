@@ -796,7 +796,7 @@ export default function TripDetailPage() {
       </div>
 
       {/* Trip Info Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+      <div className="mobile-trip-detail-grid">
         <div className="glass-card p-5">
           <p className="text-xs theme-text-soft uppercase tracking-wider">Plaka</p>
           <p className="text-lg font-bold theme-text-strong mt-1 font-mono">
@@ -817,7 +817,37 @@ export default function TripDetailPage() {
             {trip.uetdsSeferRefNo || 'Henüz yok'}
           </p>
         </div>
+        <div className="route-box rounded-2xl p-5">
+          <p className="route-box-label text-xs uppercase tracking-wider">Kalkış Noktası</p>
+          <p className="route-box-value mt-2 text-base font-semibold">{trip.originPlace || 'Kalkış bilgisi yok'}</p>
+        </div>
+        <div className="route-box rounded-2xl p-5">
+          <p className="route-box-label text-xs uppercase tracking-wider">Varış Noktası</p>
+          <p className="route-box-value mt-2 text-base font-semibold">{trip.destPlace || 'Varış bilgisi yok'}</p>
+        </div>
       </div>
+
+      {(trip.originPlace || trip.destPlace) && (
+        <div className="route-box rounded-2xl p-5 theme-route-actions">
+          <div>
+            <p className="route-box-label text-xs uppercase tracking-wider">Harita</p>
+            <p className="route-box-value mt-2 text-sm">Kalkış ve varış noktalarını dış harita uygulamasında aç.</p>
+          </div>
+          <button
+            type="button"
+            onClick={() => {
+              const origin = encodeURIComponent(trip.originPlace || '');
+              const destination = encodeURIComponent(trip.destPlace || '');
+              const url = `https://www.google.com/maps/dir/?api=1&origin=${origin}&destination=${destination}&travelmode=driving`;
+              window.open(url, '_blank', 'noopener,noreferrer');
+            }}
+            disabled={!trip.originPlace || !trip.destPlace}
+            className="theme-map-button rounded-xl px-4 py-3 theme-map-route-button disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            <ExternalLink size={16} /> Yol Tarifi Al
+          </button>
+        </div>
+      )}
 
       {trip.status === 'sent' && (
         <div className="glass-card p-5 border-emerald-500/20 bg-[radial-gradient(circle_at_top_left,rgba(16,185,129,0.16),transparent_45%),rgba(16,185,129,0.05)]">
@@ -891,7 +921,7 @@ export default function TripDetailPage() {
 
       {/* Personnel Section */}
       <div className="glass-card overflow-hidden">
-        <div className="p-5 border-b border-slate-700/50 flex items-center justify-between">
+        <div className="p-5 border-b border-slate-700/50 flex items-center justify-between gap-3">
           <h2 className="text-lg font-semibold flex items-center gap-2">
             <Users size={20} className="text-blue-400" />
             Personel / Şoförler ({trip.personnel?.length || 0})
@@ -907,7 +937,34 @@ export default function TripDetailPage() {
             </button>
           )}
         </div>
-        <div className="overflow-x-auto">
+        <div className="theme-mobile-cards-only p-4">
+          {trip.personnel?.length > 0 ? (
+            trip.personnel.map((person: any) => (
+              <div key={person.id} className="theme-mobile-card-shell rounded-2xl p-4">
+                <p className="text-base font-semibold theme-card-strong">{person.firstName} {person.lastName}</p>
+                <div className="mt-3 grid grid-cols-2 gap-3 text-sm">
+                  <div>
+                    <p className="theme-card-copy-soft">TC Kimlik</p>
+                    <p className="mt-1 theme-card-strong font-mono">{person.tcPassportNo}</p>
+                  </div>
+                  <div>
+                    <p className="theme-card-copy-soft">Tip</p>
+                    <p className="mt-1 theme-card-strong">{getPersonnelTypeLabel(person.personnelType)}</p>
+                  </div>
+                  <div>
+                    <p className="theme-card-copy-soft">Telefon</p>
+                    <p className="mt-1 theme-card-strong">{person.phone || '-'}</p>
+                  </div>
+                </div>
+              </div>
+            ))
+          ) : (
+            <div className="theme-mobile-card-shell rounded-2xl p-6 text-center theme-empty">
+              Henüz personel eklenmemiş (Şoför eklemeden UETDS'ye gönderemezsiniz)
+            </div>
+          )}
+        </div>
+        <div className="theme-desktop-tables-only overflow-x-auto">
           <table className="w-full">
             <thead>
               <tr className="text-left text-xs text-slate-400 uppercase tracking-wider border-b border-slate-700/50">
@@ -958,6 +1015,7 @@ export default function TripDetailPage() {
             <div className="flex gap-2">
               <button
                 type="button"
+                title="Manuel yolcu ekle"
                 onClick={() => setShowAddPassenger(true)}
                 className="btn-secondary text-sm flex items-center gap-1.5"
               >

@@ -119,7 +119,6 @@ export default function DashboardPage() {
           <div
             key={i}
             className="glass-card p-5 animate-slide-in"
-            style={{ animationDelay: `${i * 100}ms` }}
           >
             <div className="flex items-center justify-between mb-3">
               <div
@@ -149,7 +148,44 @@ export default function DashboardPage() {
             Tümünü Gör →
           </a>
         </div>
-        <div className="overflow-x-auto">
+        <div className="theme-mobile-recent-list p-4">
+          {recentTrips?.trips?.length === 0 ? (
+            <div className="dashboard-trip-card rounded-2xl p-5 text-center theme-empty">
+              Henüz sefer bulunmuyor
+            </div>
+          ) : (
+            recentTrips?.trips?.map((trip: any) => (
+              <button
+                key={trip.id}
+                type="button"
+                onClick={() => (window.location.href = `/trips/${trip.id}`)}
+                className="dashboard-trip-card rounded-2xl p-5 text-left theme-safe-shadow"
+              >
+                <div className="flex items-start justify-between gap-3">
+                  <div>
+                    <p className="text-lg font-semibold dashboard-trip-value">{trip.firmTripNumber || trip.id.slice(0, 8)}</p>
+                    <p className="mt-1 text-sm dashboard-trip-meta font-mono">{trip.vehiclePlate}</p>
+                  </div>
+                  <span className="theme-mobile-status">{getStatusBadge(trip.status)}</span>
+                </div>
+                <div className="mt-4 grid grid-cols-2 gap-4 text-sm">
+                  <div>
+                    <p className="dashboard-trip-meta">Kalkış</p>
+                    <p className="mt-1 dashboard-trip-value">{trip.departureDate} {trip.departureTime}</p>
+                  </div>
+                  <div>
+                    <p className="dashboard-trip-meta">UETDS Ref</p>
+                    <p className="mt-1 dashboard-trip-code font-mono">{trip.uetdsSeferRefNo || '-'}</p>
+                  </div>
+                </div>
+                <div className="mt-4 theme-inline-action dashboard-trip-link">
+                  <span>Detaya git</span>
+                </div>
+              </button>
+            ))
+          )}
+        </div>
+        <div className="theme-desktop-recent-table overflow-x-auto">
           <table className="w-full">
             <thead>
               <tr className="text-left text-xs theme-text-soft uppercase tracking-wider theme-table-head">

@@ -17,6 +17,8 @@ import {
   X,
   ChevronDown,
   Shield,
+  Sun,
+  Moon,
 } from 'lucide-react';
 
 const navigation = [
@@ -38,10 +40,33 @@ export default function Sidebar() {
   const { user, logout, isAuthenticated, isLoading, loadFromStorage } =
     useAuthStore();
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [theme, setTheme] = useState<'light' | 'dark'>('light');
+
+  const applyTheme = (nextTheme: 'light' | 'dark') => {
+    if (typeof document === 'undefined') return;
+    document.documentElement.dataset.theme = nextTheme;
+    document.documentElement.style.colorScheme = nextTheme;
+    localStorage.setItem('theme-preference', nextTheme);
+    setTheme(nextTheme);
+  };
 
   useEffect(() => {
     loadFromStorage();
   }, [loadFromStorage]);
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    const storedTheme = localStorage.getItem('theme-preference');
+    const initialTheme = storedTheme === 'dark' || storedTheme === 'light'
+      ? storedTheme
+      : window.matchMedia('(prefers-color-scheme: dark)').matches
+        ? 'dark'
+        : 'light';
+
+    document.documentElement.dataset.theme = initialTheme;
+    document.documentElement.style.colorScheme = initialTheme;
+    setTheme(initialTheme);
+  }, []);
 
   useEffect(() => {
     // Allow access to login and register pages without authentication
@@ -63,11 +88,37 @@ export default function Sidebar() {
     <>
       {/* Mobile menu button */}
       <button
+        type="button"
         onClick={() => setSidebarOpen(!sidebarOpen)}
-        className="fixed top-4 left-4 z-50 lg:hidden theme-panel text-[rgb(var(--foreground-rgb))] p-2 rounded-lg shadow-lg"
+        className="fixed top-4 left-4 z-50 lg:hidden theme-panel text-[rgb(var(--foreground-rgb))] p-2 rounded-lg shadow-lg theme-menu-touch"
       >
         {sidebarOpen ? <X size={20} /> : <Menu size={20} />}
       </button>
+
+      <div className="fixed top-4 right-4 z-50 lg:hidden">
+        <div className="theme-toggle-pill theme-toggle-group shadow-lg">
+          <button
+            type="button"
+            data-active={theme === 'light'}
+            onClick={() => applyTheme('light')}
+            className="theme-toggle-chip theme-toggle-touch"
+            title="Açık tema"
+            aria-label="Açık tema"
+          >
+            <Sun size={16} />
+          </button>
+          <button
+            type="button"
+            data-active={theme === 'dark'}
+            onClick={() => applyTheme('dark')}
+            className="theme-toggle-chip theme-toggle-touch"
+            title="Koyu tema"
+            aria-label="Koyu tema"
+          >
+            <Moon size={16} />
+          </button>
+        </div>
+      </div>
 
       {/* Overlay */}
       {sidebarOpen && (
@@ -122,6 +173,27 @@ export default function Sidebar() {
           })}
         </nav>
 
+        <div className="hidden lg:block px-4 pb-2 desktop-theme-slot">
+          <div className="theme-toggle-pill theme-toggle-group w-full justify-center">
+            <button
+              type="button"
+              data-active={theme === 'light'}
+              onClick={() => applyTheme('light')}
+              className="theme-toggle-chip theme-toggle-compact theme-toggle-touch"
+            >
+              <Sun size={16} /> Açık
+            </button>
+            <button
+              type="button"
+              data-active={theme === 'dark'}
+              onClick={() => applyTheme('dark')}
+              className="theme-toggle-chip theme-toggle-compact theme-toggle-touch"
+            >
+              <Moon size={16} /> Koyu
+            </button>
+          </div>
+        </div>
+
         {/* User Info */}
         <div className="p-4 theme-divider-top">
           <div className="flex items-center gap-3 mb-3 px-2">
@@ -139,6 +211,7 @@ export default function Sidebar() {
             </div>
           </div>
           <button
+            type="button"
             onClick={handleLogout}
             className="flex items-center gap-2 w-full px-4 py-2.5 text-sm text-slate-600 dark:text-slate-400 hover:text-red-500 hover:bg-red-500/10 rounded-xl transition-all"
           >

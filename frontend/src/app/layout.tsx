@@ -1,5 +1,6 @@
 import type { Metadata, Viewport } from 'next';
 import { Inter } from 'next/font/google';
+import Script from 'next/script';
 import './globals.css';
 import Sidebar from '@/components/layout/Sidebar';
 import { Toaster } from 'react-hot-toast';
@@ -58,6 +59,9 @@ export default function RootLayout({
   return (
     <html lang="tr" suppressHydrationWarning>
       <body className={`${inter.className} app-shell bg-[rgb(var(--background-start-rgb))] text-[rgb(var(--foreground-rgb))]`}>
+        <Script id="theme-preference" strategy="beforeInteractive">
+          {`try { const theme = localStorage.getItem('theme-preference'); if (theme === 'light' || theme === 'dark') { document.documentElement.dataset.theme = theme; document.documentElement.style.colorScheme = theme; } } catch (error) {}`}
+        </Script>
         <Toaster
           position="top-right"
           toastOptions={{
@@ -75,7 +79,7 @@ export default function RootLayout({
           }}
         />
         <Sidebar />
-        <main className="adaptive-page lg:ml-64 min-h-screen">{children}</main>
+        <main className="adaptive-page lg:ml-64 min-h-screen pt-[calc(env(safe-area-inset-top)+4.75rem)] pl-12 lg:pl-0 lg:pt-0">{children}</main>
       </body>
     </html>
   );
