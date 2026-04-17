@@ -19,8 +19,8 @@ const getEmptyVehicleForm = () => ({
   model: '',
 });
 
-const BULK_EXAMPLE = `34ABC123, Mercedes, Sprinter
-34XYZ987, Volkswagen, Crafter`;
+const BULK_EXAMPLE = `34ABC123
+34XYZ987`;
 
 export default function VehiclesPage() {
   const [vehicles, setVehicles] = useState<any[]>([]);
@@ -88,21 +88,34 @@ export default function VehiclesPage() {
     e.preventDefault();
     setBulkSubmitting(true);
     try {
-      const res = await vehiclesApi.bulkCreate(bulkText);
-      const data = res.data;
-      const successSummary = [
-        data.createdCount ? `${data.createdCount} yeni araç` : null,
-        data.reactivatedCount ? `${data.reactivatedCount} yeniden aktif` : null,
-        data.skippedCount ? `${data.skippedCount} tekrar satır` : null,
-      ]
-        .filter(Boolean)
-        .join(' · ');
+      const plates = bulkText
+        .split(/\r?\n/)
+        .map((line) => line.trim().toUpperCase().replace(/\s+/g, ''))
+        .filter(Boolean);
 
-      if (data.errors?.length) {
-        toast.success(successSummary || 'Toplu araç işlemi tamamlandı');
-        toast.error(`Hatalı satır: ${data.errors.map((item: any) => item.line).join(', ')}`);
-      } else {
-        toast.success(successSummary || 'Araçlar eklendi');
+      if (!plates.length) {
+        toast.error('En az bir plaka girin');
+        return;
+      }
+
+      let createdCount = 0;
+      const errors: number[] = [];
+
+      for (const [index, plateNumber] of plates.entries()) {
+        try {
+          await vehiclesApi.create({ plateNumber, brand: '', model: '' });
+          createdCount += 1;
+        } catch {
+          errors.push(index + 1);
+        }
+      }
+
+      if (createdCount > 0) {
+        toast.success(`${createdCount} araç eklendi`);
+      }
+
+      if (errors.length > 0) {
+        toast.error(`Eklenemeyen satırlar: ${errors.join(', ')}`);
       }
 
       setShowBulkModal(false);
@@ -249,7 +262,7 @@ export default function VehiclesPage() {
                   <CopyPlus size={18} className="text-emerald-400" /> Toplu Araç Ekle
                 </h3>
                 <p className="theme-text-soft mt-1">
-                  Her satırı <span className="theme-code">PLAKA, MARKA, MODEL</span> formatında gir.
+                  Her satıra yalnızca bir plaka gir. Marka ve model sonra düzenlenebilir.
                 </p>
               </div>
             </div>
@@ -259,10 +272,10 @@ export default function VehiclesPage() {
             </div>
             <form onSubmit={handleBulkSubmit} className="space-y-4">
               <div>
-                <label htmlFor="vehicle-bulk-text" className="label-muted">Araç listesi</label>
+                <label htmlFor="vehicle-bulk-text" className="label-muted">Plaka listesi</label>
                 <textarea
                   id="vehicle-bulk-text"
-                  title="Toplu araç listesi"
+                  title="Toplu plaka listesi"
                   value={bulkText}
                   onChange={(e) => setBulkText(e.target.value)}
                   className="input-field min-h-[220px] resize-y"
