@@ -989,6 +989,7 @@ export class TripsService {
   async cancelOnUetds(tripId: string, tenantId: string, reason: string) {
     const trip = await this.findOne(tripId, tenantId);
     const tenant = await this.tenantRepo.findOne({ where: { id: tenantId } });
+    const environment = tenant?.settings?.uetdsEnvironment || 'test';
 
     if (!trip.uetdsSeferRefNo) {
       throw new BadRequestException('Bu sefer UETDS\'ye gönderilmemiş');
@@ -1001,6 +1002,7 @@ export class TripsService {
       tripId,
       trip.uetdsSeferRefNo,
       reason,
+      environment,
     );
 
     if (result.sonucKodu === 0) {

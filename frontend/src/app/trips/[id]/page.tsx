@@ -396,7 +396,7 @@ export default function TripDetailPage() {
       toast.success("UETDS'de iptal edildi");
       fetchTrip();
     } catch (err: any) {
-      toast.error('İptal başarısız');
+      toast.error(err.response?.data?.message || err.response?.data?.details || 'İptal başarısız');
     }
   };
 
