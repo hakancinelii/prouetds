@@ -434,9 +434,6 @@ body {
   color: rgb(var(--muted-rgb));
 }
 
-/* Status badges */
-.badge {
-
 .theme-table-row:hover {
   background: color-mix(in srgb, rgb(var(--surface-elevated-rgb)) 68%, transparent);
 }
