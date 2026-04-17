@@ -1,5 +1,4 @@
 import type { MetadataRoute } from 'next';
-import vitoIcon from './vito.png';
 
 export default function manifest(): MetadataRoute.Manifest {
   return {
@@ -14,13 +13,13 @@ export default function manifest(): MetadataRoute.Manifest {
     orientation: 'portrait',
     icons: [
       {
-        src: vitoIcon.src,
+        src: '/vito.png',
         sizes: '192x192',
         type: 'image/png',
         purpose: 'any maskable',
       },
       {
-        src: vitoIcon.src,
+        src: '/vito.png',
         sizes: '512x512',
         type: 'image/png',
         purpose: 'any maskable',

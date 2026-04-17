@@ -3,7 +3,6 @@ import { Inter } from 'next/font/google';
 import './globals.css';
 import Sidebar from '@/components/layout/Sidebar';
 import { Toaster } from 'react-hot-toast';
-import vitoIcon from './vito.png';
 
 const inter = Inter({ subsets: ['latin'] });
 
@@ -15,9 +14,9 @@ export const metadata: Metadata = {
   applicationName: 'ProUETDS',
   manifest: '/manifest.webmanifest',
   icons: {
-    icon: [{ url: vitoIcon.src, type: 'image/png' }],
-    shortcut: [{ url: vitoIcon.src, type: 'image/png' }],
-    apple: [{ url: vitoIcon.src, type: 'image/png' }],
+    icon: [{ url: '/vito.png', type: 'image/png' }],
+    shortcut: [{ url: '/vito.png', type: 'image/png' }],
+    apple: [{ url: '/apple-icon.png', type: 'image/png' }],
   },
   appleWebApp: {
     capable: true,
@@ -28,7 +27,7 @@ export const metadata: Metadata = {
     title: 'ProUETDS',
     description:
       'UETDS Tarifesiz (Arızi) Yolcu Taşımacılığı Bildirim ve Yönetim Platformu',
-    images: [vitoIcon.src],
+    images: ['/vito.png'],
     type: 'website',
     locale: 'tr_TR',
   },
@@ -37,7 +36,7 @@ export const metadata: Metadata = {
     title: 'ProUETDS',
     description:
       'UETDS Tarifesiz (Arızi) Yolcu Taşımacılığı Bildirim ve Yönetim Platformu',
-    images: [vitoIcon.src],
+    images: ['/vito.png'],
   },
 };
 
