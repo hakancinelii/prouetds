@@ -61,7 +61,7 @@ export default function Sidebar() {
       {/* Mobile menu button */}
       <button
         onClick={() => setSidebarOpen(!sidebarOpen)}
-        className="fixed top-4 left-4 z-50 lg:hidden bg-slate-800 text-white p-2 rounded-lg shadow-lg"
+        className="fixed top-4 left-4 z-50 lg:hidden bg-white/85 text-slate-900 dark:bg-slate-800 dark:text-white p-2 rounded-lg shadow-lg border border-slate-200/80 dark:border-slate-700/50"
       >
         {sidebarOpen ? <X size={20} /> : <Menu size={20} />}
       </button>
@@ -76,12 +76,12 @@ export default function Sidebar() {
 
       {/* Sidebar */}
       <aside
-        className={`fixed top-0 left-0 h-full w-64 bg-gradient-to-b from-slate-900 via-slate-800 to-slate-900 text-white z-40 transform transition-transform duration-300 ${
+        className={`fixed top-0 left-0 h-full w-64 bg-gradient-to-b from-sky-50 via-white to-slate-100 text-slate-900 dark:from-slate-900 dark:via-slate-800 dark:to-slate-900 dark:text-white z-40 transform transition-transform duration-300 ${
           sidebarOpen ? 'translate-x-0' : '-translate-x-full'
-        } lg:translate-x-0 flex flex-col`}
+        } lg:translate-x-0 flex flex-col border-r border-slate-200/70 dark:border-slate-700/50`}
       >
         {/* Logo */}
-        <div className="p-6 border-b border-slate-700/50">
+        <div className="p-6 border-b border-slate-200/70 dark:border-slate-700/50">
           <div className="flex items-center gap-3">
             <div className="w-10 h-10 bg-gradient-to-br from-emerald-400 to-cyan-500 rounded-xl flex items-center justify-center shadow-lg shadow-emerald-500/20">
               <Shield size={22} className="text-white" />
@@ -90,7 +90,7 @@ export default function Sidebar() {
               <h1 className="text-lg font-bold bg-gradient-to-r from-emerald-300 to-cyan-300 bg-clip-text text-transparent">
                 ProUETDS
               </h1>
-              <p className="text-[10px] text-slate-400 tracking-wider uppercase">
+              <p className="text-[10px] text-slate-500 dark:text-slate-400 tracking-wider uppercase">
                 Yolcu Taşımacılığı
               </p>
             </div>
@@ -108,8 +108,8 @@ export default function Sidebar() {
                 onClick={() => setSidebarOpen(false)}
                 className={`flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium transition-all duration-200 ${
                   isActive
-                    ? 'bg-gradient-to-r from-emerald-500/20 to-cyan-500/20 text-emerald-300 shadow-lg shadow-emerald-500/5 border border-emerald-500/20'
-                    : 'text-slate-400 hover:text-white hover:bg-slate-700/50'
+                    ? 'bg-gradient-to-r from-emerald-500/15 to-cyan-500/15 text-emerald-700 dark:text-emerald-300 shadow-lg shadow-emerald-500/5 border border-emerald-500/20'
+                    : 'text-slate-600 dark:text-slate-400 hover:text-slate-950 dark:hover:text-white hover:bg-slate-200/80 dark:hover:bg-slate-700/50'
                 }`}
               >
                 <item.icon size={18} />
@@ -120,7 +120,7 @@ export default function Sidebar() {
         </nav>
 
         {/* User Info */}
-        <div className="p-4 border-t border-slate-700/50">
+        <div className="p-4 border-t border-slate-200/70 dark:border-slate-700/50">
           <div className="flex items-center gap-3 mb-3 px-2">
             <div className="w-9 h-9 bg-gradient-to-br from-violet-500 to-purple-600 rounded-full flex items-center justify-center text-sm font-bold shadow-lg">
               {user?.firstName?.[0]}
@@ -130,14 +130,14 @@ export default function Sidebar() {
               <p className="text-sm font-medium truncate">
                 {user?.firstName} {user?.lastName}
               </p>
-              <p className="text-[11px] text-slate-400 truncate">
+              <p className="text-[11px] text-slate-500 dark:text-slate-400 truncate">
                 {user?.tenant?.companyName || user?.role}
               </p>
             </div>
           </div>
           <button
             onClick={handleLogout}
-            className="flex items-center gap-2 w-full px-4 py-2.5 text-sm text-slate-400 hover:text-red-400 hover:bg-red-500/10 rounded-xl transition-all"
+            className="flex items-center gap-2 w-full px-4 py-2.5 text-sm text-slate-600 dark:text-slate-400 hover:text-red-500 hover:bg-red-500/10 rounded-xl transition-all"
           >
             <LogOut size={16} />
             Çıkış Yap

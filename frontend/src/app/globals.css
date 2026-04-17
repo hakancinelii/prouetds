@@ -3,9 +3,50 @@
 @tailwind utilities;
 
 :root {
+  color-scheme: dark light;
   --foreground-rgb: 226, 232, 240;
   --background-start-rgb: 2, 6, 23;
   --background-end-rgb: 15, 23, 42;
+  --surface-rgb: 30, 41, 59;
+  --surface-elevated-rgb: 51, 65, 85;
+  --border-rgb: 100, 116, 139;
+  --muted-rgb: 148, 163, 184;
+  --toast-bg: 30, 41, 59;
+  --toast-fg: 226, 232, 240;
+  --sidebar-start: 15, 23, 42;
+  --sidebar-mid: 30, 41, 59;
+  --sidebar-end: 51, 65, 85;
+  --primary-start: 16, 185, 129;
+  --primary-end: 14, 165, 233;
+  --secondary-bg: 51, 65, 85;
+  --secondary-hover: 71, 85, 105;
+  --secondary-fg: 226, 232, 240;
+  --danger-bg: 248, 113, 113;
+  --danger-hover: 239, 68, 68;
+  --danger-fg: 127, 29, 29;
+}
+
+@media (prefers-color-scheme: light) {
+  :root {
+    --foreground-rgb: 15, 23, 42;
+    --background-start-rgb: 248, 245, 239;
+    --background-end-rgb: 255, 255, 255;
+    --surface-rgb: 255, 255, 255;
+    --surface-elevated-rgb: 248, 250, 252;
+    --border-rgb: 203, 213, 225;
+    --muted-rgb: 100, 116, 139;
+    --toast-bg: 255, 255, 255;
+    --toast-fg: 15, 23, 42;
+    --sidebar-start: 240, 249, 255;
+    --sidebar-mid: 224, 242, 254;
+    --sidebar-end: 186, 230, 253;
+    --secondary-bg: 241, 245, 249;
+    --secondary-hover: 226, 232, 240;
+    --secondary-fg: 15, 23, 42;
+    --danger-bg: 254, 226, 226;
+    --danger-hover: 254, 202, 202;
+    --danger-fg: 153, 27, 27;
+  }
 }
 
 body {
@@ -14,6 +55,16 @@ body {
       rgb(var(--background-start-rgb)),
       rgb(var(--background-end-rgb)));
   min-height: 100vh;
+}
+
+.app-shell {
+  background: linear-gradient(135deg,
+      rgb(var(--background-start-rgb)),
+      rgb(var(--background-end-rgb)));
+}
+
+.adaptive-page {
+  color: rgb(var(--foreground-rgb));
 }
 
 /* Custom scrollbar */
@@ -35,9 +86,16 @@ body {
   background: rgba(148, 163, 184, 0.4);
 }
 
+::selection {
+  background: rgba(16, 185, 129, 0.2);
+  color: rgb(var(--foreground-rgb));
+}
+
 /* Glass card */
 .glass-card {
-  @apply bg-slate-800/50 backdrop-blur-xl border border-slate-700/50 rounded-2xl shadow-xl;
+  background: color-mix(in srgb, rgb(var(--surface-rgb)) 72%, transparent);
+  border: 1px solid color-mix(in srgb, rgb(var(--border-rgb)) 36%, transparent);
+  @apply backdrop-blur-xl rounded-2xl shadow-xl;
 }
 
 /* Status badges */
@@ -71,20 +129,51 @@ body {
 
 /* Input styling */
 .input-field {
-  @apply w-full bg-slate-700/50 border border-slate-600/50 rounded-xl px-4 py-2.5 text-sm text-slate-200 placeholder:text-slate-500 focus:outline-none focus:ring-2 focus:ring-emerald-500/50 focus:border-emerald-500/50 transition-all;
+  color: rgb(var(--foreground-rgb));
+  background: color-mix(in srgb, rgb(var(--surface-elevated-rgb)) 80%, transparent);
+  border: 1px solid color-mix(in srgb, rgb(var(--border-rgb)) 42%, transparent);
+  @apply w-full rounded-xl px-4 py-2.5 text-sm placeholder:text-slate-500 focus:outline-none focus:ring-2 transition-all;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.04);
+}
+
+.input-field:focus {
+  border-color: rgba(var(--primary-start), 0.45);
+  box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.12);
 }
 
 /* Button styling */
 .btn-primary {
-  @apply bg-gradient-to-r from-emerald-500 to-cyan-500 hover:from-emerald-400 hover:to-cyan-400 text-white font-medium py-2.5 px-5 rounded-xl shadow-lg shadow-emerald-500/25 transition-all duration-200 hover:shadow-emerald-500/40 disabled:opacity-50 disabled:cursor-not-allowed;
+  background: linear-gradient(90deg, rgb(var(--primary-start)), rgb(var(--primary-end)));
+  color: white;
+  @apply font-medium py-2.5 px-5 rounded-xl shadow-lg transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed;
+  box-shadow: 0 18px 32px -18px rgba(16, 185, 129, 0.55);
+}
+
+.btn-primary:hover {
+  filter: brightness(1.05);
+  box-shadow: 0 20px 34px -16px rgba(14, 165, 233, 0.4);
 }
 
 .btn-secondary {
-  @apply bg-slate-700/50 hover:bg-slate-600/50 text-slate-300 font-medium py-2.5 px-5 rounded-xl border border-slate-600/50 transition-all;
+  background: color-mix(in srgb, rgb(var(--secondary-bg)) 88%, transparent);
+  color: rgb(var(--secondary-fg));
+  border: 1px solid color-mix(in srgb, rgb(var(--border-rgb)) 46%, transparent);
+  @apply font-medium py-2.5 px-5 rounded-xl transition-all;
+}
+
+.btn-secondary:hover {
+  background: color-mix(in srgb, rgb(var(--secondary-hover)) 92%, transparent);
 }
 
 .btn-danger {
-  @apply bg-red-500/20 hover:bg-red-500/30 text-red-400 font-medium py-2.5 px-5 rounded-xl border border-red-500/30 transition-all;
+  background: color-mix(in srgb, rgb(var(--danger-bg)) 92%, transparent);
+  color: rgb(var(--danger-fg));
+  border: 1px solid color-mix(in srgb, rgb(var(--danger-fg)) 24%, transparent);
+  @apply font-medium py-2.5 px-5 rounded-xl transition-all;
+}
+
+.btn-danger:hover {
+  background: color-mix(in srgb, rgb(var(--danger-hover)) 96%, transparent);
 }
 
 /* Animations */
@@ -116,4 +205,12 @@ body {
 
 .animate-fade-in {
   animation: fadeIn 0.5s ease-out;
+}
+
+@media (max-width: 768px) {
+  .mobile-trip-card {
+    background: color-mix(in srgb, rgb(var(--surface-rgb)) 82%, transparent);
+    border: 1px solid color-mix(in srgb, rgb(var(--border-rgb)) 36%, transparent);
+    @apply rounded-2xl p-4 shadow-lg backdrop-blur-sm;
+  }
 }

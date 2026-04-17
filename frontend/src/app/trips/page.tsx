@@ -227,11 +227,11 @@ export default function TripsPage() {
       </div>
 
       {/* Filters */}
-      <div className="glass-card p-4 flex flex-col sm:flex-row gap-3">
+      <div className="glass-card p-4 flex flex-col sm:flex-row gap-3 border border-slate-200/70 dark:border-slate-700/50">
         <div className="relative flex-1">
           <Search
             size={16}
-            className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-500"
+            className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 dark:text-slate-500"
           />
           <input
             type="text"
@@ -261,91 +261,139 @@ export default function TripsPage() {
       </div>
 
       {/* Trips Table */}
-      <div className="glass-card overflow-hidden">
+      <div className="glass-card overflow-hidden border border-slate-200/70 dark:border-slate-700/50">
         {loading ? (
           <div className="flex items-center justify-center py-16">
             <Loader2 size={24} className="animate-spin text-emerald-400" />
           </div>
-        ) : (
-          <div className="overflow-x-auto">
-            <table className="w-full">
-              <thead>
-                <tr className="text-left text-xs text-slate-400 uppercase tracking-wider border-b border-slate-700/50">
-                  <th className="px-5 py-3.5">Sefer No</th>
-                  <th className="px-5 py-3.5">Plaka</th>
-                  <th className="px-5 py-3.5">Hareket</th>
-                  <th className="px-5 py-3.5">Bitiş</th>
-                  <th className="px-5 py-3.5">Yolcu</th>
-                  <th className="px-5 py-3.5">Durum</th>
-                  <th className="px-5 py-3.5">UETDS Ref</th>
-                  <th className="px-5 py-3.5 text-right">Aksiyon</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-slate-700/30">
-                {trips.length === 0 && (
-                  <tr>
-                    <td
-                      colSpan={8}
-                      className="px-5 py-12 text-center text-slate-500"
-                    >
-                      Sefer bulunamadı
-                    </td>
-                  </tr>
-                )}
-                {trips.map((trip) => {
-                  const passengerCount =
-                    trip.groups?.reduce(
-                      (sum: number, g: any) =>
-                        sum + (g.passengers?.length || 0),
-                      0,
-                    ) || 0;
-                  return (
-                    <tr
-                      key={trip.id}
-                      className="hover:bg-slate-700/20 transition cursor-pointer"
-                      onClick={() => router.push(`/trips/${trip.id}`)}
-                    >
-                      <td className="px-5 py-3.5 text-sm font-medium text-white">
-                        {trip.firmTripNumber || trip.id.slice(0, 8)}
-                      </td>
-                      <td className="px-5 py-3.5 text-sm text-slate-300 font-mono">
-                        {trip.vehiclePlate}
-                      </td>
-                      <td className="px-5 py-3.5 text-sm text-slate-300">
-                        {trip.departureDate} {trip.departureTime}
-                      </td>
-                      <td className="px-5 py-3.5 text-sm text-slate-300">
-                        {trip.endDate} {trip.endTime}
-                      </td>
-                      <td className="px-5 py-3.5 text-sm text-slate-300">
-                        {passengerCount}
-                      </td>
-                      <td className="px-5 py-3.5">
-                        {getStatusBadge(trip.status)}
-                      </td>
-                      <td className="px-5 py-3.5 text-sm text-slate-400 font-mono">
-                        {trip.uetdsSeferRefNo || '-'}
-                      </td>
-                      <td className="px-5 py-3.5">
-                        <button
-                          type="button"
-                          title="Sefer detayını aç"
-                          aria-label="Sefer detayını aç"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            router.push(`/trips/${trip.id}`);
-                          }}
-                          className="text-slate-400 hover:text-emerald-400 transition"
-                        >
-                          <Eye size={16} />
-                        </button>
-                      </td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
+        ) : trips.length === 0 ? (
+          <div className="px-5 py-12 text-center text-slate-500 dark:text-slate-400">
+            Sefer bulunamadı
           </div>
+        ) : (
+          <>
+            <div className="grid gap-3 p-4 md:hidden">
+              {trips.map((trip) => {
+                const passengerCount =
+                  trip.groups?.reduce(
+                    (sum: number, g: any) =>
+                      sum + (g.passengers?.length || 0),
+                    0,
+                  ) || 0;
+                return (
+                  <button
+                    key={trip.id}
+                    type="button"
+                    onClick={() => router.push(`/trips/${trip.id}`)}
+                    className="mobile-trip-card text-left"
+                  >
+                    <div className="flex items-start justify-between gap-3">
+                      <div>
+                        <p className="text-sm font-semibold text-slate-900 dark:text-white">
+                          {trip.firmTripNumber || trip.id.slice(0, 8)}
+                        </p>
+                        <p className="mt-1 text-xs font-mono text-slate-500 dark:text-slate-400">
+                          {trip.vehiclePlate}
+                        </p>
+                      </div>
+                      {getStatusBadge(trip.status)}
+                    </div>
+                    <div className="mt-4 grid grid-cols-2 gap-3 text-xs">
+                      <div>
+                        <p className="text-slate-500 dark:text-slate-400">Hareket</p>
+                        <p className="mt-1 font-medium text-slate-700 dark:text-slate-200">{trip.departureDate} {trip.departureTime}</p>
+                      </div>
+                      <div>
+                        <p className="text-slate-500 dark:text-slate-400">Bitiş</p>
+                        <p className="mt-1 font-medium text-slate-700 dark:text-slate-200">{trip.endDate} {trip.endTime}</p>
+                      </div>
+                      <div>
+                        <p className="text-slate-500 dark:text-slate-400">Yolcu</p>
+                        <p className="mt-1 font-medium text-slate-700 dark:text-slate-200">{passengerCount}</p>
+                      </div>
+                      <div>
+                        <p className="text-slate-500 dark:text-slate-400">UETDS Ref</p>
+                        <p className="mt-1 font-medium font-mono text-slate-700 dark:text-slate-200">{trip.uetdsSeferRefNo || '-'}</p>
+                      </div>
+                    </div>
+                    <div className="mt-4 flex items-center justify-end gap-2 text-emerald-600 dark:text-emerald-300">
+                      <Eye size={16} />
+                      <span className="text-xs font-medium">Detaya git</span>
+                    </div>
+                  </button>
+                );
+              })}
+            </div>
+            <div className="hidden md:block overflow-x-auto">
+              <table className="w-full">
+                <thead>
+                  <tr className="text-left text-xs text-slate-500 dark:text-slate-400 uppercase tracking-wider border-b border-slate-200 dark:border-slate-700/50">
+                    <th className="px-5 py-3.5">Sefer No</th>
+                    <th className="px-5 py-3.5">Plaka</th>
+                    <th className="px-5 py-3.5">Hareket</th>
+                    <th className="px-5 py-3.5">Bitiş</th>
+                    <th className="px-5 py-3.5">Yolcu</th>
+                    <th className="px-5 py-3.5">Durum</th>
+                    <th className="px-5 py-3.5">UETDS Ref</th>
+                    <th className="px-5 py-3.5 text-right">Aksiyon</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-200/70 dark:divide-slate-700/30">
+                  {trips.map((trip) => {
+                    const passengerCount =
+                      trip.groups?.reduce(
+                        (sum: number, g: any) =>
+                          sum + (g.passengers?.length || 0),
+                        0,
+                      ) || 0;
+                    return (
+                      <tr
+                        key={trip.id}
+                        className="hover:bg-slate-100/70 dark:hover:bg-slate-700/20 transition cursor-pointer"
+                        onClick={() => router.push(`/trips/${trip.id}`)}
+                      >
+                        <td className="px-5 py-3.5 text-sm font-medium text-slate-900 dark:text-white">
+                          {trip.firmTripNumber || trip.id.slice(0, 8)}
+                        </td>
+                        <td className="px-5 py-3.5 text-sm text-slate-700 dark:text-slate-300 font-mono">
+                          {trip.vehiclePlate}
+                        </td>
+                        <td className="px-5 py-3.5 text-sm text-slate-700 dark:text-slate-300">
+                          {trip.departureDate} {trip.departureTime}
+                        </td>
+                        <td className="px-5 py-3.5 text-sm text-slate-700 dark:text-slate-300">
+                          {trip.endDate} {trip.endTime}
+                        </td>
+                        <td className="px-5 py-3.5 text-sm text-slate-700 dark:text-slate-300">
+                          {passengerCount}
+                        </td>
+                        <td className="px-5 py-3.5">
+                          {getStatusBadge(trip.status)}
+                        </td>
+                        <td className="px-5 py-3.5 text-sm text-slate-500 dark:text-slate-400 font-mono">
+                          {trip.uetdsSeferRefNo || '-'}
+                        </td>
+                        <td className="px-5 py-3.5">
+                          <button
+                            type="button"
+                            title="Sefer detayını aç"
+                            aria-label="Sefer detayını aç"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              router.push(`/trips/${trip.id}`);
+                            }}
+                            className="text-slate-500 dark:text-slate-400 hover:text-emerald-500 transition"
+                          >
+                            <Eye size={16} />
+                          </button>
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+          </>
         )}
 
         {/* Pagination */}
