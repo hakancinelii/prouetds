@@ -174,8 +174,22 @@ export class VehiclesService {
   async update(id: string, tenantId: string, data: Partial<Vehicle>) {
     const vehicle = await this.findOne(id, tenantId);
     const normalized = this.normalizeVehiclePayload(data);
+
+    const nextPlate = normalized.plateNumber || vehicle.plateNumber;
+    if (nextPlate !== vehicle.plateNumber) {
+      const duplicate = await this.vehicleRepo.findOne({
+        where: { tenantId, plateNumber: nextPlate },
+      });
+
+      if (duplicate && duplicate.id !== vehicle.id) {
+        throw new BadRequestException('Bu plaka bu şirkette zaten kayıtlı');
+      }
+    }
+
     Object.assign(vehicle, {
-      ...normalized,
+      plateNumber: nextPlate,
+      brand: normalized.brand,
+      model: normalized.model,
       inspectionExpiry:
         normalized.inspectionExpiry === null && data.inspectionExpiry !== undefined
           ? null

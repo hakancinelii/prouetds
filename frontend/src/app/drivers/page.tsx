@@ -133,7 +133,7 @@ export default function DriversPage() {
 
       {showModal && (
         <div className="fixed inset-0 theme-overlay-strong backdrop-blur-sm z-50 flex items-center justify-center p-4">
-          <div className="glass-card theme-modal w-full max-w-md p-6 animate-slide-in">
+          <div className="glass-card theme-modal theme-panel-soft w-full max-w-md p-6 animate-slide-in">
             <h3 className="text-lg theme-heading mb-4">{editId ? 'Şoför Düzenle' : 'Yeni Şoför'}</h3>
             <form onSubmit={handleSubmit} className="space-y-3">
               <div className="grid grid-cols-2 gap-3">
@@ -145,7 +145,7 @@ export default function DriversPage() {
               <div><label htmlFor="driver-src" className="label-muted">SRC Belgesi</label><input id="driver-src" title="SRC Belgesi" value={form.srcCertificate} onChange={(e) => setForm({ ...form, srcCertificate: e.target.value })} className="input-field" /></div>
               <div className="flex gap-3 pt-2">
                 <button type="submit" className="btn-primary flex-1">{editId ? 'Güncelle' : 'Ekle'}</button>
-                <button type="button" onClick={() => setShowModal(false)} className="btn-secondary">İptal</button>
+                <button type="button" onClick={() => setShowModal(false)} className="btn-secondary theme-panel-border">İptal</button>
               </div>
             </form>
           </div>

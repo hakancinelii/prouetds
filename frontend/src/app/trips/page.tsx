@@ -398,7 +398,7 @@ export default function TripsPage() {
             <div className="hidden md:block overflow-x-auto">
               <table className="w-full">
                 <thead>
-                  <tr className="text-left text-xs text-slate-500 dark:text-slate-400 uppercase tracking-wider border-b border-slate-200 dark:border-slate-700/50">
+                  <tr className="text-left text-xs text-slate-500 dark:text-slate-300 uppercase tracking-wider border-b border-slate-200 dark:border-slate-700/50">
                     <th className="px-5 py-3.5">Sefer No</th>
                     <th className="px-5 py-3.5">Plaka</th>
                     <th className="px-5 py-3.5">Hareket</th>
@@ -423,10 +423,10 @@ export default function TripsPage() {
                         className="hover:bg-slate-100/70 dark:hover:bg-slate-700/20 transition cursor-pointer"
                         onClick={() => router.push(`/trips/${trip.id}`)}
                       >
-                        <td className="px-5 py-3.5 text-sm font-medium text-slate-900 dark:text-white">
+                        <td className="px-5 py-3.5 text-sm font-medium text-slate-900 dark:text-slate-100">
                           {trip.firmTripNumber || trip.id.slice(0, 8)}
                         </td>
-                        <td className="px-5 py-3.5 text-sm text-slate-700 dark:text-slate-300 font-mono">
+                        <td className="px-5 py-3.5 text-sm text-slate-700 dark:text-slate-200 font-mono">
                           {trip.vehiclePlate}
                         </td>
                         <td className="px-5 py-3.5 text-sm text-slate-700 dark:text-slate-300">
@@ -441,7 +441,7 @@ export default function TripsPage() {
                         <td className="px-5 py-3.5">
                           {getStatusBadge(trip.status)}
                         </td>
-                        <td className="px-5 py-3.5 text-sm text-slate-500 dark:text-slate-400 font-mono">
+                        <td className="px-5 py-3.5 text-sm text-slate-500 dark:text-slate-300 font-mono">
                           {trip.uetdsSeferRefNo || '-'}
                         </td>
                         <td className="px-5 py-3.5">
