@@ -84,10 +84,10 @@ const getTripEditabilityNote = (status: string) =>
 
 const getTripEditabilityTone = (status: string) =>
   status === 'sent'
-    ? 'border-amber-500/30 bg-amber-500/10 text-amber-200'
+    ? 'theme-callout-warning'
     : status === 'cancelled'
-      ? 'border-slate-600/40 bg-slate-800/30 text-slate-300'
-      : 'border-cyan-500/20 bg-cyan-500/10 text-cyan-100';
+      ? 'theme-callout-neutral'
+      : 'theme-callout-info';
 
 const DEFAULT_TRIP_DESCRIPTION = 'İstanbul içi Transfer';
 
@@ -260,7 +260,7 @@ export default function TripDetailPage() {
   const getQuickFlowTone = (done: boolean) =>
     done
       ? 'border-emerald-500/30 bg-emerald-500/10 text-emerald-300'
-      : 'border-slate-700/60 bg-slate-900/40 text-slate-300';
+      : 'theme-callout-neutral';
 
   void getSelectedGroupSummary;
 
@@ -569,7 +569,7 @@ export default function TripDetailPage() {
 
   if (!trip) {
     return (
-      <div className="p-8 text-center text-slate-400">Sefer bulunamadı</div>
+      <div className="p-8 text-center theme-empty">Sefer bulunamadı</div>
     );
   }
 
@@ -592,16 +592,16 @@ export default function TripDetailPage() {
             title="Listeye geri dön"
             aria-label="Listeye geri dön"
             onClick={() => router.back()}
-            className="text-slate-400 hover:text-white transition"
+            className="theme-text-soft theme-muted-hover transition"
           >
             <ArrowLeft size={20} />
           </button>
           <div>
-            <h1 className="text-2xl font-bold text-white flex items-center gap-3">
+            <h1 className="text-2xl theme-heading flex items-center gap-3">
               Sefer: {trip.firmTripNumber || trip.vehiclePlate}
               <span className={statusInfo.class}>{statusInfo.label}</span>
             </h1>
-            <p className="text-slate-400 mt-1">
+            <p className="theme-text-soft mt-1">
               {trip.departureDate} {trip.departureTime} → {trip.endDate}{' '}
               {trip.endTime}
             </p>
@@ -653,12 +653,12 @@ export default function TripDetailPage() {
       )}
 
       {showPdfViewer && pdfUrl && (
-        <div className="fixed inset-0 z-50 bg-slate-950/80 backdrop-blur-sm flex items-center justify-center p-4">
-          <div className="glass-card w-full max-w-6xl h-[85vh] flex flex-col overflow-hidden border border-white/10">
-            <div className="flex items-center justify-between gap-3 px-4 py-3 border-b border-white/10">
+        <div className="fixed inset-0 z-50 theme-overlay-strong backdrop-blur-sm flex items-center justify-center p-4">
+          <div className="glass-card theme-modal w-full max-w-6xl h-[85vh] flex flex-col overflow-hidden">
+            <div className="flex items-center justify-between gap-3 px-4 py-3 theme-divider-bottom">
               <div>
-                <p className="text-sm font-medium text-white">UETDS PDF Önizleme</p>
-                <p className="text-xs text-slate-400">Sefer {trip.firmTripNumber || trip.vehiclePlate}</p>
+                <p className="text-sm theme-heading">UETDS PDF Önizleme</p>
+                <p className="text-xs theme-text-soft">Sefer {trip.firmTripNumber || trip.vehiclePlate}</p>
               </div>
               <div className="flex items-center gap-2">
                 <button
@@ -688,9 +688,9 @@ export default function TripDetailPage() {
                 </button>
               </div>
             </div>
-            <div className="px-4 py-2 border-b border-white/10 bg-slate-900/40 flex flex-wrap items-center justify-between gap-2 text-xs text-slate-400">
+            <div className="px-4 py-2 theme-divider-bottom theme-panel-soft flex flex-wrap items-center justify-between gap-2 text-xs theme-text-soft">
               <span>Belge yüklendi. Gerekirse yeni sekmede açarak tarayıcının yerel PDF aracını kullanabilirsiniz.</span>
-              <span className="font-mono text-slate-300">Ref: {trip.uetdsSeferRefNo || '—'}</span>
+              <span className="font-mono theme-code">Ref: {trip.uetdsSeferRefNo || '—'}</span>
             </div>
             <iframe
               src={pdfUrl}
@@ -701,10 +701,10 @@ export default function TripDetailPage() {
         </div>
       )}
 
-      <div className={`glass-card p-5 border ${tripEditabilityTone}`}>
+      <div className={`glass-card p-5 ${tripEditabilityTone}`}>
         <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
           <div>
-            <p className="text-sm font-semibold text-white">Sefer bilgileri</p>
+            <p className="text-sm font-semibold theme-text-strong">Sefer bilgileri</p>
             <p className="text-xs mt-1 opacity-90">{tripEditabilityNote}</p>
           </div>
           <div className="flex flex-wrap items-center gap-2">
@@ -725,19 +725,19 @@ export default function TripDetailPage() {
       {/* Trip Info Cards */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
         <div className="glass-card p-5">
-          <p className="text-xs text-slate-400 uppercase tracking-wider">Plaka</p>
-          <p className="text-lg font-bold text-white mt-1 font-mono">
+          <p className="text-xs theme-text-soft uppercase tracking-wider">Plaka</p>
+          <p className="text-lg font-bold theme-text-strong mt-1 font-mono">
             {trip.vehiclePlate}
           </p>
         </div>
         <div className="glass-card p-5">
-          <p className="text-xs text-slate-400 uppercase tracking-wider">
+          <p className="text-xs theme-text-soft uppercase tracking-wider">
             Toplam Yolcu
           </p>
-          <p className="text-lg font-bold text-white mt-1">{totalPassengers}</p>
+          <p className="text-lg font-bold theme-text-strong mt-1">{totalPassengers}</p>
         </div>
         <div className="glass-card p-5">
-          <p className="text-xs text-slate-400 uppercase tracking-wider">
+          <p className="text-xs theme-text-soft uppercase tracking-wider">
             UETDS Referans
           </p>
           <p className="text-lg font-bold text-emerald-400 mt-1 font-mono">
@@ -758,8 +758,8 @@ export default function TripDetailPage() {
                 <p className="text-sm text-slate-200">
                   Belgeyi uygulama içinde görüntüleyebilir veya doğrudan indirebilirsiniz.
                 </p>
-                <p className="text-xs text-slate-400 mt-1">
-                  Referans: <span className="font-mono text-slate-300">{trip.uetdsSeferRefNo || 'Henüz yok'}</span>
+                <p className="text-xs theme-text-soft mt-1">
+                  Referans: <span className="font-mono theme-code">{trip.uetdsSeferRefNo || 'Henüz yok'}</span>
                 </p>
               </div>
             </div>
@@ -787,11 +787,11 @@ export default function TripDetailPage() {
       )}
 
       {trip.status !== 'sent' && trip.status !== 'cancelled' && (
-        <div className="glass-card p-5 border-white/10 bg-slate-900/30">
+        <div className="glass-card p-5 theme-note-strong">
           <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
             <div>
-              <p className="text-sm font-semibold text-white">Hızlı UETDS akışı</p>
-              <p className="text-xs text-slate-400 mt-1">
+              <p className="text-sm font-semibold theme-text-strong">Hızlı UETDS akışı</p>
+              <p className="text-xs theme-text-soft mt-1">
                 Aynı ekranda seferi tamamlayıp şoför, yolcu ve gönderim adımlarını sırayla bitirin.
               </p>
             </div>

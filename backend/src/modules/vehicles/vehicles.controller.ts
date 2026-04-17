@@ -6,6 +6,10 @@ import { Roles } from '../../common/decorators/roles.decorator';
 import { RolesGuard } from '../../common/guards/roles.guard';
 import { UserRole } from '../../database/entities';
 
+interface BulkVehicleBody {
+  text: string;
+}
+
 @Controller('api/vehicles')
 @UseGuards(AuthGuard('jwt'), RolesGuard)
 export class VehiclesController {
@@ -25,6 +29,12 @@ export class VehiclesController {
   @Roles(UserRole.COMPANY_ADMIN, UserRole.OPERATOR)
   create(@TenantId() tenantId: string, @Body() data: any) {
     return this.vehiclesService.create(tenantId, data);
+  }
+
+  @Post('bulk')
+  @Roles(UserRole.COMPANY_ADMIN, UserRole.OPERATOR)
+  createBulk(@TenantId() tenantId: string, @Body() body: BulkVehicleBody) {
+    return this.vehiclesService.createBulk(tenantId, body.text || '');
   }
 
   @Patch(':id')

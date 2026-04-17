@@ -101,7 +101,7 @@ export default function SettingsPage() {
 
   return (
     <div className="p-6 lg:p-8 space-y-6 animate-fade-in max-w-4xl mx-auto">
-      <h1 className="text-2xl font-bold text-white flex items-center gap-2">
+      <h1 className="text-2xl theme-heading flex items-center gap-2">
         <Settings size={24} className="text-emerald-400" /> Ayarlar
       </h1>
 
@@ -116,21 +116,25 @@ export default function SettingsPage() {
             <div className="grid grid-cols-1 gap-4">
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
-                  <label className="text-xs text-slate-400 uppercase tracking-wider mb-1 block">Şirket Adı</label>
+                  <label htmlFor="settings-company-name" className="label-muted">Şirket Adı</label>
                   <input
+                    id="settings-company-name"
+                    title="Şirket adı"
                     type="text"
                     value={formData.name}
                     onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                    className="w-full bg-slate-900/50 border border-slate-700 rounded-lg px-4 py-2 text-white focus:outline-none focus:border-emerald-500 transition-colors"
+                    className="input-field"
                     placeholder="Şirket Ünvanı"
                   />
                 </div>
                 <div>
-                  <label className="text-xs text-slate-400 uppercase tracking-wider mb-1 block">UETDS Ortamı</label>
+                  <label htmlFor="settings-environment" className="label-muted">UETDS Ortamı</label>
                   <select
+                    id="settings-environment"
+                    title="UETDS ortamı"
                     value={formData.uetdsEnvironment}
                     onChange={(e) => setFormData({ ...formData, uetdsEnvironment: e.target.value })}
-                    className="w-full bg-slate-900/50 border border-slate-700 rounded-lg px-4 py-2 text-white focus:outline-none focus:border-emerald-500 transition-colors"
+                    className="input-field"
                   >
                     <option value="test">Test Ortamı (SandBox)</option>
                     <option value="production">Canlı Ortam (Production)</option>
@@ -140,22 +144,26 @@ export default function SettingsPage() {
               
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
-                  <label className="text-xs text-slate-400 uppercase tracking-wider mb-1 block">Vergi No</label>
+                  <label htmlFor="settings-tax-number" className="label-muted">Vergi No</label>
                   <input
+                    id="settings-tax-number"
+                    title="Vergi numarası"
                     type="text"
                     value={formData.taxNumber}
                     onChange={(e) => setFormData({ ...formData, taxNumber: e.target.value })}
-                    className="w-full bg-slate-900/50 border border-slate-700 rounded-lg px-4 py-2 text-white focus:outline-none focus:border-emerald-500 transition-colors"
+                    className="input-field"
                     placeholder="Vergi No"
                   />
                 </div>
                 <div>
-                  <label className="text-xs text-slate-400 uppercase tracking-wider mb-1 block">UNET No</label>
+                  <label htmlFor="settings-unet" className="label-muted">UNET No</label>
                   <input
+                    id="settings-unet"
+                    title="UNET numarası"
                     type="text"
                     value={formData.uetdsUnetNo}
                     onChange={(e) => setFormData({ ...formData, uetdsUnetNo: e.target.value })}
-                    className="w-full bg-slate-900/50 border border-slate-700 rounded-lg px-4 py-2 text-white focus:outline-none focus:border-emerald-500 transition-colors"
+                    className="input-field"
                     placeholder="Örn: 123456"
                   />
                 </div>
@@ -163,22 +171,26 @@ export default function SettingsPage() {
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
-                  <label className="text-xs text-slate-400 uppercase tracking-wider mb-1 block">UETDS Kullanıcı Adı</label>
+                  <label htmlFor="settings-username" className="label-muted">UETDS Kullanıcı Adı</label>
                   <input
+                    id="settings-username"
+                    title="UETDS kullanıcı adı"
                     type="text"
                     value={formData.uetdsUsername}
                     onChange={(e) => setFormData({ ...formData, uetdsUsername: e.target.value })}
-                    className="w-full bg-slate-900/50 border border-slate-700 rounded-lg px-4 py-2 text-white focus:outline-none focus:border-emerald-500 transition-colors"
+                    className="input-field"
                     placeholder="TC No veya Kullanıcı Adı"
                   />
                 </div>
                 <div>
-                  <label className="text-xs text-slate-400 uppercase tracking-wider mb-1 block">UETDS Şifre</label>
+                  <label htmlFor="settings-password" className="label-muted">UETDS Şifre</label>
                   <input
+                    id="settings-password"
+                    title="UETDS şifre"
                     type="password"
                     value={formData.uetdsPasswordEncrypted}
                     onChange={(e) => setFormData({ ...formData, uetdsPasswordEncrypted: e.target.value })}
-                    className="w-full bg-slate-900/50 border border-slate-700 rounded-lg px-4 py-2 text-white focus:outline-none focus:border-emerald-500 transition-colors"
+                    className="input-field"
                     placeholder="******"
                   />
                 </div>
@@ -198,39 +210,39 @@ export default function SettingsPage() {
             <h2 className="text-lg font-semibold mb-2 flex items-center gap-2">
               <Wifi size={18} className="text-cyan-400" /> Bağlantı Testi
             </h2>
-            <p className="text-xs text-slate-400 mb-6 leading-relaxed">
+            <p className="text-xs theme-text-soft mb-6 leading-relaxed">
               Girilen bilgilerin UETDS servisiyle uyuşup uyuşmadığını kontrol edin.
             </p>
             <div className="space-y-3">
-              <button onClick={handleTestConnection} disabled={testing} className="w-full py-2 bg-slate-800 hover:bg-slate-700 text-white rounded-lg text-sm flex items-center justify-center gap-2 transition-all">
+              <button type="button" onClick={handleTestConnection} disabled={testing} className="w-full py-2 theme-control rounded-lg text-sm flex items-center justify-center gap-2 transition-all">
                 {testing ? <Loader2 size={16} className="animate-spin" /> : <Wifi size={16} />}
                 Bağlantıyı Test Et
               </button>
-              <button onClick={handleValidateCredentials} disabled={testing} className="w-full py-2 bg-slate-800/50 hover:bg-slate-700 text-white border border-slate-700 rounded-lg text-sm flex items-center justify-center gap-2 transition-all">
+              <button type="button" onClick={handleValidateCredentials} disabled={testing} className="w-full py-2 theme-action-soft rounded-lg text-sm flex items-center justify-center gap-2 transition-all">
                 <Key size={16} /> Kimlik Doğrula
               </button>
             </div>
 
             {testResult && (
-              <div className={`mt-4 p-4 rounded-xl border ${testResult.success ? 'bg-emerald-500/10 border-emerald-500/20' : 'bg-red-500/10 border-red-500/20'}`}>
+              <div className={`mt-4 p-4 rounded-xl ${testResult.success ? 'theme-success-panel' : 'theme-danger-panel'}`}>
                 <div className="flex items-center gap-2 mb-2">
-                  {testResult.success ? <CheckCircle2 size={14} className="text-emerald-400" /> : <Shield size={14} className="text-red-400" />}
-                  <span className={`text-xs font-semibold ${testResult.success ? 'text-emerald-300' : 'text-red-300'}`}>
+                  {testResult.success ? <CheckCircle2 size={14} className="text-emerald-500 dark:text-emerald-400" /> : <Shield size={14} className="text-red-500 dark:text-red-400" />}
+                  <span className={`text-xs font-semibold ${testResult.success ? 'text-emerald-600 dark:text-emerald-300' : 'text-red-600 dark:text-red-300'}`}>
                     {testResult.success ? 'Başarılı' : 'Hata Mevcut'}
                   </span>
                 </div>
-                <pre className="text-[10px] leading-tight text-slate-400 overflow-auto max-h-32 p-2 bg-black/30 rounded-lg">
+                <pre className="text-[10px] leading-tight theme-text-soft overflow-auto max-h-32 p-2 theme-pre rounded-lg">
                   {JSON.stringify(testResult.data || testResult.error, null, 2)}
                 </pre>
               </div>
             )}
           </div>
 
-          <div className="glass-card p-6 bg-blue-500/5 border-blue-500/20">
-            <h3 className="text-sm font-semibold mb-2 text-blue-300 flex items-center gap-2">
+          <div className="glass-card p-6 theme-note">
+            <h3 className="text-sm font-semibold mb-2 text-sky-700 dark:text-sky-300 flex items-center gap-2">
               <Shield size={14} /> Güvenlik Notu
             </h3>
-            <p className="text-[11px] text-slate-400 leading-normal">
+            <p className="text-[11px] theme-text-soft leading-normal">
               UETDS şifreleriniz veritabanında şifrelenmiş olarak tutulur. Gerçek zamanlı testler Turkiye.gov.tr servislerine doğrudan istek atar.
             </p>
           </div>

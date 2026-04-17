@@ -109,8 +109,8 @@ export default function DashboardPage() {
     <div className="p-6 lg:p-8 space-y-8 animate-fade-in">
       {/* Header */}
       <div>
-        <h1 className="text-2xl font-bold text-white">Dashboard</h1>
-        <p className="text-slate-400 mt-1">UETDS bildirim sistemi genel durumu</p>
+        <h1 className="text-2xl theme-heading">Dashboard</h1>
+        <p className="theme-text-soft mt-1">UETDS bildirim sistemi genel durumu</p>
       </div>
 
       {/* Stat Cards */}
@@ -127,24 +127,24 @@ export default function DashboardPage() {
               >
                 <card.icon size={20} className="text-white" />
               </div>
-              <TrendingUp size={16} className="text-slate-500" />
+              <TrendingUp size={16} className="theme-icon-muted" />
             </div>
-            <p className="text-2xl font-bold text-white">{card.value}</p>
-            <p className="text-sm text-slate-400 mt-1">{card.title}</p>
+            <p className="text-2xl theme-heading">{card.value}</p>
+            <p className="text-sm theme-text-soft mt-1">{card.title}</p>
           </div>
         ))}
       </div>
 
       {/* Recent Trips */}
       <div className="glass-card overflow-hidden">
-        <div className="p-5 border-b border-slate-700/50 flex items-center justify-between">
-          <h2 className="text-lg font-semibold flex items-center gap-2">
+        <div className="p-5 theme-divider-bottom flex items-center justify-between">
+          <h2 className="theme-section-title flex items-center gap-2">
             <Bus size={20} className="text-emerald-400" />
             Son Seferler
           </h2>
           <a
             href="/trips"
-            className="text-sm text-emerald-400 hover:text-emerald-300 transition"
+            className="text-sm theme-link transition"
           >
             Tümünü Gör →
           </a>
@@ -152,7 +152,7 @@ export default function DashboardPage() {
         <div className="overflow-x-auto">
           <table className="w-full">
             <thead>
-              <tr className="text-left text-xs text-slate-400 uppercase tracking-wider">
+              <tr className="text-left text-xs theme-text-soft uppercase tracking-wider theme-table-head">
                 <th className="px-5 py-3">Sefer No</th>
                 <th className="px-5 py-3">Plaka</th>
                 <th className="px-5 py-3">Tarih</th>
@@ -160,10 +160,10 @@ export default function DashboardPage() {
                 <th className="px-5 py-3">UETDS Ref</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-slate-700/50">
+            <tbody className="divide-y theme-table-body">
               {recentTrips?.trips?.length === 0 && (
                 <tr>
-                  <td colSpan={5} className="px-5 py-8 text-center text-slate-500">
+                  <td colSpan={5} className="px-5 py-8 text-center theme-empty">
                     Henüz sefer bulunmuyor
                   </td>
                 </tr>
@@ -171,20 +171,20 @@ export default function DashboardPage() {
               {recentTrips?.trips?.map((trip: any) => (
                 <tr
                   key={trip.id}
-                  className="hover:bg-slate-700/30 transition cursor-pointer"
+                  className="theme-table-row transition cursor-pointer"
                   onClick={() => (window.location.href = `/trips/${trip.id}`)}
                 >
-                  <td className="px-5 py-3.5 text-sm font-medium text-white">
+                  <td className="px-5 py-3.5 text-sm font-medium theme-table-cell-strong">
                     {trip.firmTripNumber || trip.id.slice(0, 8)}
                   </td>
-                  <td className="px-5 py-3.5 text-sm text-slate-300">
+                  <td className="px-5 py-3.5 text-sm theme-table-code">
                     {trip.vehiclePlate}
                   </td>
-                  <td className="px-5 py-3.5 text-sm text-slate-300">
+                  <td className="px-5 py-3.5 text-sm theme-table-cell">
                     {trip.departureDate} {trip.departureTime}
                   </td>
                   <td className="px-5 py-3.5">{getStatusBadge(trip.status)}</td>
-                  <td className="px-5 py-3.5 text-sm text-slate-400">
+                  <td className="px-5 py-3.5 text-sm theme-table-cell-soft">
                     {trip.uetdsSeferRefNo || '-'}
                   </td>
                 </tr>

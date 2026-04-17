@@ -60,7 +60,7 @@ export default function DriversPage() {
   return (
     <div className="p-6 lg:p-8 space-y-6 animate-fade-in">
       <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-bold text-white flex items-center gap-2">
+        <h1 className="text-2xl theme-heading flex items-center gap-2">
           <Users size={24} className="text-emerald-400" />
           Şoförler
         </h1>
@@ -75,7 +75,7 @@ export default function DriversPage() {
         ) : (
           <table className="w-full">
             <thead>
-              <tr className="text-left text-xs text-slate-400 uppercase tracking-wider border-b border-slate-700/50">
+              <tr className="text-left text-xs theme-text-soft uppercase tracking-wider theme-table-head">
                 <th className="px-5 py-3.5">Ad Soyad</th>
                 <th className="px-5 py-3.5">TC Kimlik</th>
                 <th className="px-5 py-3.5">Telefon</th>
@@ -83,16 +83,16 @@ export default function DriversPage() {
                 <th className="px-5 py-3.5"></th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-slate-700/30">
+            <tbody className="divide-y theme-table-body">
               {drivers.map((d) => (
-                <tr key={d.id} className="hover:bg-slate-700/20 transition">
-                  <td className="px-5 py-3.5 text-sm font-medium text-white">{d.firstName} {d.lastName}</td>
-                  <td className="px-5 py-3.5 text-sm text-slate-300 font-mono">{d.tcKimlikNo}</td>
-                  <td className="px-5 py-3.5 text-sm text-slate-300">{d.phone}</td>
-                  <td className="px-5 py-3.5 text-sm text-slate-300">{d.srcCertificate || '-'}</td>
+                <tr key={d.id} className="theme-table-row transition">
+                  <td className="px-5 py-3.5 text-sm font-medium theme-table-cell-strong">{d.firstName} {d.lastName}</td>
+                  <td className="px-5 py-3.5 text-sm theme-table-code">{d.tcKimlikNo}</td>
+                  <td className="px-5 py-3.5 text-sm theme-table-cell">{d.phone}</td>
+                  <td className="px-5 py-3.5 text-sm theme-table-cell">{d.srcCertificate || '-'}</td>
                   <td className="px-5 py-3.5 flex gap-2">
-                    <button onClick={() => handleEdit(d)} className="text-slate-400 hover:text-blue-400 transition"><Edit size={15} /></button>
-                    <button onClick={() => handleDelete(d.id)} className="text-slate-400 hover:text-red-400 transition"><Trash2 size={15} /></button>
+                    <button onClick={() => handleEdit(d)} className="theme-text-soft hover:text-blue-500 transition"><Edit size={15} /></button>
+                    <button onClick={() => handleDelete(d.id)} className="theme-text-soft hover:text-red-500 transition"><Trash2 size={15} /></button>
                   </td>
                 </tr>
               ))}
@@ -102,17 +102,17 @@ export default function DriversPage() {
       </div>
 
       {showModal && (
-        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-          <div className="glass-card w-full max-w-md p-6 animate-slide-in">
-            <h3 className="text-lg font-bold mb-4">{editId ? 'Şoför Düzenle' : 'Yeni Şoför'}</h3>
+        <div className="fixed inset-0 theme-overlay-strong backdrop-blur-sm z-50 flex items-center justify-center p-4">
+          <div className="glass-card theme-modal w-full max-w-md p-6 animate-slide-in">
+            <h3 className="text-lg theme-heading mb-4">{editId ? 'Şoför Düzenle' : 'Yeni Şoför'}</h3>
             <form onSubmit={handleSubmit} className="space-y-3">
               <div className="grid grid-cols-2 gap-3">
-                <div><label className="block text-xs text-slate-400 mb-1">Ad</label><input value={form.firstName} onChange={(e) => setForm({ ...form, firstName: e.target.value })} className="input-field" required /></div>
-                <div><label className="block text-xs text-slate-400 mb-1">Soyad</label><input value={form.lastName} onChange={(e) => setForm({ ...form, lastName: e.target.value })} className="input-field" required /></div>
+                <div><label htmlFor="driver-first-name" className="label-muted">Ad</label><input id="driver-first-name" title="Ad" value={form.firstName} onChange={(e) => setForm({ ...form, firstName: e.target.value })} className="input-field" required /></div>
+                <div><label htmlFor="driver-last-name" className="label-muted">Soyad</label><input id="driver-last-name" title="Soyad" value={form.lastName} onChange={(e) => setForm({ ...form, lastName: e.target.value })} className="input-field" required /></div>
               </div>
-              <div><label className="block text-xs text-slate-400 mb-1">TC Kimlik No</label><input value={form.tcKimlikNo} onChange={(e) => setForm({ ...form, tcKimlikNo: e.target.value })} className="input-field" required /></div>
-              <div><label className="block text-xs text-slate-400 mb-1">Telefon</label><input value={form.phone} onChange={(e) => setForm({ ...form, phone: e.target.value })} className="input-field" /></div>
-              <div><label className="block text-xs text-slate-400 mb-1">SRC Belgesi</label><input value={form.srcCertificate} onChange={(e) => setForm({ ...form, srcCertificate: e.target.value })} className="input-field" /></div>
+              <div><label htmlFor="driver-identity" className="label-muted">TC Kimlik No</label><input id="driver-identity" title="TC Kimlik No" value={form.tcKimlikNo} onChange={(e) => setForm({ ...form, tcKimlikNo: e.target.value })} className="input-field" required /></div>
+              <div><label htmlFor="driver-phone" className="label-muted">Telefon</label><input id="driver-phone" title="Telefon" value={form.phone} onChange={(e) => setForm({ ...form, phone: e.target.value })} className="input-field" /></div>
+              <div><label htmlFor="driver-src" className="label-muted">SRC Belgesi</label><input id="driver-src" title="SRC Belgesi" value={form.srcCertificate} onChange={(e) => setForm({ ...form, srcCertificate: e.target.value })} className="input-field" /></div>
               <div className="flex gap-3 pt-2">
                 <button type="submit" className="btn-primary flex-1">{editId ? 'Güncelle' : 'Ekle'}</button>
                 <button type="button" onClick={() => setShowModal(false)} className="btn-secondary">İptal</button>

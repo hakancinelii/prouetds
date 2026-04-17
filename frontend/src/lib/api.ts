@@ -111,6 +111,7 @@ export const vehiclesApi = {
   list: () => api.get('/api/vehicles'),
   get: (id: string) => api.get(`/api/vehicles/${id}`),
   create: (data: any) => api.post('/api/vehicles', data),
+  bulkCreate: (text: string) => api.post('/api/vehicles/bulk', { text }),
   update: (id: string, data: any) => api.patch(`/api/vehicles/${id}`, data),
   remove: (id: string) => api.delete(`/api/vehicles/${id}`),
 };

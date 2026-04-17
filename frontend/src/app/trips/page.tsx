@@ -208,11 +208,11 @@ export default function TripsPage() {
       {/* Header */}
       <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-bold text-white flex items-center gap-2">
+          <h1 className="text-2xl theme-heading flex items-center gap-2">
             <Bus size={24} className="text-emerald-400" />
             Seferler
           </h1>
-          <p className="text-slate-400 mt-1">
+          <p className="theme-text-soft mt-1">
             Toplam {total} sefer · Sayfa {page}/{totalPages || 1}
           </p>
         </div>
@@ -227,11 +227,11 @@ export default function TripsPage() {
       </div>
 
       {/* Filters */}
-      <div className="glass-card p-4 flex flex-col sm:flex-row gap-3 border border-slate-200/70 dark:border-slate-700/50">
+      <div className="glass-card p-4 flex flex-col sm:flex-row gap-3 theme-panel-border">
         <div className="relative flex-1">
           <Search
             size={16}
-            className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 dark:text-slate-500"
+            className="absolute left-3 top-1/2 -translate-y-1/2 theme-icon-muted"
           />
           <input
             type="text"
@@ -261,7 +261,7 @@ export default function TripsPage() {
       </div>
 
       {/* Trips Table */}
-      <div className="glass-card overflow-hidden border border-slate-200/70 dark:border-slate-700/50">
+      <div className="glass-card overflow-hidden theme-panel-border">
         {loading ? (
           <div className="flex items-center justify-center py-16">
             <Loader2 size={24} className="animate-spin text-emerald-400" />
