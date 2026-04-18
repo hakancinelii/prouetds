@@ -612,6 +612,20 @@ export class TripsService {
 
   async addPersonnel(tripId: string, tenantId: string, data: Partial<TripPersonnel>) {
     const trip = await this.findOne(tripId, tenantId);
+
+    const existingPersonnel = await this.personnelRepo.findOne({
+      where: {
+        tripId: trip.id,
+        tenantId,
+        tcPassportNo: data.tcPassportNo,
+        personnelType: data.personnelType,
+      },
+    });
+
+    if (existingPersonnel) {
+      throw new BadRequestException('Bu personel bu rolde zaten eklenmiş');
+    }
+
     const personnel = this.personnelRepo.create({
       ...data,
       tripId: trip.id,

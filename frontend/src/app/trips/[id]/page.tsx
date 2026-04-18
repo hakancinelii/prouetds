@@ -166,6 +166,7 @@ export default function TripDetailPage() {
   const [showAddPersonnel, setShowAddPersonnel] = useState(false);
   const [showEditTrip, setShowEditTrip] = useState(false);
   const [savingTrip, setSavingTrip] = useState(false);
+  const [addingPersonnelId, setAddingPersonnelId] = useState<string | null>(null);
   const [selectedPersonnelType, setSelectedPersonnelType] = useState(0);
   const [editTripForm, setEditTripForm] = useState(() => getEditTripForm(null));
   const [editOriginDistricts, setEditOriginDistricts] = useState<Array<{ code: number; name: string }>>([]);
@@ -284,6 +285,9 @@ export default function TripDetailPage() {
   void noop;
 
   const addPersonnel = async (driver: any) => {
+    if (addingPersonnelId) return;
+
+    setAddingPersonnelId(driver.id);
     try {
       await tripsApi.addPersonnel(tripId, buildPersonPayload(driver));
       toast.success(`${getPersonnelTypeLabel(selectedPersonnelType)} eklendi`);
@@ -291,6 +295,8 @@ export default function TripDetailPage() {
       fetchTrip();
     } catch (err: any) {
       toast.error(err.response?.data?.message || 'Personel eklenemedi');
+    } finally {
+      setAddingPersonnelId(null);
     }
   };
 
@@ -858,7 +864,7 @@ export default function TripDetailPage() {
                 <span className="text-sm font-semibold">UETDS resmi çıktısı hazır</span>
               </div>
               <div>
-                <p className="text-sm text-slate-200">
+                <p className="text-sm theme-text-strong">
                   Belgeyi uygulama içinde görüntüleyebilir veya doğrudan indirebilirsiniz.
                 </p>
                 <p className="text-xs theme-text-soft mt-1">
@@ -978,16 +984,16 @@ export default function TripDetailPage() {
               {trip.personnel?.length > 0 ? (
                 trip.personnel.map((p: any) => (
                   <tr key={p.id} className="hover:bg-slate-700/20 transition">
-                    <td className="px-5 py-3 text-sm font-medium text-white">
+                    <td className="px-5 py-3 text-sm font-medium theme-text-strong">
                       {p.firstName} {p.lastName}
                     </td>
-                    <td className="px-5 py-3 text-sm text-slate-300 font-mono">
+                    <td className="px-5 py-3 text-sm theme-table-code font-mono">
                       {p.tcPassportNo}
                     </td>
-                    <td className="px-5 py-3 text-sm text-slate-300">
+                    <td className="px-5 py-3 text-sm theme-table-cell">
                       {getPersonnelTypeLabel(p.personnelType)}
                     </td>
-                    <td className="px-5 py-3 text-sm text-slate-300">
+                    <td className="px-5 py-3 text-sm theme-table-cell">
                       {p.phone || '-'}
                     </td>
                   </tr>
@@ -1081,13 +1087,13 @@ export default function TripDetailPage() {
                 ?.passengers?.map((p: any, i: number) => (
                   <tr key={p.id} className="hover:bg-slate-700/20 transition">
                     <td className="px-5 py-3 text-sm text-slate-500">{i + 1}</td>
-                    <td className="px-5 py-3 text-sm font-medium text-white">
+                    <td className="px-5 py-3 text-sm font-medium theme-text-strong">
                       {p.firstName} {p.lastName}
                     </td>
-                    <td className="px-5 py-3 text-sm text-slate-300 font-mono">
+                    <td className="px-5 py-3 text-sm theme-table-code font-mono">
                       {p.tcPassportNo}
                     </td>
-                    <td className="px-5 py-3 text-sm text-slate-300">
+                    <td className="px-5 py-3 text-sm theme-table-cell">
                       {p.nationalityCode}
                     </td>
                     <td className="px-5 py-3">
@@ -1502,10 +1508,11 @@ export default function TripDetailPage() {
                     type="button"
                     key={d.id}
                     onClick={() => handleAddPersonnel(d)}
-                    className="w-full flex items-center justify-between p-3 rounded-lg bg-slate-700/30 hover:bg-slate-700/50 border border-slate-600/30 transition group"
+                    disabled={addingPersonnelId !== null}
+                    className="w-full flex items-center justify-between p-3 rounded-lg theme-card-soft hover:bg-[rgb(var(--surface-elevated-rgb))]/80 border theme-border transition group disabled:opacity-60 disabled:cursor-not-allowed"
                   >
                     <div className="text-left">
-                      <p className="text-sm font-medium text-white group-hover:text-emerald-400">
+                      <p className="text-sm font-medium theme-text-strong group-hover:text-emerald-400">
                         {d.firstName} {d.lastName}
                       </p>
                       <p className="text-xs text-slate-500 font-mono">
