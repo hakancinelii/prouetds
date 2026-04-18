@@ -823,22 +823,24 @@ export default function TripDetailPage() {
             {trip.uetdsSeferRefNo || 'Henüz yok'}
           </p>
         </div>
-        <div className="route-box rounded-2xl p-5">
-          <p className="route-box-label text-xs uppercase tracking-wider">Kalkış Noktası</p>
-          <p className="route-box-value mt-2 text-base font-semibold">{trip.originPlace || 'Kalkış bilgisi yok'}</p>
-        </div>
-        <div className="route-box rounded-2xl p-5">
-          <p className="route-box-label text-xs uppercase tracking-wider">Varış Noktası</p>
-          <p className="route-box-value mt-2 text-base font-semibold">{trip.destPlace || 'Varış bilgisi yok'}</p>
-        </div>
       </div>
 
-      {(trip.originPlace || trip.destPlace) && (
-        <div className="route-box rounded-2xl p-5 theme-route-actions">
-          <div>
-            <p className="route-box-label text-xs uppercase tracking-wider">Harita</p>
-            <p className="route-box-value mt-2 text-sm">Kalkış ve varış noktalarını dış harita uygulamasında aç.</p>
+      <div className="route-box rounded-2xl p-5 space-y-5">
+        <div>
+          <p className="route-box-label text-xs uppercase tracking-wider">Rota Özeti</p>
+          <p className="route-box-value mt-2 text-sm">Kalkış ve varış noktalarını tek karttan görüntüleyin ve haritada açın.</p>
+        </div>
+        <div className="grid gap-4 md:grid-cols-2">
+          <div className="theme-panel-soft rounded-xl p-4">
+            <p className="route-box-label text-xs uppercase tracking-wider">Kalkış Noktası</p>
+            <p className="route-box-value mt-2 text-base font-semibold">{trip.originPlace || 'Kalkış bilgisi yok'}</p>
           </div>
+          <div className="theme-panel-soft rounded-xl p-4">
+            <p className="route-box-label text-xs uppercase tracking-wider">Varış Noktası</p>
+            <p className="route-box-value mt-2 text-base font-semibold">{trip.destPlace || 'Varış bilgisi yok'}</p>
+          </div>
+        </div>
+        <div className="theme-route-actions">
           <button
             type="button"
             onClick={() => {
@@ -853,7 +855,7 @@ export default function TripDetailPage() {
             <ExternalLink size={16} /> Yol Tarifi Al
           </button>
         </div>
-      )}
+      </div>
 
       {trip.status === 'sent' && (
         <div className="glass-card p-5 border-emerald-500/20 bg-[radial-gradient(circle_at_top_left,rgba(16,185,129,0.16),transparent_45%),rgba(16,185,129,0.05)]">
