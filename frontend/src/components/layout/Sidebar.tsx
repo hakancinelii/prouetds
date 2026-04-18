@@ -160,8 +160,8 @@ export default function Sidebar() {
         {/* Logo */}
         <div className="p-6 theme-divider-bottom">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 bg-gradient-to-br from-emerald-400 to-cyan-500 rounded-xl flex items-center justify-center shadow-lg shadow-emerald-500/20">
-              <Shield size={22} className="text-white" />
+            <div className="w-10 h-10 bg-white rounded-xl flex items-center justify-center shadow-lg shadow-slate-900/10 ring-1 ring-slate-200/70 dark:ring-slate-700/50">
+              <Shield size={22} className="text-slate-900" />
             </div>
             <div>
               <h1 className="text-lg font-bold bg-gradient-to-r from-emerald-300 to-cyan-300 bg-clip-text text-transparent">
