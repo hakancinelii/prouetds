@@ -503,16 +503,16 @@ export default function TripsPage() {
 
       {/* Create Trip Modal */}
       {showCreateModal && (
-        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-          <div className="glass-card w-full max-w-lg p-6 animate-slide-in">
-            <h2 className="text-xl font-bold mb-5 flex items-center gap-2">
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-start justify-center p-3 sm:p-4 overflow-y-auto">
+          <div className="glass-card theme-modal w-full max-w-lg p-4 sm:p-6 animate-slide-in my-[calc(env(safe-area-inset-top)+0.75rem)] mb-[calc(env(safe-area-inset-bottom)+1rem)] max-h-[calc(100dvh-2rem-env(safe-area-inset-top)-env(safe-area-inset-bottom))] overflow-y-auto">
+            <h2 className="text-xl theme-heading mb-5 flex items-center gap-2">
               <Plus size={20} className="text-emerald-400" />
               Yeni Sefer Oluştur
             </h2>
             <form onSubmit={handleCreate} className="space-y-4">
               <div className="grid grid-cols-2 gap-4">
                 <div className="col-span-2">
-                  <label className="block text-sm text-slate-300 mb-1">
+                  <label className="label-muted text-sm">
                     Araç Plaka
                   </label>
                   <input
@@ -534,7 +534,7 @@ export default function TripsPage() {
                   </datalist>
                 </div>
                 <div>
-                  <label className="block text-sm text-slate-300 mb-1">
+                  <label className="label-muted text-sm">
                     Hareket Tarihi
                   </label>
                   <input
@@ -550,7 +550,7 @@ export default function TripsPage() {
                   />
                 </div>
                 <div>
-                  <label className="block text-sm text-slate-300 mb-1">
+                  <label className="label-muted text-sm">
                     Hareket Saati
                   </label>
                   <input
@@ -566,7 +566,7 @@ export default function TripsPage() {
                   />
                 </div>
                 <div>
-                  <label className="block text-sm text-slate-300 mb-1">
+                  <label className="label-muted text-sm">
                     Bitiş Tarihi
                   </label>
                   <input
@@ -582,7 +582,7 @@ export default function TripsPage() {
                   />
                 </div>
                 <div>
-                  <label className="block text-sm text-slate-300 mb-1">
+                  <label className="label-muted text-sm">
                     Bitiş Saati
                   </label>
                   <input
@@ -598,7 +598,7 @@ export default function TripsPage() {
                   />
                 </div>
                 <div className="col-span-2">
-                  <label className="block text-sm text-slate-300 mb-1">
+                  <label className="label-muted text-sm">
                     Açıklama
                   </label>
                   <textarea
@@ -611,16 +611,16 @@ export default function TripsPage() {
                     placeholder="Sefer açıklaması / grup açıklaması (örn: İstanbul içi Transfer)"
                     required
                   />
-                  <p className="mt-1 text-[11px] text-slate-500">
+                  <p className="mt-1 text-[11px] theme-text-soft">
                     Varsayılan açıklama hazır gelir; isterseniz sefere göre düzenleyebilirsiniz.
                   </p>
                 </div>
               </div>
               <div className="grid grid-cols-2 gap-4">
-                <div className="bg-slate-700/30 p-3 rounded-lg space-y-3">
-                  <span className="text-xs font-semibold text-emerald-400 uppercase tracking-wider">Kalkış Noktası</span>
+                <div className="theme-form-shell p-3 rounded-lg space-y-3">
+                  <span className="text-xs font-semibold text-emerald-600 dark:text-emerald-300 uppercase tracking-wider">Kalkış Noktası</span>
                   <div>
-                    <label className="block text-[11px] text-slate-400 mb-0.5">İl Kodu (MERNIS)</label>
+                    <label className="label-muted text-[11px]">İl Kodu (MERNIS)</label>
                     <select
                       id="origin-il-code"
                       aria-label="Kalkış ili"
@@ -646,7 +646,7 @@ export default function TripsPage() {
                     </select>
                   </div>
                   <div>
-                    <label className="block text-[11px] text-slate-400 mb-0.5">İlçe Kodu (MERNIS)</label>
+                    <label className="label-muted text-[11px]">İlçe Kodu (MERNIS)</label>
                     <select
                       id="origin-ilce-code"
                       aria-label="Kalkış ilçesi"
@@ -667,7 +667,7 @@ export default function TripsPage() {
                     </select>
                   </div>
                   <div>
-                    <label className="block text-[11px] text-slate-400 mb-0.5">Başlangıç Yeri (İlçe Adı / Havalimanı)</label>
+                    <label className="label-muted text-[11px]">Başlangıç Yeri (İlçe Adı / Havalimanı)</label>
                     <input
                       type="text"
                       value={form.originPlace}
@@ -679,10 +679,10 @@ export default function TripsPage() {
                   </div>
                 </div>
 
-                <div className="bg-slate-700/30 p-3 rounded-lg space-y-3">
-                  <span className="text-xs font-semibold text-blue-400 uppercase tracking-wider">Varış Noktası</span>
+                <div className="theme-form-shell p-3 rounded-lg space-y-3">
+                  <span className="text-xs font-semibold text-sky-700 dark:text-sky-300 uppercase tracking-wider">Varış Noktası</span>
                   <div>
-                    <label className="block text-[11px] text-slate-400 mb-0.5">İl Kodu (MERNIS)</label>
+                    <label className="label-muted text-[11px]">İl Kodu (MERNIS)</label>
                     <select
                       id="dest-il-code"
                       aria-label="Varış ili"
@@ -708,7 +708,7 @@ export default function TripsPage() {
                     </select>
                   </div>
                   <div>
-                    <label className="block text-[11px] text-slate-400 mb-0.5">İlçe Kodu (MERNIS)</label>
+                    <label className="label-muted text-[11px]">İlçe Kodu (MERNIS)</label>
                     <select
                       id="dest-ilce-code"
                       aria-label="Varış ilçesi"
@@ -729,7 +729,7 @@ export default function TripsPage() {
                     </select>
                   </div>
                   <div>
-                    <label className="block text-[11px] text-slate-400 mb-0.5">Bitiş Yeri (İlçe Adı / Havalimanı)</label>
+                    <label className="label-muted text-[11px]">Bitiş Yeri (İlçe Adı / Havalimanı)</label>
                     <input
                       type="text"
                       value={form.destPlace}

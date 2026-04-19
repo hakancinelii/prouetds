@@ -6615,8 +6615,28 @@ body {
 }
 
 .theme-form-shell {
-  background: rgb(var(--surface-soft-rgb) / 0.7);
+  background: rgb(var(--surface-soft-rgb) / 0.78);
   border: 1px solid rgb(var(--border-rgb) / 0.26);
+}
+
+:root[data-theme='light'] .theme-form-shell {
+  background: rgb(var(--surface-soft-rgb) / 0.94);
+  border: 1px solid rgb(var(--border-rgb) / 0.34);
+}
+
+:root[data-theme='light'] .theme-modal {
+  background: rgb(var(--surface-rgb) / 0.98);
+}
+
+:root[data-theme='light'] .label-muted {
+  color: rgb(var(--foreground-rgb) / 0.72);
+}
+
+:root[data-theme='light'] .theme-note-strong,
+:root[data-theme='light'] .theme-note,
+:root[data-theme='light'] .theme-panel-soft {
+  background: rgb(var(--surface-soft-rgb) / 0.9);
+  border-color: rgb(var(--border-rgb) / 0.34);
 }
 
 .theme-callout-warning {
