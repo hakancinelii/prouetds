@@ -35,7 +35,7 @@ export default function LoginPage() {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center p-4 bg-gradient-to-br from-slate-950 via-slate-900 to-slate-950">
+    <div className="min-h-screen flex items-center justify-center p-4 bg-gradient-to-br from-slate-950 via-slate-900 to-slate-950 text-white">
       {/* Background decoration */}
       <div className="absolute inset-0 overflow-hidden">
         <div className="absolute -top-40 -right-40 w-80 h-80 bg-emerald-500/10 rounded-full blur-3xl" />
@@ -51,7 +51,7 @@ export default function LoginPage() {
           <h1 className="text-3xl font-bold bg-gradient-to-r from-emerald-300 to-cyan-300 bg-clip-text text-transparent">
             ProUETDS
           </h1>
-          <p className="text-slate-400 mt-2 text-sm">
+          <p className="text-slate-300 mt-2 text-sm">
             Tarifesiz Yolcu Taşımacılığı Bildirim Sistemi
           </p>
         </div>
@@ -60,7 +60,7 @@ export default function LoginPage() {
         <div className="glass-card p-8">
           <form onSubmit={handleSubmit} className="space-y-5">
             <div>
-              <label className="block text-sm font-medium text-slate-300 mb-1.5">
+              <label className="block text-sm font-medium text-slate-200 mb-1.5">
                 E-posta Adresi
               </label>
               <input
@@ -74,7 +74,7 @@ export default function LoginPage() {
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-slate-300 mb-1.5">
+              <label className="block text-sm font-medium text-slate-200 mb-1.5">
                 Şifre
               </label>
               <div className="relative">
@@ -89,7 +89,7 @@ export default function LoginPage() {
                 <button
                   type="button"
                   onClick={() => setShowPassword(!showPassword)}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-300"
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-white"
                 >
                   {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
                 </button>
@@ -114,7 +114,7 @@ export default function LoginPage() {
 
           {/* New Registration CTA */}
           <div className="mt-8 pt-6 border-t border-slate-700/50 text-center space-y-3">
-             <p className="text-xs text-slate-500 uppercase tracking-widest font-bold">Yeni misiniz?</p>
+             <p className="text-xs text-slate-400 uppercase tracking-widest font-bold">Yeni misiniz?</p>
              <button 
                type="button"
                onClick={() => window.location.href = '/register'}
@@ -125,7 +125,7 @@ export default function LoginPage() {
           </div>
         </div>
 
-        <p className="text-center text-slate-500 text-xs mt-6">
+        <p className="text-center text-slate-400 text-xs mt-6">
           © 2026 ProUETDS - Tüm hakları saklıdır
         </p>
       </div>

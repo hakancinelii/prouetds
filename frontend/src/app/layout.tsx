@@ -2,7 +2,7 @@ import type { Metadata, Viewport } from 'next';
 import { Inter } from 'next/font/google';
 import Script from 'next/script';
 import './globals.css';
-import Sidebar from '@/components/layout/Sidebar';
+import AppShell from '@/components/layout/AppShell';
 import { Toaster } from 'react-hot-toast';
 
 const inter = Inter({ subsets: ['latin'] });
@@ -78,8 +78,7 @@ export default function RootLayout({
             },
           }}
         />
-        <Sidebar />
-        <main className="adaptive-page lg:ml-64 min-h-screen pt-[calc(env(safe-area-inset-top)+4.75rem)] lg:pt-0">{children}</main>
+        <AppShell>{children}</AppShell>
       </body>
     </html>
   );
