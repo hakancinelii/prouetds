@@ -897,11 +897,6 @@ export default function Home() {
     </div>
   );
 }
-,
-export default function Home() {
-  return (
-    <div className="min-h-screen bg-[rgb(var(--background-start-rgb))] text-[rgb(var(--foreground-rgb))]">
-      <main className="mx-auto max-w-7xl px-6 pb-24 pt-10 lg:px-10">
         <section className="grid gap-10 lg:grid-cols-[1.1fr_0.9fr] lg:items-center">
           <div className="space-y-8">
             <div className="inline-flex items-center gap-2 rounded-full border border-emerald-500/20 bg-emerald-500/8 px-4 py-2 text-sm text-emerald-600 dark:text-emerald-300">
@@ -1082,16 +1077,16 @@ export default function Home() {
         <section className="mt-24 rounded-[2rem] border border-[rgb(var(--border-rgb))]/24 bg-[linear-gradient(180deg,rgba(255,255,255,0.94),rgba(241,245,249,0.9))] p-8 shadow-[0_32px_80px_-48px_rgba(15,23,42,0.35)] dark:border-white/8 dark:bg-[linear-gradient(180deg,rgba(15,23,42,0.96),rgba(17,24,39,0.94))]">
           <div className="mb-8 flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
             <div>
-              <p className="text-sm font-semibold uppercase tracking-[0.2em] text-sky-600 dark:text-sky-300">Neler sunuyoruz?</p>
-              <h2 className="mt-3 text-4xl font-black tracking-tight text-slate-950 dark:text-white">Vitrin değil, operasyonu taşıyan ürün özellikleri.</h2>
+              <p className="text-sm font-semibold uppercase tracking-[0.2em] text-sky-600 dark:text-sky-300">{landingFeatureEyebrow}</p>
+              <h2 className="mt-3 text-4xl font-black tracking-tight text-slate-950 dark:text-white">{landingFeatureHeadline}</h2>
             </div>
             <p className="max-w-2xl text-base leading-8 text-slate-600 dark:text-slate-300">
-              Araç, personel, yolcu, sefer ve bildirim akışlarını tek platformda toplayarak tekrar eden işleri azaltır ve kontrolü merkezileştirir.
+              {landingFeatureSectionBody}
             </p>
           </div>
 
           <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
-            {features.map((item) => (
+            {landingFeatureGrid.map((item) => (
               <article
                 key={item.title}
                 className="rounded-[1.5rem] border border-[rgb(var(--border-rgb))]/20 bg-white/88 p-5 dark:border-white/8 dark:bg-white/4"
@@ -1108,27 +1103,96 @@ export default function Home() {
           </div>
         </section>
 
-        <section className="mt-24 grid gap-6 lg:grid-cols-[1.1fr_0.9fr]">
+        <section className="mt-24 rounded-[2rem] border border-[rgb(var(--border-rgb))]/24 bg-white/94 p-8 shadow-[0_32px_80px_-48px_rgba(15,23,42,0.35)] dark:border-white/8 dark:bg-white/4">
+          <div className="mb-8 flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
+            <div>
+              <p className="text-sm font-semibold uppercase tracking-[0.2em] text-emerald-600 dark:text-emerald-300">{landingPricingEyebrow}</p>
+              <h2 className="mt-3 text-4xl font-black tracking-tight text-slate-950 dark:text-white">{landingPricingHeadline}</h2>
+              <p className="mt-4 max-w-3xl text-base leading-8 text-slate-600 dark:text-slate-300">{pricingIntro}</p>
+            </div>
+            <p className="max-w-2xl text-base leading-8 text-slate-600 dark:text-slate-300">{pricingText}</p>
+          </div>
+
+          <div className="grid gap-4 xl:grid-cols-4">
+            {landingPricingSectionCards.map((plan) => (
+              <article
+                key={plan.code}
+                className="rounded-[1.6rem] border border-[rgb(var(--border-rgb))]/22 bg-[rgb(var(--surface-rgb))]/96 p-6 shadow-[0_18px_42px_-32px_rgba(15,23,42,0.24)] dark:border-white/8 dark:bg-white/4"
+              >
+                <p className="text-xs font-semibold uppercase tracking-[0.18em] text-emerald-600 dark:text-emerald-300">{plan.code} Paketi</p>
+                <div className="mt-5">
+                  <p className="text-sm text-slate-500 dark:text-slate-400">{landingPricingMonthlyLabel}</p>
+                  <p className="mt-2 text-4xl font-black text-slate-950 dark:text-white">{plan.monthlyPrice}</p>
+                </div>
+                <div className="mt-5 border-t border-[rgb(var(--border-rgb))]/22 pt-5 dark:border-white/8">
+                  <p className="text-sm text-slate-500 dark:text-slate-400">{landingPricingYearlyLabel}</p>
+                  <p className="mt-2 text-3xl font-bold text-slate-950 dark:text-white">{plan.yearlyPrice}</p>
+                </div>
+                <p className="mt-5 text-sm leading-7 text-slate-600 dark:text-slate-300">{plan.detail}</p>
+              </article>
+            ))}
+          </div>
+
+          <div className="mt-6 rounded-[1.5rem] border border-emerald-500/14 bg-emerald-500/8 px-5 py-4 text-sm font-medium text-emerald-700 dark:text-emerald-300">
+            {landingNote}
+          </div>
+          <p className="mt-4 text-sm text-slate-500 dark:text-slate-400">{landingPricingFooter}</p>
+        </section>
+
+        <section className="mt-24 rounded-[2rem] border border-[rgb(var(--border-rgb))]/24 bg-[linear-gradient(180deg,rgba(255,255,255,0.94),rgba(248,250,252,0.92))] p-8 shadow-[0_30px_72px_-48px_rgba(15,23,42,0.32)] dark:border-white/8 dark:bg-[linear-gradient(180deg,rgba(15,23,42,0.96),rgba(17,24,39,0.94))]">
+          <div className="mb-8 flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
+            <div>
+              <p className="text-sm font-semibold uppercase tracking-[0.2em] text-sky-600 dark:text-sky-300">{landingShowcaseEyebrowLabel}</p>
+              <h2 className="mt-3 text-4xl font-black tracking-tight text-slate-950 dark:text-white">{landingShowcaseTitle}</h2>
+            </div>
+            <p className="max-w-2xl text-base leading-8 text-slate-600 dark:text-slate-300">{landingShowcaseBody}</p>
+          </div>
+
+          <div className="grid gap-4 md:grid-cols-3">
+            {landingShowcaseSectionCards.map((item) => (
+              <article
+                key={item.label}
+                className="rounded-[1.5rem] border border-[rgb(var(--border-rgb))]/20 bg-white/90 p-5 shadow-[0_18px_38px_-30px_rgba(15,23,42,0.22)] dark:border-white/8 dark:bg-white/4"
+              >
+                <p className="text-xs font-semibold uppercase tracking-[0.18em] text-emerald-600 dark:text-emerald-300">UETDS Sistemi</p>
+                <h3 className="mt-4 text-2xl font-bold text-slate-950 dark:text-white">{item.label}</h3>
+                <p className="mt-3 text-sm leading-7 text-slate-600 dark:text-slate-300">Panel içindeki ilgili ekranı canlı olarak inceleyin.</p>
+                <Link
+                  href={item.href}
+                  className="mt-6 inline-flex items-center gap-2 text-sm font-semibold text-sky-700 transition hover:text-sky-600 dark:text-sky-300 dark:hover:text-sky-200"
+                >
+                  Aç <ArrowRight size={16} />
+                </Link>
+              </article>
+            ))}
+          </div>
+        </section>
+
+        <section className="mt-24 grid gap-6 lg:grid-cols-[0.95fr_1.05fr]">
           <div className="rounded-[2rem] border border-[rgb(var(--border-rgb))]/22 bg-white/92 p-8 shadow-[0_24px_54px_-36px_rgba(15,23,42,0.28)] dark:border-white/8 dark:bg-white/4">
-            <p className="text-sm font-semibold uppercase tracking-[0.2em] text-emerald-600 dark:text-emerald-300">Sık sorulanlar</p>
-            <div className="mt-8 space-y-5">
-              {faqs.map((item) => (
-                <article key={item.question} className="rounded-2xl border border-[rgb(var(--border-rgb))]/18 bg-[rgb(var(--surface-soft-rgb))]/68 p-5 dark:border-white/8 dark:bg-white/4">
-                  <h3 className="text-lg font-semibold text-slate-950 dark:text-white">{item.question}</h3>
-                  <p className="mt-3 text-sm leading-7 text-slate-600 dark:text-slate-300">{item.answer}</p>
+            <p className="text-sm font-semibold uppercase tracking-[0.2em] text-emerald-600 dark:text-emerald-300">{landingTestimonialsEyebrow}</p>
+            <h2 className="mt-3 text-4xl font-black tracking-tight text-slate-950 dark:text-white">{landingTestimonialsTitle}</h2>
+            <p className="mt-4 text-base leading-8 text-slate-600 dark:text-slate-300">{landingTestimonialsBody}</p>
+            <div className="mt-8 space-y-4">
+              {landingTestimonialsCards.map((item) => (
+                <article key={item.name} className="rounded-2xl border border-[rgb(var(--border-rgb))]/18 bg-[rgb(var(--surface-soft-rgb))]/68 p-5 dark:border-white/8 dark:bg-white/4">
+                  <p className="text-base leading-8 text-slate-700 dark:text-slate-300">“{item.quote}”</p>
+                  <p className="mt-4 text-sm font-semibold text-slate-950 dark:text-white">{item.name}</p>
+                  <p className="text-sm text-slate-500 dark:text-slate-400">{item.company}</p>
                 </article>
               ))}
             </div>
           </div>
 
           <div className="rounded-[2rem] border border-[rgb(var(--border-rgb))]/22 bg-[linear-gradient(180deg,rgba(16,185,129,0.12),rgba(14,165,233,0.12))] p-8 shadow-[0_26px_60px_-36px_rgba(15,23,42,0.3)] dark:border-white/8 dark:bg-[linear-gradient(180deg,rgba(16,185,129,0.18),rgba(14,165,233,0.16))]">
-            <p className="text-sm font-semibold uppercase tracking-[0.2em] text-slate-900 dark:text-white">Hemen başlayın</p>
+            <p className="text-sm font-semibold uppercase tracking-[0.2em] text-slate-900 dark:text-white">{landingSupportEyebrow}</p>
             <h2 className="mt-4 text-4xl font-black tracking-tight text-slate-950 dark:text-white">
-              UETDS operasyonlarınızı daha az eforla yönetin.
+              {landingSupportTitle}
             </h2>
             <p className="mt-4 text-base leading-8 text-slate-700 dark:text-slate-200">
-              Ayarlar ekranından kurum bilgilerinizi girin, araç ve personel kayıtlarınızı oluşturun, ardından sefer akışını aynı gün içinde canlı kullanmaya başlayın.
+              {landingSupportBody}
             </p>
+            <p className="mt-3 text-sm text-slate-600 dark:text-slate-300">{landingSupportCopy}</p>
             <div className="mt-8 flex flex-wrap gap-3">
               <Link
                 href="/login"
@@ -1143,12 +1207,109 @@ export default function Home() {
                 UETDS ayarlarını hazırla
               </Link>
             </div>
-            <div className="mt-8 rounded-2xl border border-slate-900/8 bg-white/80 p-4 text-sm text-slate-700 dark:border-white/10 dark:bg-white/5 dark:text-slate-300">
-              İletişim: <span className="font-semibold text-slate-950 dark:text-white">info@prouetds.com.tr</span>
+            <a
+              href={landingFooterSupportLink}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="mt-8 inline-flex items-center gap-3 rounded-2xl border border-slate-900/10 bg-white/85 px-5 py-4 text-sm font-semibold text-slate-900 transition hover:bg-white dark:border-white/10 dark:bg-white/5 dark:text-white dark:hover:bg-white/10"
+            >
+              <MessageCircle size={18} /> WhatsApp ile mesaj gönderin: {landingFooterSupportLabel}
+            </a>
+          </div>
+        </section>
+
+        <section className="mt-24 rounded-[2rem] border border-[rgb(var(--border-rgb))]/22 bg-white/92 p-8 shadow-[0_24px_54px_-36px_rgba(15,23,42,0.28)] dark:border-white/8 dark:bg-white/4">
+          <div className="mb-8 flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
+            <div>
+              <p className="text-sm font-semibold uppercase tracking-[0.2em] text-emerald-600 dark:text-emerald-300">{landingFaqEyebrow}</p>
+              <h2 className="mt-3 text-4xl font-black tracking-tight text-slate-950 dark:text-white">{landingFaqHeadline}</h2>
+            </div>
+            <div className="max-w-xl text-sm leading-7 text-slate-600 dark:text-slate-300">
+              <p>{landingSupportText}</p>
+            </div>
+          </div>
+          <div className="grid gap-5 lg:grid-cols-[1.1fr_0.9fr]">
+            <div className="space-y-5">
+              {landingFAQSectionCards.map((item) => (
+                <article key={item.question} className="rounded-2xl border border-[rgb(var(--border-rgb))]/18 bg-[rgb(var(--surface-soft-rgb))]/68 p-5 dark:border-white/8 dark:bg-white/4">
+                  <h3 className="text-lg font-semibold text-slate-950 dark:text-white">{item.question}</h3>
+                  <p className="mt-3 text-sm leading-7 text-slate-600 dark:text-slate-300">{item.answer}</p>
+                </article>
+              ))}
+            </div>
+            <div className="rounded-[1.7rem] border border-emerald-500/14 bg-emerald-500/8 p-6 dark:border-white/8 dark:bg-white/4">
+              <p className="text-sm font-semibold uppercase tracking-[0.2em] text-slate-900 dark:text-white">{landingSupportEyebrow}</p>
+              <h3 className="mt-4 text-4xl font-black tracking-tight text-slate-950 dark:text-white">{landingSupportTitle}</h3>
+              <p className="mt-4 text-base leading-8 text-slate-700 dark:text-slate-300">{landingSupportBody}</p>
+              <div className="mt-8 flex flex-wrap gap-3">
+                <Link
+                  href="/login"
+                  className="inline-flex items-center gap-2 rounded-2xl bg-slate-950 px-6 py-3 text-sm font-semibold text-white transition hover:bg-slate-800 dark:bg-white dark:text-slate-950 dark:hover:bg-slate-200"
+                >
+                  Panele giriş yap <ArrowRight size={18} />
+                </Link>
+                <a
+                  href={landingFooterSupportLink}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="inline-flex items-center gap-2 rounded-2xl border border-slate-900/10 bg-white/85 px-6 py-3 text-sm font-semibold text-slate-900 transition hover:bg-white dark:border-white/12 dark:bg-white/6 dark:text-white dark:hover:bg-white/10"
+                >
+                  <MessageCircle size={16} /> WhatsApp ile yaz
+                </a>
+              </div>
+              <div className="mt-8 rounded-2xl border border-slate-900/8 bg-white/80 p-4 text-sm text-slate-700 dark:border-white/10 dark:bg-white/5 dark:text-slate-300">
+                {landingSupportText}
+              </div>
             </div>
           </div>
         </section>
+
+        <footer className="mt-24 flex flex-col gap-8 rounded-[2rem] border border-[rgb(var(--border-rgb))]/22 bg-[rgb(var(--surface-rgb))]/92 p-8 shadow-[0_24px_54px_-36px_rgba(15,23,42,0.28)] dark:border-white/8 dark:bg-white/4">
+          <div className="flex flex-col gap-8 lg:flex-row lg:items-start lg:justify-between">
+            <div>
+              <h2 className="text-2xl font-black text-slate-950 dark:text-white">ProUETDS</h2>
+              <p className="mt-3 max-w-md text-sm leading-7 text-slate-600 dark:text-slate-300">
+                Tarifesiz yolcu taşımacılığı için UETDS operasyon paneli.
+              </p>
+            </div>
+            <div className="grid gap-8 sm:grid-cols-3">
+              <div>
+                <p className="text-sm font-semibold uppercase tracking-[0.18em] text-slate-500 dark:text-slate-400">{landingFooterHeading}</p>
+                <ul className="mt-4 space-y-2 text-sm text-slate-700 dark:text-slate-300">
+                  {landingFooterQuickLinks.map((item) => (
+                    <li key={item}>{item}</li>
+                  ))}
+                </ul>
+              </div>
+              <div>
+                <p className="text-sm font-semibold uppercase tracking-[0.18em] text-slate-500 dark:text-slate-400">Sistem Özellikleri</p>
+                <ul className="mt-4 space-y-2 text-sm text-slate-700 dark:text-slate-300">
+                  {landingPublicPanels.map((item) => (
+                    <li key={item}>{item}</li>
+                  ))}
+                </ul>
+              </div>
+              <div>
+                <p className="text-sm font-semibold uppercase tracking-[0.18em] text-slate-500 dark:text-slate-400">{landingFooterSupport}</p>
+                <p className="mt-4 text-sm text-slate-700 dark:text-slate-300">{landingFooterSupportBody}</p>
+                <a
+                  href={landingFooterSupportLink}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="mt-3 inline-flex items-center gap-2 text-sm font-semibold text-emerald-600 dark:text-emerald-300"
+                >
+                  <MessageCircle size={16} /> {landingFooterSupportLabel}
+                </a>
+              </div>
+            </div>
+          </div>
+          <div className="text-xs text-slate-500 dark:text-slate-400">{landingFooterCopy}</div>
+        </footer>
       </main>
+    </div>
+  );
+}
+,      </main>
     </div>
   );
 }
