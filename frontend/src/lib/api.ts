@@ -52,6 +52,10 @@ export default api;
 export const authApi = {
   login: (email: string, password: string) =>
     api.post('/api/auth/login', { email, password }),
+  demoLogin: () => api.post('/api/auth/login', {
+    email: 'demo@prouetds.com',
+    password: 'Demo123!',
+  }),
   register: (data: any) =>
     api.post('/api/auth/register', data),
   refresh: (token: string) =>

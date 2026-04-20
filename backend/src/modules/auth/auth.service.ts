@@ -11,6 +11,8 @@ import { User, UserRole } from '../../database/entities';
 
 import { TenantsService } from '../tenants/tenants.service';
 
+const DEMO_ADMIN_EMAIL = 'demo@prouetds.com';
+
 @Injectable()
 export class AuthService {
   constructor(
@@ -20,6 +22,10 @@ export class AuthService {
   ) {}
 
   async login(email: string, password: string) {
+    if (email?.trim().toLowerCase() === DEMO_ADMIN_EMAIL) {
+      await this.tenantsService.ensureDemoTenant();
+    }
+
     const user = await this.userRepo.findOne({
       where: { email, isActive: true },
       relations: ['tenant'],

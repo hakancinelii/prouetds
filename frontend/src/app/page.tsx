@@ -1,50 +1,28 @@
+'use client';
+
+import { useState } from 'react';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import {
   ArrowRight,
   BadgeCheck,
-  BarChart3,
   Bell,
-  Bus,
   CarFront,
-  FileText,
+  Loader2,
+  LogIn,
   MapPinned,
   MessageCircle,
-  ShieldCheck,
   Smartphone,
   Users,
 } from 'lucide-react';
+import toast from 'react-hot-toast';
+import { authApi } from '@/lib/api';
+import { useAuthStore } from '@/lib/store';
 
 const heroStats = [
   { label: 'UETDS Uyumlu', value: 'Bakanlık akışına hazır' },
   { label: 'Operasyon Hızı', value: 'Dakikalar içinde bildirim' },
   { label: 'Mobil Erişim', value: 'Her cihazdan kullanım' },
-];
-
-const advantages = [
-  {
-    title: 'Tek panelden operasyon',
-    description:
-      'Araç, şoför, yolcu ve sefer akışını tek ekranda toparlayın; tekrar tekrar aynı veriyi girmeyin.',
-    icon: Bus,
-  },
-  {
-    title: 'Bakanlık uyumlu veri akışı',
-    description:
-      'Kalkış, varış, personel ve yolcu bilgilerini UETDS için doğru sırada hazırlayıp gönderin.',
-    icon: ShieldCheck,
-  },
-  {
-    title: 'Raporlama ve görünürlük',
-    description:
-      'Taslak, gönderildi, hata ve iptal durumlarını operasyonda anlık takip edin.',
-    icon: BarChart3,
-  },
-  {
-    title: 'Bildirim ve belge erişimi',
-    description:
-      'Sefer çıktılarını sistem içinde açın, dış harita uygulamasına rota yönlendirmesi verin.',
-    icon: FileText,
-  },
 ];
 
 const steps = [
@@ -126,9 +104,9 @@ const faqs = [
       'Evet. Ayarlar ekranından kurum tarafından verilen kullanıcı adı ve şifre ile bağlantı testi yapılabilir.',
   },
   {
-    question: 'Mobilde çalışıyor mu?',
+    question: 'Demo girişte ne göreceğim?',
     answer:
-      'Evet. Sefer listeleri, detay ekranları ve araç/şoför modalları mobil kullanım için optimize edildi.',
+      'Demo şirkette araçlar, şoförler, taslak ve gönderilmiş seferler ile örnek yolcu listeleri hazır gelir.',
   },
 ];
 
@@ -173,7 +151,6 @@ const publicPanels = [
 ];
 
 const quickLinks = ['Ana Sayfa', 'Hakkımızda', 'Blog', 'İletişim', 'U-ETDS Giriş'];
-
 const whatsappHref = 'https://wa.me/905545812034';
 const landingBadge = 'Türkiye’nin UETDS operasyon paneli';
 const landingTitle = 'UETDS verilerinizi Ulaştırma Bakanlığına daha hızlı, daha temiz ve daha az hatayla gönderin.';
@@ -184,16 +161,28 @@ const landingAboutBody =
   'ProUETDS, tarifesiz yolcu taşımacılığı yapan firmaların araç, personel ve yolcu verilerini tekrar tekrar girmeden sefer bazında hazırlamasına yardımcı olur.';
 const landingAboutBody2 =
   'Sistem, bakanlığın talep ettiği veri akışını operasyona daha uygun bir iş sırasına çevirir: sefer oluştur, araç ata, personel ekle, yolcu ekle, gönder.';
-const landingSupportTitle = 'UETDS operasyonlarınızı daha az eforla yönetin.';
-const landingSupportBody =
-  'Ayarlar ekranından kurum bilgilerinizi girin, araç ve personel kayıtlarınızı oluşturun, ardından sefer akışını aynı gün içinde canlı kullanmaya başlayın.';
-const pricingIntro = 'Aylık ve yıllık fiyatlandırma ile araç ve kullanıcı kapasitenize göre en uygun paketi seçin.';
-const pricingText =
-  'Aylık paketler hızlı başlangıç için, yıllık paketler ise iki ay avantajlı uzun dönem kullanım için tasarlandı.';
-const pricingNote =
-  'Yıllık alımlarda 12 ay yerine 10 aylık ödeme yaparak 2 aylık indirimli kullanabilirsiniz.';
 
 export default function Home() {
+  const router = useRouter();
+  const { login } = useAuthStore();
+  const [demoLoading, setDemoLoading] = useState(false);
+
+  const handleDemoLogin = async () => {
+    if (demoLoading) return;
+    setDemoLoading(true);
+
+    try {
+      const res = await authApi.demoLogin();
+      login(res.data.accessToken, res.data.refreshToken, res.data.user);
+      toast.success('Demo ortama giriş yapıldı.');
+      router.push('/dashboard');
+    } catch (err: any) {
+      toast.error(err.response?.data?.message || 'Demo giriş şu anda açılamadı.');
+    } finally {
+      setDemoLoading(false);
+    }
+  };
+
   return (
     <div className="min-h-screen bg-[rgb(var(--background-start-rgb))] text-[rgb(var(--foreground-rgb))]">
       <main className="mx-auto max-w-7xl px-6 pb-24 pt-10 lg:px-10">
@@ -219,14 +208,34 @@ export default function Home() {
               >
                 U-ETDS Giriş <ArrowRight size={18} />
               </Link>
+              <button
+                type="button"
+                onClick={handleDemoLogin}
+                disabled={demoLoading}
+                className="inline-flex items-center gap-2 rounded-2xl border border-slate-900/10 bg-white/90 px-6 py-3 text-base font-semibold text-slate-900 shadow-sm transition hover:bg-white disabled:cursor-not-allowed disabled:opacity-70 dark:border-white/10 dark:bg-white/5 dark:text-white dark:hover:bg-white/10"
+              >
+                {demoLoading ? (
+                  <>
+                    <Loader2 size={18} className="animate-spin" /> Demo hazırlanıyor
+                  </>
+                ) : (
+                  <>
+                    <LogIn size={18} /> Demo ile Giriş Yap
+                  </>
+                )}
+              </button>
               <a
                 href={whatsappHref}
                 target="_blank"
                 rel="noopener noreferrer"
                 className="inline-flex items-center gap-2 rounded-2xl border border-[rgb(var(--border-rgb))]/40 bg-white/80 px-6 py-3 text-base font-semibold text-slate-900 shadow-sm transition hover:bg-white dark:border-white/10 dark:bg-white/5 dark:text-white dark:hover:bg-white/10"
               >
-                <MessageCircle size={18} /> Ücretsiz dene
+                <MessageCircle size={18} /> WhatsApp ile yaz
               </a>
+            </div>
+
+            <div className="rounded-[1.6rem] border border-sky-500/16 bg-sky-500/8 px-5 py-4 text-sm text-slate-700 dark:text-slate-200">
+              Demo şirket içinde örnek araçlar, şoförler, yolcular ve farklı sefer durumları hazır gelir.
             </div>
 
             <div className="grid gap-3 sm:grid-cols-3">
@@ -347,29 +356,6 @@ export default function Home() {
           </div>
         </section>
 
-        <section className="mt-24">
-          <div className="mb-8 flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
-            <div>
-              <p className="text-sm font-semibold uppercase tracking-[0.2em] text-emerald-600 dark:text-emerald-300">Avantajlar</p>
-              <h2 className="mt-3 text-4xl font-black tracking-tight text-slate-950 dark:text-white">Operasyonu hafifleten araçlar</h2>
-            </div>
-            <p className="max-w-2xl text-base leading-8 text-slate-600 dark:text-slate-300">
-              UETDS verilerinizi ücretsiz ve kolay şekilde yönetin.
-            </p>
-          </div>
-
-          <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
-            {['Ücretsiz', 'Hiçbir yardım ve desteğe ihtiyaç duymayan pratik kullanım', 'Raporlama seçenekleri', 'Müşterilere SMS ve Email bildirim', 'Gelişmiş mod ile ek özellikler', 'Ve daha fazlası...'].map((item) => (
-              <div
-                key={item}
-                className="rounded-[1.4rem] border border-[rgb(var(--border-rgb))]/18 bg-[rgb(var(--surface-rgb))]/92 px-5 py-4 text-sm font-semibold text-slate-900 shadow-[0_18px_34px_-28px_rgba(15,23,42,0.28)] dark:border-white/8 dark:bg-white/4 dark:text-white"
-              >
-                {item}
-              </div>
-            ))}
-          </div>
-        </section>
-
         <section className="mt-24 rounded-[2rem] border border-[rgb(var(--border-rgb))]/24 bg-[linear-gradient(180deg,rgba(255,255,255,0.94),rgba(241,245,249,0.9))] p-8 shadow-[0_32px_80px_-48px_rgba(15,23,42,0.35)] dark:border-white/8 dark:bg-[linear-gradient(180deg,rgba(15,23,42,0.96),rgba(17,24,39,0.94))]">
           <div className="mb-8 flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
             <div>
@@ -432,7 +418,6 @@ export default function Home() {
           <div className="mt-6 rounded-[1.5rem] border border-emerald-500/14 bg-emerald-500/8 px-5 py-4 text-sm font-medium text-emerald-700 dark:text-emerald-300">
             Yıllık alımlarda 12 ay yerine 10 aylık ödeme yaparak 2 aylık indirimli kullanabilirsiniz.
           </div>
-          <p className="mt-4 text-sm text-slate-500 dark:text-slate-400">Araç limiti büyüdükçe aynı panel ve aynı akış üzerinden devam edersiniz.</p>
         </section>
 
         <section className="mt-24 rounded-[2rem] border border-[rgb(var(--border-rgb))]/24 bg-[linear-gradient(180deg,rgba(255,255,255,0.94),rgba(248,250,252,0.92))] p-8 shadow-[0_30px_72px_-48px_rgba(15,23,42,0.32)] dark:border-white/8 dark:bg-[linear-gradient(180deg,rgba(15,23,42,0.96),rgba(17,24,39,0.94))]">
@@ -488,7 +473,7 @@ export default function Home() {
             <p className="mt-4 text-base leading-8 text-slate-700 dark:text-slate-200">
               Ayarlar ekranından kurum bilgilerinizi girin, araç ve personel kayıtlarınızı oluşturun, ardından sefer akışını aynı gün içinde canlı kullanmaya başlayın.
             </p>
-            <p className="mt-3 text-sm text-slate-600 dark:text-slate-300">WhatsApp üzerinden hemen soru sorabilir, fiyat ve başvuru detaylarını hızlıca alabilirsiniz.</p>
+            <p className="mt-3 text-sm text-slate-600 dark:text-slate-300">Demo ile içerideki gerçek kullanım hissini anında görebilirsiniz.</p>
             <div className="mt-8 flex flex-wrap gap-3">
               <Link
                 href="/login"
@@ -496,6 +481,15 @@ export default function Home() {
               >
                 Panele giriş yap <ArrowRight size={18} />
               </Link>
+              <button
+                type="button"
+                onClick={handleDemoLogin}
+                disabled={demoLoading}
+                className="inline-flex items-center gap-2 rounded-2xl border border-slate-900/10 bg-white/85 px-6 py-3 text-sm font-semibold text-slate-900 transition hover:bg-white disabled:cursor-not-allowed disabled:opacity-70 dark:border-white/12 dark:bg-white/6 dark:text-white dark:hover:bg-white/10"
+              >
+                {demoLoading ? <Loader2 size={16} className="animate-spin" /> : <LogIn size={16} />}
+                Demo ortamı aç
+              </button>
               <a
                 href={whatsappHref}
                 target="_blank"
@@ -505,14 +499,6 @@ export default function Home() {
                 <MessageCircle size={16} /> WhatsApp ile yaz
               </a>
             </div>
-            <a
-              href={whatsappHref}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="mt-8 inline-flex items-center gap-3 rounded-2xl border border-slate-900/10 bg-white/85 px-5 py-4 text-sm font-semibold text-slate-900 transition hover:bg-white dark:border-white/10 dark:bg-white/5 dark:text-white dark:hover:bg-white/10"
-            >
-              <MessageCircle size={18} /> WhatsApp ile mesaj gönderin: +90 554 581 20 34
-            </a>
           </div>
         </section>
 
@@ -546,17 +532,18 @@ export default function Home() {
                 >
                   Panele giriş yap <ArrowRight size={18} />
                 </Link>
-                <a
-                  href={whatsappHref}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="inline-flex items-center gap-2 rounded-2xl border border-slate-900/10 bg-white/85 px-6 py-3 text-sm font-semibold text-slate-900 transition hover:bg-white dark:border-white/12 dark:bg-white/6 dark:text-white dark:hover:bg-white/10"
+                <button
+                  type="button"
+                  onClick={handleDemoLogin}
+                  disabled={demoLoading}
+                  className="inline-flex items-center gap-2 rounded-2xl border border-slate-900/10 bg-white/85 px-6 py-3 text-sm font-semibold text-slate-900 transition hover:bg-white disabled:cursor-not-allowed disabled:opacity-70 dark:border-white/12 dark:bg-white/6 dark:text-white dark:hover:bg-white/10"
                 >
-                  <MessageCircle size={16} /> WhatsApp ile yaz
-                </a>
+                  {demoLoading ? <Loader2 size={16} className="animate-spin" /> : <LogIn size={16} />}
+                  Demo ile gir
+                </button>
               </div>
               <div className="mt-8 rounded-2xl border border-slate-900/8 bg-white/80 p-4 text-sm text-slate-700 dark:border-white/10 dark:bg-white/5 dark:text-slate-300">
-                WhatsApp üzerinden hemen soru sorabilir, fiyat ve başvuru detaylarını hızlıca alabilirsiniz.
+                Demo girişte örnek araçlar, şoförler, seferler ve yolcu verileri hazır gelir.
               </div>
             </div>
           </div>
