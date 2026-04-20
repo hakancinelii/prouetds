@@ -6,6 +6,7 @@ import {
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
+import { PDFDocument, StandardFonts, rgb } from 'pdf-lib';
 import {
   Trip,
   TripStatus,
@@ -458,6 +459,102 @@ export class TripsService {
 
   private buildGroupDescription(group: TripGroup) {
     return group.groupDescription?.trim() || `${group.groupName} grubu`;
+  }
+
+  private formatPdfDate(date: string, time: string) {
+    const [year, month, day] = date.split('-');
+    return `${day}/${month}/${year} ${time}`;
+  }
+
+  private maskTcKimlikNo(value?: string | null) {
+    if (!value || value.length < 6) return value || '';
+    return `${value.slice(0, 3)}*****${value.slice(-3)}`;
+  }
+
+  private async buildDemoPdfBuffer(trip: Trip) {
+    const templateBytes = await this.tenantsService.getDemoPdfTemplateBuffer();
+    const pdfDoc = await PDFDocument.load(templateBytes);
+    const pages = pdfDoc.getPages();
+    const page = pages[0];
+    const font = await pdfDoc.embedFont(StandardFonts.Helvetica);
+    const boldFont = await pdfDoc.embedFont(StandardFonts.HelveticaBold);
+    const white = rgb(1, 1, 1);
+
+    const driver = trip.personnel?.[0];
+    const group = trip.groups?.[0];
+    const passenger = group?.passengers?.[0];
+
+    page.drawRectangle({ x: 456, y: 691, width: 198, height: 138, color: white });
+    page.drawRectangle({ x: 45, y: 444, width: 614, height: 112, color: white });
+    page.drawRectangle({ x: 45, y: 324, width: 614, height: 122, color: white });
+
+    page.drawText(String(trip.uetdsSeferRefNo || ''), { x: 466, y: 788, size: 14, font });
+    page.drawText(trip.vehiclePlate || '', { x: 466, y: 758, size: 14, font });
+    page.drawText(this.formatPdfDate(trip.departureDate, trip.departureTime), {
+      x: 466,
+      y: 727,
+      size: 14,
+      font,
+    });
+    page.drawText(this.formatPdfDate(trip.endDate, trip.endTime), {
+      x: 466,
+      y: 697,
+      size: 14,
+      font,
+    });
+    page.drawText(this.formatPdfDate(trip.departureDate, '09:52:48'), {
+      x: 466,
+      y: 666,
+      size: 14,
+      font,
+    });
+
+    page.drawText(this.maskTcKimlikNo(driver?.tcPassportNo), {
+      x: 205,
+      y: 494,
+      size: 12,
+      font,
+    });
+    page.drawText(`${driver?.firstName || ''} ${driver?.lastName || ''}`.trim(), {
+      x: 350,
+      y: 494,
+      size: 12,
+      font,
+    });
+    page.drawText('SRC2', { x: 592, y: 494, size: 12, font });
+
+    page.drawText(group?.groupName || '1', { x: 48, y: 406, size: 11, font: boldFont });
+    page.drawText(
+      `Grup Adı: ${group?.groupName || '1'}`,
+      { x: 48, y: 384, size: 11, font },
+    );
+    page.drawText(
+      `Grup Biniş - İniş Yeri : ( ${group?.originPlace || ''} - ${group?.destPlace || ''})`,
+      { x: 48, y: 363, size: 10, font },
+    );
+    page.drawText(group?.groupDescription || trip.description || '', {
+      x: 160,
+      y: 332,
+      size: 11,
+      font,
+    });
+    page.drawText(String(group?.groupFee || 500), {
+      x: 160,
+      y: 309,
+      size: 11,
+      font,
+    });
+
+    page.drawText('1', { x: 57, y: 268, size: 11, font });
+    page.drawText(passenger?.nationalityCode || '', { x: 96, y: 268, size: 11, font });
+    page.drawText(passenger?.tcPassportNo || '', { x: 189, y: 268, size: 11, font });
+    page.drawText(
+      `${passenger?.firstName || ''} ${passenger?.lastName || ''}`.trim(),
+      { x: 392, y: 268, size: 11, font },
+    );
+    page.drawText(passenger?.gender || '', { x: 619, y: 268, size: 11, font });
+
+    return Buffer.from(await pdfDoc.save());
   }
 
   constructor(
@@ -1034,7 +1131,8 @@ export class TripsService {
 
     if (tenant?.settings?.isDemo && trip.firmTripNumber === DEMO_TRIP_NUMBER) {
       await this.tenantsService.refreshDemoTenantSnapshot(tenantId);
-      const pdfBuffer = await this.tenantsService.getDemoPdfTemplateBuffer();
+      const refreshedTrip = await this.findOne(tripId, tenantId);
+      const pdfBuffer = await this.buildDemoPdfBuffer(refreshedTrip);
       return {
         sonucKodu: 0,
         sonucMesaji: 'Demo PDF çıktısı hazır',

@@ -392,8 +392,14 @@ export class TenantsService {
 
     const driverTemplates = this.buildDemoDrivers(tenantId);
     const savedDrivers: Driver[] = [];
-    for (const [index, template] of driverTemplates.entries()) {
-      const driver = drivers[index] || this.driverRepo.create({ tenantId });
+    for (const template of driverTemplates) {
+      const existingDriver = drivers.find(
+        (driver) => driver.tcKimlikNo === template.tcKimlikNo,
+      );
+      const fallbackDriver = drivers.find(
+        (driver) => !savedDrivers.some((savedDriver) => savedDriver.id === driver.id),
+      );
+      const driver = existingDriver || fallbackDriver || this.driverRepo.create({ tenantId });
       Object.assign(driver, { ...template, tenantId, isActive: true });
       savedDrivers.push(await this.driverRepo.save(driver));
     }
