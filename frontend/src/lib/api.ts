@@ -156,6 +156,16 @@ export const vehiclesApi = {
 export const uetdsApi = {
   test: () => api.get('/api/uetds/test'),
   validate: () => api.get('/api/uetds/validate-credentials'),
+  checkVehicleEligibility: (plate: string) =>
+    api.get('/api/uetds/vehicle/eligibility', { params: { plate } }),
+  checkVehicleInspection: (plate: string) =>
+    api.get('/api/uetds/vehicle/inspection', { params: { plate } }),
+  checkDriverQualification: (tcKimlikNo: string) =>
+    api.get('/api/uetds/driver/qualification', { params: { tcKimlikNo } }),
+  verifyIdentity: (tcKimlikNo: string, firstName: string, lastName: string) =>
+    api.get('/api/uetds/driver/identity', {
+      params: { tcKimlikNo, firstName, lastName },
+    }),
 };
 
 export const tenantsApi = {
