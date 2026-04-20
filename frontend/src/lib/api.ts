@@ -8,11 +8,16 @@ const api = axios.create({
   headers: { 'Content-Type': 'application/json' },
 });
 
+const isAuthEndpoint = (url?: string) => {
+  if (!url) return false;
+  return url.includes('/api/auth/login') || url.includes('/api/auth/refresh');
+};
+
 // Request interceptor - add JWT token
 api.interceptors.request.use((config) => {
   if (typeof window !== 'undefined') {
     const token = localStorage.getItem('accessToken');
-    if (token) {
+    if (token && !isAuthEndpoint(config.url)) {
       config.headers.Authorization = `Bearer ${token}`;
     }
   }
@@ -24,27 +29,55 @@ api.interceptors.response.use(
   (response) => response,
   async (error) => {
     if (error.response?.status === 401 && typeof window !== 'undefined') {
+      const originalRequest = error.config || {};
+
+      if (isAuthEndpoint(originalRequest.url) || originalRequest._retry) {
+        return Promise.reject(error);
+      }
+
       const refreshToken = localStorage.getItem('refreshToken');
       if (refreshToken) {
         try {
+          originalRequest._retry = true;
           const res = await axios.post(`${API_URL}/api/auth/refresh`, {
             refreshToken,
           });
           localStorage.setItem('accessToken', res.data.accessToken);
-          error.config.headers.Authorization = `Bearer ${res.data.accessToken}`;
-          return api(error.config);
+          originalRequest.headers = originalRequest.headers || {};
+          originalRequest.headers.Authorization = `Bearer ${res.data.accessToken}`;
+          return api(originalRequest);
         } catch {
           localStorage.removeItem('accessToken');
           localStorage.removeItem('refreshToken');
+          localStorage.removeItem('user');
           window.location.href = '/login';
         }
       } else {
+        localStorage.removeItem('accessToken');
+        localStorage.removeItem('refreshToken');
+        localStorage.removeItem('user');
         window.location.href = '/login';
       }
     }
     return Promise.reject(error);
   },
 );
+
+export const clearAuthStorage = () => {
+  if (typeof window === 'undefined') return;
+  localStorage.removeItem('accessToken');
+  localStorage.removeItem('refreshToken');
+  localStorage.removeItem('user');
+};
+
+export const isStoredSessionPresent = () => {
+  if (typeof window === 'undefined') return false;
+  return Boolean(localStorage.getItem('accessToken') || localStorage.getItem('refreshToken'));
+};
+
+export const resetAuthSession = () => {
+  clearAuthStorage();
+};
 
 export default api;
 

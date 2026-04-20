@@ -15,8 +15,8 @@ export const metadata: Metadata = {
   applicationName: 'ProUETDS',
   manifest: '/manifest.webmanifest',
   icons: {
-    icon: [{ url: '/vito.png', type: 'image/png' }],
-    shortcut: [{ url: '/vito.png', type: 'image/png' }],
+    icon: [{ url: '/icon.png', type: 'image/png' }],
+    shortcut: [{ url: '/icon.png', type: 'image/png' }],
     apple: [{ url: '/apple-icon.png', type: 'image/png' }],
   },
   appleWebApp: {
@@ -28,7 +28,7 @@ export const metadata: Metadata = {
     title: 'ProUETDS',
     description:
       'UETDS Tarifesiz (Arızi) Yolcu Taşımacılığı Bildirim ve Yönetim Platformu',
-    images: ['/vito.png'],
+    images: ['/opengraph-image.png'],
     type: 'website',
     locale: 'tr_TR',
   },
@@ -37,7 +37,7 @@ export const metadata: Metadata = {
     title: 'ProUETDS',
     description:
       'UETDS Tarifesiz (Arızi) Yolcu Taşımacılığı Bildirim ve Yönetim Platformu',
-    images: ['/vito.png'],
+    images: ['/twitter-image.png'],
   },
 };
 

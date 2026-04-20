@@ -4,7 +4,7 @@ import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { useAuthStore } from '@/lib/store';
-import { authApi } from '@/lib/api';
+import { authApi, resetAuthSession } from '@/lib/api';
 import toast from 'react-hot-toast';
 import { Shield, Eye, EyeOff, Loader2, ArrowRight } from 'lucide-react';
 
@@ -19,6 +19,7 @@ export default function LoginPage() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
+    resetAuthSession();
 
     try {
       const res = await authApi.login(email, password);
