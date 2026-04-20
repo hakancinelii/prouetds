@@ -1,4 +1,9 @@
-import { Injectable, NotFoundException, ConflictException } from '@nestjs/common';
+import {
+  Injectable,
+  NotFoundException,
+  ConflictException,
+  BadRequestException,
+} from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import * as bcrypt from 'bcryptjs';
@@ -36,12 +41,177 @@ const DEMO_SETTINGS = {
   demoPdfTemplatePath: DEMO_PDF_TEMPLATE_PATH,
 };
 
+export const TENANT_PACKAGE_DEFINITIONS = {
+  'A-10': { code: 'A-10', label: 'A-10 Paketi', maxVehicles: 10, maxUsers: 10 },
+  'A-25': { code: 'A-25', label: 'A-25 Paketi', maxVehicles: 25, maxUsers: 25 },
+  'A-50': { code: 'A-50', label: 'A-50 Paketi', maxVehicles: 50, maxUsers: 50 },
+  'A-SINIRSIZ': {
+    code: 'A-SINIRSIZ',
+    label: 'A-Sınırsız Paketi',
+    maxVehicles: null,
+    maxUsers: null,
+  },
+} as const;
+
+export type TenantPackageCode = keyof typeof TENANT_PACKAGE_DEFINITIONS;
+export type TenantLimitTarget = 'vehicle' | 'user';
+
+const DEFAULT_TENANT_PACKAGE: TenantPackageCode = 'A-10';
+
+export type TenantCapacitySnapshot = {
+  activeVehicleCount: number;
+  activeUserCount: number;
+  remainingVehicleSlots: number | null;
+  remainingUserSlots: number | null;
+  package: {
+    code: TenantPackageCode;
+    label: string;
+    maxVehicles: number | null;
+    maxUsers: number | null;
+  };
+};
+
+export type TenantWithUsage = Tenant & {
+  activeVehicleCount: number;
+  activeUserCount: number;
+  remainingVehicleSlots: number | null;
+  remainingUserSlots: number | null;
+  package: TenantCapacitySnapshot['package'];
+};
+
 type CreateTenantInput = Partial<Tenant> & {
   adminEmail?: string;
   adminPassword?: string;
   adminFirstName?: string;
   adminLastName?: string;
 };
+
+const normalizePlanString = (value?: string | null) =>
+  String(value || '')
+    .trim()
+    .toUpperCase()
+    .replace(/İ/g, 'I')
+    .replace(/Ş/g, 'S')
+    .replace(/Ü/g, 'U')
+    .replace(/Ğ/g, 'G')
+    .replace(/Ö/g, 'O')
+    .replace(/Ç/g, 'C');
+
+export const normalizeTenantPackage = (value?: string | null): TenantPackageCode => {
+  const normalized = normalizePlanString(value);
+
+  if (!normalized || normalized === 'BASIC' || normalized === 'DEMO') {
+    return DEFAULT_TENANT_PACKAGE;
+  }
+
+  if (normalized === 'A-10') return 'A-10';
+  if (normalized === 'A-25') return 'A-25';
+  if (normalized === 'A-50') return 'A-50';
+  if (normalized === 'A-SINIRSIZ' || normalized === 'A-SINIRSIZ PAKETI') {
+    return 'A-SINIRSIZ';
+  }
+
+  throw new BadRequestException('Geçersiz paket seçimi');
+};
+
+export const getTenantPackageDefinition = (plan?: string | null) => {
+  const code = normalizeTenantPackage(plan);
+  return TENANT_PACKAGE_DEFINITIONS[code];
+};
+
+const sanitizeTenantSettings = (settings?: Record<string, any> | null) => {
+  if (!settings) return settings;
+
+  const {
+    packageLabel,
+    packageMaxVehicles,
+    packageMaxUsers,
+    activeVehicleCount,
+    activeUserCount,
+    remainingVehicleSlots,
+    remainingUserSlots,
+    ...rest
+  } = settings;
+
+  return rest;
+};
+
+const normalizeEmail = (value?: string | null) => value?.trim().toLowerCase();
+const normalizeText = (value?: string | null) => value?.trim() || null;
+const normalizeName = (value?: string | null, fallback = '') => value?.trim() || fallback;
+const toActiveFlag = (value: unknown) => {
+  if (typeof value === 'boolean') return value;
+  if (typeof value === 'string') return value === 'true';
+  return undefined;
+};
+
+const mergeTenantSettings = (
+  current?: Record<string, any> | null,
+  next?: Record<string, any> | null,
+) => ({
+  ...(sanitizeTenantSettings(current) || {}),
+  ...(sanitizeTenantSettings(next) || {}),
+});
+
+const calculateRemainingCapacity = (max: number | null, used: number) =>
+  max === null ? null : Math.max(max - used, 0);
+
+export const buildTenantCapacitySnapshot = (
+  plan: string | null | undefined,
+  activeVehicleCount: number,
+  activeUserCount: number,
+): TenantCapacitySnapshot => {
+  const pkg = getTenantPackageDefinition(plan);
+
+  return {
+    activeVehicleCount,
+    activeUserCount,
+    remainingVehicleSlots: calculateRemainingCapacity(pkg.maxVehicles, activeVehicleCount),
+    remainingUserSlots: calculateRemainingCapacity(pkg.maxUsers, activeUserCount),
+    package: { ...pkg },
+  };
+};
+
+export const assertTenantCapacity = (
+  snapshot: TenantCapacitySnapshot,
+  target: TenantLimitTarget,
+) => {
+  const max = target === 'vehicle' ? snapshot.package.maxVehicles : snapshot.package.maxUsers;
+  const used =
+    target === 'vehicle' ? snapshot.activeVehicleCount : snapshot.activeUserCount;
+  const label = target === 'vehicle' ? 'araç' : 'kullanıcı';
+
+  if (max !== null && used >= max) {
+    throw new BadRequestException(
+      `${snapshot.package.label} en fazla ${max} aktif ${label} destekliyor`,
+    );
+  }
+};
+
+const decorateTenantEntity = (
+  tenant: Tenant,
+  activeVehicleCount: number,
+  activeUserCount: number,
+): TenantWithUsage => {
+  const snapshot = buildTenantCapacitySnapshot(
+    tenant.subscriptionPlan,
+    activeVehicleCount,
+    activeUserCount,
+  );
+
+  return {
+    ...tenant,
+    subscriptionPlan: snapshot.package.code,
+    settings: sanitizeTenantSettings(tenant.settings),
+    activeVehicleCount: snapshot.activeVehicleCount,
+    activeUserCount: snapshot.activeUserCount,
+    remainingVehicleSlots: snapshot.remainingVehicleSlots,
+    remainingUserSlots: snapshot.remainingUserSlots,
+    package: snapshot.package,
+  } as TenantWithUsage;
+};
+
+export const getTenantPackageSeedPlan = () => 'A-50' as TenantPackageCode;
 
 @Injectable()
 export class TenantsService {
@@ -56,6 +226,48 @@ export class TenantsService {
     private personnelRepo: Repository<TripPersonnel>,
     @InjectRepository(Passenger) private passengerRepo: Repository<Passenger>,
   ) {}
+
+  private async getTenantCounts(tenantId: string) {
+    const [activeVehicleCount, activeUserCount] = await Promise.all([
+      this.vehicleRepo.count({ where: { tenantId, isActive: true } }),
+      this.userRepo.count({ where: { tenantId, isActive: true } }),
+    ]);
+
+    return { activeVehicleCount, activeUserCount };
+  }
+
+  async getTenantCapacity(tenantId: string) {
+    const tenant = await this.tenantRepo.findOne({ where: { id: tenantId } });
+    if (!tenant) throw new NotFoundException('Firma bulunamadı');
+
+    const counts = await this.getTenantCounts(tenantId);
+    return buildTenantCapacitySnapshot(
+      tenant.subscriptionPlan,
+      counts.activeVehicleCount,
+      counts.activeUserCount,
+    );
+  }
+
+  async assertTenantCanCreateUser(tenantId: string) {
+    const snapshot = await this.getTenantCapacity(tenantId);
+    assertTenantCapacity(snapshot, 'user');
+    return snapshot;
+  }
+
+  async assertTenantCanCreateVehicle(tenantId: string) {
+    const snapshot = await this.getTenantCapacity(tenantId);
+    assertTenantCapacity(snapshot, 'vehicle');
+    return snapshot;
+  }
+
+  async decorateTenant(tenant: Tenant) {
+    const counts = await this.getTenantCounts(tenant.id);
+    return decorateTenantEntity(tenant, counts.activeVehicleCount, counts.activeUserCount);
+  }
+
+  async decorateTenants(tenants: Tenant[]) {
+    return Promise.all(tenants.map((tenant) => this.decorateTenant(tenant)));
+  }
 
   private buildDemoVehicles(tenantId: string) {
     return [
@@ -499,7 +711,7 @@ export class TenantsService {
       await this.refreshDemoTenantSnapshot(existingTenant.id);
 
       return {
-        tenant: existingTenant,
+        tenant: await this.decorateTenant(existingTenant),
         credentials: {
           email: DEMO_ADMIN_EMAIL,
           password: DEMO_ADMIN_PASSWORD,
@@ -516,7 +728,7 @@ export class TenantsService {
       contactPhone: '+90 554 581 20 34',
       address: 'Bağcılar / İstanbul',
       isActive: true,
-      subscriptionPlan: 'demo',
+      subscriptionPlan: getTenantPackageSeedPlan(),
       settings: {
         ...DEMO_SETTINGS,
         crmApiKey: uuid().replace(/-/g, ''),
@@ -539,7 +751,7 @@ export class TenantsService {
     await this.seedDemoTenantData(savedTenant, adminUser);
 
     return {
-      tenant: savedTenant,
+      tenant: await this.decorateTenant(savedTenant),
       credentials: {
         email: DEMO_ADMIN_EMAIL,
         password: DEMO_ADMIN_PASSWORD,
@@ -550,9 +762,7 @@ export class TenantsService {
   }
 
   async findAll(query: any = {}) {
-    const qb = this.tenantRepo
-      .createQueryBuilder('t')
-      .orderBy('t.createdAt', 'DESC');
+    const qb = this.tenantRepo.createQueryBuilder('t').orderBy('t.createdAt', 'DESC');
 
     if (query.search) {
       qb.andWhere('t.companyName ILIKE :search', {
@@ -560,68 +770,121 @@ export class TenantsService {
       });
     }
     if (query.isActive !== undefined) {
-      qb.andWhere('t.isActive = :isActive', { isActive: query.isActive });
+      qb.andWhere('t.isActive = :isActive', {
+        isActive: toActiveFlag(query.isActive) ?? query.isActive,
+      });
     }
 
-    const page = query.page || 1;
-    const limit = query.limit || 20;
+    const page = Number(query.page) || 1;
+    const limit = Number(query.limit) || 20;
     qb.skip((page - 1) * limit).take(limit);
 
     const [tenants, total] = await qb.getManyAndCount();
-    return { tenants, total, page, limit };
+    return { tenants: await this.decorateTenants(tenants), total, page, limit };
   }
 
   async findOne(id: string) {
     const tenant = await this.tenantRepo.findOne({ where: { id } });
     if (!tenant) throw new NotFoundException('Firma bulunamadı');
-    return tenant;
+    return this.decorateTenant(tenant);
   }
 
   async create(data: CreateTenantInput) {
+    const normalizedData: CreateTenantInput = {
+      ...data,
+      subscriptionPlan: normalizeTenantPackage(data.subscriptionPlan),
+      adminEmail: normalizeEmail(data.adminEmail),
+      adminFirstName: normalizeName(data.adminFirstName, 'Admin'),
+      adminLastName: normalizeName(data.adminLastName, data.companyName || 'Admin'),
+      contactEmail: normalizeEmail(data.contactEmail),
+      contactPhone: normalizeText(data.contactPhone),
+      taxNumber: normalizeText(data.taxNumber),
+      d2LicenseNumber: normalizeText(data.d2LicenseNumber),
+      unetNumber: normalizeText(data.unetNumber),
+      uetdsUsername: normalizeText(data.uetdsUsername),
+      uetdsPasswordEncrypted: normalizeText(data.uetdsPasswordEncrypted),
+      address: normalizeText(data.address),
+      settings: sanitizeTenantSettings(data.settings),
+    };
+
     const existing = await this.tenantRepo.findOne({
-      where: { taxNumber: data.taxNumber },
+      where: { taxNumber: normalizedData.taxNumber },
     });
-    if (existing && data.taxNumber) {
+    if (existing && normalizedData.taxNumber) {
       throw new ConflictException('Bu vergi numarası zaten kayıtlı');
     }
 
     const crmApiKey = uuid().replace(/-/g, '');
 
     const tenant = this.tenantRepo.create({
-      ...data,
-      settings: { crmApiKey, ...data.settings },
+      ...normalizedData,
+      settings: { crmApiKey, ...(normalizedData.settings || {}) },
     });
     const savedTenant = await this.tenantRepo.save(tenant);
 
-    if (data.adminEmail && data.adminPassword) {
+    if (normalizedData.adminEmail && normalizedData.adminPassword) {
       const adminUser = this.userRepo.create({
-        email: data.adminEmail,
-        passwordHash: await bcrypt.hash(data.adminPassword, 12),
-        firstName: data.adminFirstName || 'Admin',
-        lastName: data.adminLastName || data.companyName || 'Admin',
+        email: normalizedData.adminEmail,
+        passwordHash: await bcrypt.hash(normalizedData.adminPassword, 12),
+        firstName: normalizedData.adminFirstName || 'Admin',
+        lastName: normalizedData.adminLastName || normalizedData.companyName || 'Admin',
         role: UserRole.COMPANY_ADMIN,
         tenantId: savedTenant.id,
+        isActive: normalizedData.isActive ?? true,
+        phone: normalizeText(normalizedData.contactPhone),
       });
       await this.userRepo.save(adminUser);
     }
 
-    return savedTenant;
+    return this.findOne(savedTenant.id);
   }
 
   async update(id: string, data: Partial<Tenant>) {
-    const tenant = await this.findOne(id);
+    const tenant = await this.tenantRepo.findOne({ where: { id } });
+    if (!tenant) throw new NotFoundException('Firma bulunamadı');
 
-    if (data.settings) {
-      data.settings = { ...tenant.settings, ...data.settings };
-    }
+    const normalizedData: Partial<Tenant> = {
+      ...data,
+      subscriptionPlan:
+        data.subscriptionPlan !== undefined
+          ? normalizeTenantPackage(data.subscriptionPlan)
+          : tenant.subscriptionPlan,
+      contactEmail:
+        data.contactEmail !== undefined ? normalizeEmail(data.contactEmail) : tenant.contactEmail,
+      contactPhone:
+        data.contactPhone !== undefined ? normalizeText(data.contactPhone) : tenant.contactPhone,
+      taxNumber: data.taxNumber !== undefined ? normalizeText(data.taxNumber) : tenant.taxNumber,
+      d2LicenseNumber:
+        data.d2LicenseNumber !== undefined
+          ? normalizeText(data.d2LicenseNumber)
+          : tenant.d2LicenseNumber,
+      unetNumber:
+        data.unetNumber !== undefined ? normalizeText(data.unetNumber) : tenant.unetNumber,
+      uetdsUsername:
+        data.uetdsUsername !== undefined
+          ? normalizeText(data.uetdsUsername)
+          : tenant.uetdsUsername,
+      uetdsPasswordEncrypted:
+        data.uetdsPasswordEncrypted !== undefined
+          ? normalizeText(data.uetdsPasswordEncrypted)
+          : tenant.uetdsPasswordEncrypted,
+      address: data.address !== undefined ? normalizeText(data.address) : tenant.address,
+      settings:
+        data.settings !== undefined
+          ? mergeTenantSettings(tenant.settings, data.settings)
+          : tenant.settings,
+    };
 
-    Object.assign(tenant, data);
-    return this.tenantRepo.save(tenant);
+    Object.assign(tenant, normalizedData);
+    await this.tenantRepo.save(tenant);
+    return this.findOne(id);
   }
 
   async toggleActive(id: string) {
-    const tenant = await this.findOne(id);
+    const tenant = await this.tenantRepo.findOne({ where: { id } });
+    if (!tenant) throw new NotFoundException('Firma bulunamadı');
     tenant.isActive = !tenant.isActive;
-    return this.tenantRepo.save(tenant);
+    await this.tenantRepo.save(tenant);
+    return this.findOne(id);
   }
 }

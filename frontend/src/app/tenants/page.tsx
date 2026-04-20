@@ -4,10 +4,9 @@ import { useEffect, useState } from 'react';
 import { tenantsApi } from '@/lib/api';
 import toast from 'react-hot-toast';
 import { 
-  Building2, 
-  Plus, 
-  Search, 
-  MoreVertical, 
+  Building2,
+  Plus,
+  Search,
   Power, 
   PowerOff, 
   Edit2, 
@@ -25,6 +24,19 @@ import {
   AtSign
 } from 'lucide-react';
 import { useAuthStore } from '@/lib/store';
+
+const PACKAGE_OPTIONS = [
+  { code: 'A-10', label: 'A-10 Paketi', limits: '10 araç · 10 kullanıcı' },
+  { code: 'A-25', label: 'A-25 Paketi', limits: '25 araç · 25 kullanıcı' },
+  { code: 'A-50', label: 'A-50 Paketi', limits: '50 araç · 50 kullanıcı' },
+  { code: 'A-SINIRSIZ', label: 'A-Sınırsız Paketi', limits: 'Sınırsız araç · sınırsız kullanıcı' },
+];
+
+const getCapacityText = (tenant: any) => {
+  const vehicleMax = tenant?.package?.maxVehicles ?? '∞';
+  const userMax = tenant?.package?.maxUsers ?? '∞';
+  return `${tenant?.activeVehicleCount ?? 0}/${vehicleMax} araç · ${tenant?.activeUserCount ?? 0}/${userMax} kullanıcı`;
+};
 
 export default function TenantsPage() {
   const { user } = useAuthStore();
@@ -46,7 +58,7 @@ export default function TenantsPage() {
     contactEmail: '',
     contactPhone: '',
     address: '',
-    subscriptionPlan: 'basic',
+    subscriptionPlan: 'A-10',
     isActive: true,
     adminEmail: '',
     adminPassword: '',
@@ -82,7 +94,7 @@ export default function TenantsPage() {
         contactEmail: tenant.contactEmail || '',
         contactPhone: tenant.contactPhone || '',
         address: tenant.address || '',
-        subscriptionPlan: tenant.subscriptionPlan || 'basic',
+        subscriptionPlan: tenant.subscriptionPlan || 'A-10',
         isActive: tenant.isActive ?? true,
         adminEmail: '', // Cannot change admin email via update easily without separate logic
         adminPassword: '',
@@ -99,7 +111,7 @@ export default function TenantsPage() {
         contactEmail: '',
         contactPhone: '',
         address: '',
-        subscriptionPlan: 'basic',
+        subscriptionPlan: 'A-10',
         isActive: true,
         adminEmail: '',
         adminPassword: 'password123',
@@ -264,9 +276,14 @@ export default function TenantsPage() {
                       {tenant.isActive ? 'AKTİF' : 'PASİF'}
                     </span>
                     <span className="px-2.5 py-1 rounded-lg text-[10px] uppercase font-black tracking-widest bg-cyan-500/10 text-cyan-400 ring-1 ring-cyan-500/30">
-                      {tenant.subscriptionPlan}
+                      {tenant.package?.label || tenant.subscriptionPlan}
                     </span>
                   </div>
+                </div>
+
+                <div className="rounded-2xl bg-slate-950/40 border border-slate-800/60 px-4 py-3">
+                  <p className="text-[11px] font-black uppercase tracking-[0.18em] text-slate-500">Kota Kullanımı</p>
+                  <p className="mt-2 text-sm font-semibold text-slate-200">{getCapacityText(tenant)}</p>
                 </div>
 
                 <div className="space-y-3 pt-2 text-sm text-slate-400 border-t border-slate-700/30">
@@ -328,7 +345,10 @@ export default function TenantsPage() {
                   </td>
                   <td className="px-6 py-5 text-sm font-bold text-slate-400">{tenant.taxNumber || '-'}</td>
                   <td className="px-6 py-5">
-                    <span className="px-2.5 py-1.5 rounded-lg bg-cyan-500/10 text-cyan-400 text-[11px] font-black uppercase ring-1 ring-cyan-500/20">{tenant.subscriptionPlan}</span>
+                    <div className="space-y-1">
+                      <span className="px-2.5 py-1.5 rounded-lg bg-cyan-500/10 text-cyan-400 text-[11px] font-black uppercase ring-1 ring-cyan-500/20">{tenant.package?.label || tenant.subscriptionPlan}</span>
+                      <p className="text-[11px] text-slate-500">{getCapacityText(tenant)}</p>
+                    </div>
                   </td>
                   <td className="px-6 py-5">
                     <span className={`inline-flex items-center gap-2 px-3 py-1.5 rounded-lg text-[11px] font-black tracking-widest ${tenant.isActive ? 'text-emerald-400 bg-emerald-400/10 ring-1 ring-emerald-500/30' : 'text-red-400 bg-red-400/10 ring-1 ring-red-500/30'}`}>
@@ -433,8 +453,41 @@ export default function TenantsPage() {
                       onChange={(e) => setFormData({...formData, unetNumber: e.target.value})}
                     />
                   </div>
+                  <div className="space-y-2 md:col-span-2">
+                    <label htmlFor="tenant-package" className="text-xs font-black text-slate-400 uppercase tracking-widest ml-1">Tenant Paketi</label>
+                    <select
+                      id="tenant-package"
+                      title="Tenant paketi"
+                      value={formData.subscriptionPlan}
+                      onChange={(e) => setFormData({ ...formData, subscriptionPlan: e.target.value })}
+                      className="w-full bg-slate-950 border border-slate-800 rounded-2xl px-4 py-3.5 text-white outline-none focus:ring-2 focus:ring-emerald-500/30 focus:border-emerald-500 transition-all font-medium"
+                    >
+                      {PACKAGE_OPTIONS.map((option) => (
+                        <option key={option.code} value={option.code}>
+                          {option.label} · {option.limits}
+                        </option>
+                      ))}
+                    </select>
+                    <p className="text-xs text-slate-500">Paket araç ve alt kullanıcı limitlerini belirler.</p>
+                  </div>
                 </div>
               </div>
+
+              <div className="rounded-3xl border border-cyan-500/20 bg-cyan-500/5 p-6">
+                <p className="text-[11px] font-black uppercase tracking-[0.18em] text-cyan-300">Paket Özeti</p>
+                <div className="mt-3 grid gap-3 md:grid-cols-2">
+                  {PACKAGE_OPTIONS.map((option) => (
+                    <div
+                      key={option.code}
+                      className={`rounded-2xl border px-4 py-3 transition-all ${formData.subscriptionPlan === option.code ? 'border-cyan-400 bg-cyan-500/10 text-cyan-100' : 'border-slate-800 bg-slate-950/40 text-slate-400'}`}
+                    >
+                      <p className="text-sm font-bold">{option.label}</p>
+                      <p className="mt-1 text-xs">{option.limits}</p>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
 
               {/* UETDS Credentials Section - CRITCAL */}
               <div className="p-6 bg-gradient-to-br from-emerald-500/5 to-cyan-500/5 border border-emerald-500/20 rounded-3xl space-y-6 shadow-xl shadow-emerald-500/5">

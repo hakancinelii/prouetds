@@ -176,6 +176,16 @@ export const tenantsApi = {
   toggleActive: (id: string) => api.post(`/api/tenants/${id}/toggle-active`),
 };
 
+export const usersApi = {
+  list: (tenantId?: string) => api.get('/api/users', { params: tenantId ? { tenantId } : undefined }),
+  createDriver: (data: any, tenantId?: string) =>
+    api.post('/api/users/driver', data, { params: tenantId ? { tenantId } : undefined }),
+  update: (id: string, data: any, tenantId?: string) =>
+    api.patch(`/api/users/${id}`, data, { params: tenantId ? { tenantId } : undefined }),
+  toggleActive: (id: string, tenantId?: string) =>
+    api.post(`/api/users/${id}/toggle-active`, {}, { params: tenantId ? { tenantId } : undefined }),
+};
+
 export const logsApi = {
   getUetdsLogs: (params?: any) => api.get('/api/logs/uetds', { params }),
   getTripLogs: (tripId: string) => api.get(`/api/logs/uetds/trip/${tripId}`),

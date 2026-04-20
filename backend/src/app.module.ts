@@ -17,6 +17,7 @@ import { UetdsModule } from './modules/uetds/uetds.module';
 import { ParserModule } from './modules/parser/parser.module';
 import { LogsModule } from './modules/logs/logs.module';
 import { CrmModule } from './modules/crm/crm.module';
+import { UsersModule } from './modules/users/users.module';
 
 @Module({
   imports: [
@@ -44,6 +45,7 @@ import { CrmModule } from './modules/crm/crm.module';
     ParserModule,
     LogsModule,
     CrmModule,
+    UsersModule,
   ],
   providers: [
     {

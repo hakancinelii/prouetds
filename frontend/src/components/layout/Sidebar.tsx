@@ -24,6 +24,7 @@ import {
 const navigation = [
   { name: 'Dashboard', href: '/dashboard', icon: LayoutDashboard },
   { name: 'Şirketler', href: '/tenants', icon: Building2, superAdminOnly: true },
+  { name: 'Kullanıcılar', href: '/users', icon: Users, roles: ['super_admin', 'company_admin'] },
   { name: 'Seferler', href: '/trips', icon: Bus },
   { name: 'Şoförler', href: '/drivers', icon: Users },
   { name: 'Araçlar', href: '/vehicles', icon: CarFront },
@@ -32,7 +33,11 @@ const navigation = [
 ];
 
 const getVisibleNavigation = (role?: string) =>
-  navigation.filter((item) => !item.superAdminOnly || role === 'super_admin');
+  navigation.filter((item) => {
+    if (item.superAdminOnly && role !== 'super_admin') return false;
+    if (item.roles && !item.roles.includes(role || '')) return false;
+    return true;
+  });
 
 export default function Sidebar() {
   const router = useRouter();

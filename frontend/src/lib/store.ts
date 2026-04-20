@@ -7,6 +7,7 @@ interface User {
   lastName: string;
   role: string;
   tenantId: string;
+  driverId?: string | null;
   tenant?: { id: string; companyName: string };
 }
 

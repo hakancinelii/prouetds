@@ -2,6 +2,7 @@ import { BadRequestException, Injectable, NotFoundException } from '@nestjs/comm
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Vehicle } from '../../database/entities';
+import { TenantsService } from '../tenants/tenants.service';
 
 interface VehicleBulkResult {
   createdCount: number;
@@ -14,7 +15,17 @@ interface VehicleBulkResult {
 export class VehiclesService {
   constructor(
     @InjectRepository(Vehicle) private vehicleRepo: Repository<Vehicle>,
+    private tenantsService: TenantsService,
   ) {}
+
+  private async ensureVehicleCapacity(tenantId: string, isReactivation = false) {
+    if (!isReactivation) {
+      await this.tenantsService.assertTenantCanCreateVehicle(tenantId);
+      return;
+    }
+
+    await this.tenantsService.assertTenantCanCreateVehicle(tenantId);
+  }
 
   private normalizePlate(plate: string) {
     return plate.trim().toUpperCase().replace(/\s+/g, '');
@@ -55,6 +66,10 @@ export class VehiclesService {
     });
 
     if (existingVehicle) {
+      const needsReactivation = !existingVehicle.isActive;
+      if (needsReactivation) {
+        await this.ensureVehicleCapacity(tenantId, true);
+      }
       existingVehicle.isActive = true;
       existingVehicle.brand = normalized.brand || existingVehicle.brand;
       existingVehicle.model = normalized.model || existingVehicle.model;
@@ -65,6 +80,8 @@ export class VehiclesService {
       await this.vehicleRepo.save(existingVehicle);
       return 'reactivated';
     }
+
+    await this.ensureVehicleCapacity(tenantId);
 
     const vehicle = this.vehicleRepo.create({
       ...normalized,
@@ -91,7 +108,9 @@ export class VehiclesService {
   async create(tenantId: string, data: Partial<Vehicle>) {
     await this.upsertVehicle(tenantId, data);
     const normalizedPlate = this.normalizePlate(data.plateNumber || '');
-    return this.vehicleRepo.findOneOrFail({ where: { tenantId, plateNumber: normalizedPlate } });
+    const vehicle = await this.vehicleRepo.findOne({ where: { tenantId, plateNumber: normalizedPlate } });
+    if (!vehicle) throw new NotFoundException('Araç bulunamadı');
+    return vehicle;
   }
 
   async createBulk(tenantId: string, text: string): Promise<VehicleBulkResult> {
