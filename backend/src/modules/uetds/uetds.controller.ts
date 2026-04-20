@@ -87,6 +87,20 @@ export class UetdsController {
     );
   }
 
+  private buildLookupError(error: any, fallbackMessage: string) {
+    const rawMessage = String(error?.message || fallbackMessage);
+    const normalizedMessage = rawMessage.includes('Yetki Hatası')
+      ? 'Bu UETDS hesabında ilgili sorgu servisi için yetki tanımlı değil. Kurum yetkisi açılmadan resmi veri çekilemez.'
+      : rawMessage;
+
+    return {
+      ok: false,
+      resultCode: -1,
+      message: normalizedMessage,
+      raw: { error: rawMessage },
+    };
+  }
+
   @Get('vehicle/eligibility')
   @Roles(UserRole.COMPANY_ADMIN, UserRole.OPERATOR)
   async checkVehicleEligibility(
@@ -97,27 +111,37 @@ export class UetdsController {
       this.ensureQueryValue(plate, 'Plaka'),
     );
     const { username, password } = await this.getTenantProps(tenantId);
-    const payload = await this.uetdsService.yetkiBelgesiKontrol(
-      username,
-      password,
-      tenantId,
-      normalizedPlate,
-    );
 
-    return {
-      ...buildNormalizedResult(payload),
-      plateNumber: normalizedPlate,
-      documentNumber: pickFirstDefined(payload, [
-        'yetkiBelgeNo',
-        'yetkiBelgesiNo',
-        'belgeNo',
-      ]),
-      documentType: pickFirstDefined(payload, [
-        'yetkiBelgeTuru',
-        'yetkiBelgesiTuru',
-        'belgeTuru',
-      ]),
-    };
+    try {
+      const payload = await this.uetdsService.yetkiBelgesiKontrol(
+        username,
+        password,
+        tenantId,
+        normalizedPlate,
+      );
+
+      return {
+        ...buildNormalizedResult(payload),
+        plateNumber: normalizedPlate,
+        documentNumber: pickFirstDefined(payload, [
+          'yetkiBelgeNo',
+          'yetkiBelgesiNo',
+          'belgeNo',
+        ]),
+        documentType: pickFirstDefined(payload, [
+          'yetkiBelgeTuru',
+          'yetkiBelgesiTuru',
+          'belgeTuru',
+        ]),
+      };
+    } catch (error: any) {
+      return {
+        ...this.buildLookupError(error, 'Yetki belgesi sorgusu başarısız'),
+        plateNumber: normalizedPlate,
+        documentNumber: null,
+        documentType: null,
+      };
+    }
   }
 
   @Get('vehicle/inspection')
@@ -130,24 +154,33 @@ export class UetdsController {
       this.ensureQueryValue(plate, 'Plaka'),
     );
     const { username, password } = await this.getTenantProps(tenantId);
-    const payload = await this.uetdsService.aracMuayeneSorgula(
-      username,
-      password,
-      tenantId,
-      normalizedPlate,
-    );
 
-    return {
-      ...buildNormalizedResult(payload),
-      plateNumber: normalizedPlate,
-      inspectionExpiry: pickFirstDefined(payload, [
-        'muayeneGecerlilikTarihi',
-        'muayeneBitisTarihi',
-        'muayeneSonTarihi',
-        'muayeneTarihi',
-        'sonMuayeneTarihi',
-      ]),
-    };
+    try {
+      const payload = await this.uetdsService.aracMuayeneSorgula(
+        username,
+        password,
+        tenantId,
+        normalizedPlate,
+      );
+
+      return {
+        ...buildNormalizedResult(payload),
+        plateNumber: normalizedPlate,
+        inspectionExpiry: pickFirstDefined(payload, [
+          'muayeneGecerlilikTarihi',
+          'muayeneBitisTarihi',
+          'muayeneSonTarihi',
+          'muayeneTarihi',
+          'sonMuayeneTarihi',
+        ]),
+      };
+    } catch (error: any) {
+      return {
+        ...this.buildLookupError(error, 'Muayene sorgusu başarısız'),
+        plateNumber: normalizedPlate,
+        inspectionExpiry: null,
+      };
+    }
   }
 
   @Get('driver/qualification')
@@ -158,25 +191,35 @@ export class UetdsController {
   ) {
     const identityNo = this.ensureQueryValue(tcKimlikNo, 'TC Kimlik No');
     const { username, password } = await this.getTenantProps(tenantId);
-    const payload = await this.uetdsService.meslekiYeterlilikSorgula(
-      username,
-      password,
-      tenantId,
-      identityNo,
-    );
 
-    return {
-      ...buildNormalizedResult(payload),
-      tcKimlikNo: identityNo,
-      srcCertificate: pickFirstDefined(payload, [
-        'srcBelgeTuru',
-        'srcTur',
-        'meslekiYeterlilikBelgesi',
-        'belgeTuru',
-        'srcBelgesi',
-      ]),
-      fullName: pickFirstDefined(payload, ['adSoyad', 'adiSoyadi']),
-    };
+    try {
+      const payload = await this.uetdsService.meslekiYeterlilikSorgula(
+        username,
+        password,
+        tenantId,
+        identityNo,
+      );
+
+      return {
+        ...buildNormalizedResult(payload),
+        tcKimlikNo: identityNo,
+        srcCertificate: pickFirstDefined(payload, [
+          'srcBelgeTuru',
+          'srcTur',
+          'meslekiYeterlilikBelgesi',
+          'belgeTuru',
+          'srcBelgesi',
+        ]),
+        fullName: pickFirstDefined(payload, ['adSoyad', 'adiSoyadi']),
+      };
+    } catch (error: any) {
+      return {
+        ...this.buildLookupError(error, 'Mesleki yeterlilik sorgusu başarısız'),
+        tcKimlikNo: identityNo,
+        srcCertificate: null,
+        fullName: null,
+      };
+    }
   }
 
   @Get('driver/identity')
@@ -195,20 +238,30 @@ export class UetdsController {
       'tr-TR',
     );
     const { username, password } = await this.getTenantProps(tenantId);
-    const payload = await this.uetdsService.kimlikDogrulama(
-      username,
-      password,
-      tenantId,
-      identityNo,
-      normalizedFirstName,
-      normalizedLastName,
-    );
 
-    return {
-      ...buildNormalizedResult(payload),
-      tcKimlikNo: identityNo,
-      firstName: pickFirstDefined(payload, ['adi', 'ad']) || normalizedFirstName,
-      lastName: pickFirstDefined(payload, ['soyadi', 'soyad']) || normalizedLastName,
-    };
+    try {
+      const payload = await this.uetdsService.kimlikDogrulama(
+        username,
+        password,
+        tenantId,
+        identityNo,
+        normalizedFirstName,
+        normalizedLastName,
+      );
+
+      return {
+        ...buildNormalizedResult(payload),
+        tcKimlikNo: identityNo,
+        firstName: pickFirstDefined(payload, ['adi', 'ad']) || normalizedFirstName,
+        lastName: pickFirstDefined(payload, ['soyadi', 'soyad']) || normalizedLastName,
+      };
+    } catch (error: any) {
+      return {
+        ...this.buildLookupError(error, 'Kimlik doğrulama başarısız'),
+        tcKimlikNo: identityNo,
+        firstName: normalizedFirstName,
+        lastName: normalizedLastName,
+      };
+    }
   }
 }

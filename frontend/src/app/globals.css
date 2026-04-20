@@ -6558,11 +6558,13 @@ body {
 .theme-note {
   background: rgb(var(--surface-soft-rgb) / 0.82);
   border: 1px solid rgb(var(--border-rgb) / 0.3);
+  color: rgb(var(--foreground-rgb));
 }
 
 .theme-note-strong {
   background: rgb(var(--surface-soft-rgb) / 0.9);
   border: 1px solid rgb(var(--border-rgb) / 0.34);
+  color: rgb(var(--foreground-rgb));
 }
 
 .theme-accent-block {
@@ -6620,8 +6622,8 @@ body {
 }
 
 :root[data-theme='light'] .theme-form-shell {
-  background: rgb(var(--surface-soft-rgb) / 0.94);
-  border: 1px solid rgb(var(--border-rgb) / 0.34);
+  background: rgb(30 41 59 / 0.9);
+  border: 1px solid rgb(100 116 139 / 0.34);
 }
 
 :root[data-theme='light'] .theme-modal {
@@ -6629,14 +6631,14 @@ body {
 }
 
 :root[data-theme='light'] .label-muted {
-  color: rgb(var(--foreground-rgb) / 0.72);
+  color: rgb(226 232 240 / 0.84);
 }
 
 :root[data-theme='light'] .theme-note-strong,
 :root[data-theme='light'] .theme-note,
 :root[data-theme='light'] .theme-panel-soft {
-  background: rgb(var(--surface-soft-rgb) / 0.9);
-  border-color: rgb(var(--border-rgb) / 0.34);
+  background: rgb(30 41 59 / 0.86);
+  border-color: rgb(100 116 139 / 0.34);
 }
 
 .theme-callout-warning {
