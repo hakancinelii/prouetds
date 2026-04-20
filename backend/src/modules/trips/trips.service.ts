@@ -15,6 +15,9 @@ import {
   Tenant,
 } from '../../database/entities';
 import { UetdsService } from '../uetds/uetds.service';
+import { TenantsService } from '../tenants/tenants.service';
+
+const DEMO_TRIP_NUMBER = 'DMO-2026-001';
 
 @Injectable()
 export class TripsService {
@@ -187,7 +190,9 @@ export class TripsService {
     });
   }
 
-  private normalizeTripData(tripData: Partial<Trip> & { originPlace?: string; destPlace?: string }) {
+  private normalizeTripData(
+    tripData: Partial<Trip> & { originPlace?: string; destPlace?: string },
+  ) {
     return {
       ...tripData,
       originPlace: tripData.originPlace?.trim(),
@@ -213,23 +218,33 @@ export class TripsService {
     return `${fieldLabel} zorunludur ve gerçek MERNİS ilçe / havalimanı kodu içermelidir.`;
   }
 
-  private validateTripInput(tripData: Partial<Trip> & { originPlace?: string; destPlace?: string }) {
+  private validateTripInput(
+    tripData: Partial<Trip> & { originPlace?: string; destPlace?: string },
+  ) {
     const originIl = this.sanitizeMernisCode(tripData.originIlCode);
     const originIlce = this.sanitizeMernisCode(tripData.originIlceCode);
     const destIl = this.sanitizeMernisCode(tripData.destIlCode);
     const destIlce = this.sanitizeMernisCode(tripData.destIlceCode);
 
     if (!originIl) {
-      throw new BadRequestException(this.buildLocationValidationMessage('Kalkış ili'));
+      throw new BadRequestException(
+        this.buildLocationValidationMessage('Kalkış ili'),
+      );
     }
     if (!originIlce) {
-      throw new BadRequestException(this.buildLocationValidationMessage('Kalkış ilçesi'));
+      throw new BadRequestException(
+        this.buildLocationValidationMessage('Kalkış ilçesi'),
+      );
     }
     if (!destIl) {
-      throw new BadRequestException(this.buildLocationValidationMessage('Varış ili'));
+      throw new BadRequestException(
+        this.buildLocationValidationMessage('Varış ili'),
+      );
     }
     if (!destIlce) {
-      throw new BadRequestException(this.buildLocationValidationMessage('Varış ilçesi'));
+      throw new BadRequestException(
+        this.buildLocationValidationMessage('Varış ilçesi'),
+      );
     }
   }
 
@@ -238,9 +253,10 @@ export class TripsService {
     const originIlce = this.sanitizeMernisCode(data.originIlceCode);
     const destIl = this.sanitizeMernisCode(data.destIlCode);
     const destIlce = this.sanitizeMernisCode(data.destIlceCode);
-    const groupFee = data.groupFee !== undefined && data.groupFee !== null
-      ? Number(data.groupFee)
-      : undefined;
+    const groupFee =
+      data.groupFee !== undefined && data.groupFee !== null
+        ? Number(data.groupFee)
+        : undefined;
 
     this.logger.warn(
       `[UETDS][DEBUG] group raw=${JSON.stringify({
@@ -263,23 +279,33 @@ export class TripsService {
     );
 
     if (!originIl) {
-      throw new BadRequestException(this.buildLocationValidationMessage('Grup kalkış ili'));
+      throw new BadRequestException(
+        this.buildLocationValidationMessage('Grup kalkış ili'),
+      );
     }
     if (!originIlce) {
-      throw new BadRequestException(this.buildLocationValidationMessage('Grup kalkış ilçesi'));
+      throw new BadRequestException(
+        this.buildLocationValidationMessage('Grup kalkış ilçesi'),
+      );
     }
     if (!destIl) {
-      throw new BadRequestException(this.buildLocationValidationMessage('Grup varış ili'));
+      throw new BadRequestException(
+        this.buildLocationValidationMessage('Grup varış ili'),
+      );
     }
     if (!destIlce) {
-      throw new BadRequestException(this.buildLocationValidationMessage('Grup varış ilçesi'));
+      throw new BadRequestException(
+        this.buildLocationValidationMessage('Grup varış ilçesi'),
+      );
     }
     if (!groupFee || groupFee <= 0) {
-      throw new BadRequestException('Grup ücreti 0\'dan büyük olmalıdır.');
+      throw new BadRequestException("Grup ücreti 0'dan büyük olmalıdır.");
     }
   }
 
-  private async persistPreparedGroups(preparedGroups: Array<{ group: TripGroup; updates: Partial<TripGroup> }>) {
+  private async persistPreparedGroups(
+    preparedGroups: Array<{ group: TripGroup; updates: Partial<TripGroup> }>,
+  ) {
     for (const { group, updates } of preparedGroups) {
       await this.groupRepo.update(group.id, updates);
       Object.assign(group, updates);
@@ -314,12 +340,12 @@ export class TripsService {
     return this.buildDefaultGroupData(savedTrip);
   }
 
-  private getReadableGroupName(group: Partial<TripGroup>) {
-    return group.groupName?.trim() || 'Grup';
-  }
-
-  private ensureGroupHasMeaningfulDescription(group: Partial<TripGroup>, trip?: Partial<Trip>) {
-    const description = group.groupDescription?.trim() || trip?.description?.trim() || 'Transfer';
+  private ensureGroupHasMeaningfulDescription(
+    group: Partial<TripGroup>,
+    trip?: Partial<Trip>,
+  ) {
+    const description =
+      group.groupDescription?.trim() || trip?.description?.trim() || 'Transfer';
     return description;
   }
 
@@ -328,19 +354,11 @@ export class TripsService {
   }
 
   private ensureGroupFee(group: Partial<TripGroup>) {
-    const fee = group.groupFee !== undefined && group.groupFee !== null
-      ? Number(group.groupFee)
-      : 500;
+    const fee =
+      group.groupFee !== undefined && group.groupFee !== null
+        ? Number(group.groupFee)
+        : 500;
     return fee > 0 ? fee : 500;
-  }
-
-  private normalizeDefaultGroup(savedTrip: Trip) {
-    return {
-      ...this.buildCreateDefaultGroupPayload(savedTrip),
-      groupName: this.ensureGroupHasMeaningfulName({ groupName: '1. Grup' }),
-      groupDescription: this.ensureGroupHasMeaningfulDescription({}, savedTrip),
-      groupFee: this.ensureGroupFee({ groupFee: 500 }),
-    };
   }
 
   private normalizeExistingDefaultGroup(group: TripGroup, savedTrip: Trip) {
@@ -372,8 +390,8 @@ export class TripsService {
   }
 
   private updateTripGroupsFromTrip(savedTrip: Trip) {
-    const defaultGroup = savedTrip.groups?.find(
-      (group) => this.shouldRefreshDefaultGroup(group),
+    const defaultGroup = savedTrip.groups?.find((group) =>
+      this.shouldRefreshDefaultGroup(group),
     );
 
     if (!defaultGroup) return null;
@@ -385,7 +403,9 @@ export class TripsService {
     return (value || '').trim().toUpperCase().replace(/\s+/g, '');
   }
 
-  private normalizeTripFormData(tripData: Partial<Trip> & { originPlace?: string; destPlace?: string }) {
+  private normalizeTripFormData(
+    tripData: Partial<Trip> & { originPlace?: string; destPlace?: string },
+  ) {
     return {
       ...this.normalizeTripData(tripData),
       vehiclePlate: this.getTrimmedVehiclePlate(tripData.vehiclePlate),
@@ -436,17 +456,6 @@ export class TripsService {
     };
   }
 
-  private getUpdatedDefaultGroupPayload(defaultGroup: TripGroup, savedTrip: Trip) {
-    return {
-      ...this.normalizeExistingDefaultGroup(defaultGroup, savedTrip),
-      groupName: this.ensureGroupHasMeaningfulName(defaultGroup),
-    };
-  }
-
-  private isDefaultGroup(group: TripGroup) {
-    return group.groupName === 'Genel Yolcular' || group.groupName === '1. Grup';
-  }
-
   private buildGroupDescription(group: TripGroup) {
     return group.groupDescription?.trim() || `${group.groupName} grubu`;
   }
@@ -454,11 +463,13 @@ export class TripsService {
   constructor(
     @InjectRepository(Trip) private tripRepo: Repository<Trip>,
     @InjectRepository(TripGroup) private groupRepo: Repository<TripGroup>,
-    @InjectRepository(TripPersonnel) private personnelRepo: Repository<TripPersonnel>,
+    @InjectRepository(TripPersonnel)
+    private personnelRepo: Repository<TripPersonnel>,
     @InjectRepository(Passenger) private passengerRepo: Repository<Passenger>,
     @InjectRepository(Tenant) private tenantRepo: Repository<Tenant>,
     private uetdsService: UetdsService,
-  ) { }
+    private tenantsService: TenantsService,
+  ) {}
 
   async findAll(tenantId: string, query: any = {}) {
     const page = Number(query.page) > 0 ? Number(query.page) : 1;
@@ -504,10 +515,6 @@ export class TripsService {
       .orderBy('trip.departureDate', 'DESC')
       .addOrderBy('trip.departureTime', 'DESC');
 
-    // In a real scenario, we link user to driver. 
-    // For now, let's filter by trips showing this user's assigned personnel records.
-    // Assuming driver info is linked to the user.
-
     if (query.status) {
       qb.andWhere('trip.status = :status', { status: query.status });
     }
@@ -523,7 +530,14 @@ export class TripsService {
   async findOne(id: string, tenantId: string) {
     const trip = await this.tripRepo.findOne({
       where: { id, tenantId },
-      relations: ['groups', 'groups.passengers', 'personnel', 'personnel.driver', 'vehicle', 'createdBy'],
+      relations: [
+        'groups',
+        'groups.passengers',
+        'personnel',
+        'personnel.driver',
+        'vehicle',
+        'createdBy',
+      ],
     });
 
     if (!trip) throw new NotFoundException('Sefer bulunamadı');
@@ -531,10 +545,12 @@ export class TripsService {
   }
 
   async create(tenantId: string, userId: string, data: Partial<Trip>) {
-    const tripData = this.normalizeTripFormData(data as Partial<Trip> & {
-      originPlace?: string;
-      destPlace?: string;
-    });
+    const tripData = this.normalizeTripFormData(
+      data as Partial<Trip> & {
+        originPlace?: string;
+        destPlace?: string;
+      },
+    );
 
     this.validateVehiclePlate(tripData.vehiclePlate || '');
     this.validateTripInput(tripData);
@@ -549,17 +565,22 @@ export class TripsService {
 
     const savedTrip = await this.tripRepo.save(trip);
 
-    // Her yeni seferde otomatik bir varsayılan grup oluşturalım
-    await this.addGroup(savedTrip.id, tenantId, this.buildNormalizedDefaultGroup(savedTrip));
+    await this.addGroup(
+      savedTrip.id,
+      tenantId,
+      this.buildNormalizedDefaultGroup(savedTrip),
+    );
 
     return savedTrip;
   }
 
   async update(id: string, tenantId: string, data: Partial<Trip>) {
-    const tripData = this.normalizeTripData(data as Partial<Trip> & {
-      originPlace?: string;
-      destPlace?: string;
-    });
+    const tripData = this.normalizeTripData(
+      data as Partial<Trip> & {
+        originPlace?: string;
+        destPlace?: string;
+      },
+    );
     this.validateTripInput(tripData);
     const trip = await this.findOne(id, tenantId);
     if (trip.status === TripStatus.SENT) {
@@ -578,8 +599,8 @@ export class TripsService {
     const defaultGroupUpdate = this.updateTripGroupsFromTrip(savedTrip);
 
     if (defaultGroupUpdate) {
-      const defaultGroup = savedTrip.groups?.find(
-        (group) => this.shouldRefreshDefaultGroup(group),
+      const defaultGroup = savedTrip.groups?.find((group) =>
+        this.shouldRefreshDefaultGroup(group),
       );
       if (defaultGroup) {
         await this.groupRepo.update(defaultGroup.id, defaultGroupUpdate);
@@ -610,7 +631,11 @@ export class TripsService {
     return this.groupRepo.save(group);
   }
 
-  async addPersonnel(tripId: string, tenantId: string, data: Partial<TripPersonnel>) {
+  async addPersonnel(
+    tripId: string,
+    tenantId: string,
+    data: Partial<TripPersonnel>,
+  ) {
     const trip = await this.findOne(tripId, tenantId);
 
     const existingPersonnel = await this.personnelRepo.findOne({
@@ -669,14 +694,6 @@ export class TripsService {
     return this.passengerRepo.save(entities);
   }
 
-  /**
-   * COMPLETE UETDS SEND WORKFLOW
-   * 1. seferEkle → get uetdsSeferReferansNo
-   * 2. seferGrupEkle → for each group
-   * 3. personelEkle → for each personnel
-   * 4. yolcuEkleCoklu → all passengers per group
-   * 5. bildirimOzeti → verify
-   */
   async sendToUetds(tripId: string, tenantId: string): Promise<any> {
     const trip = await this.findOne(tripId, tenantId);
     const tenant = await this.tenantRepo.findOne({ where: { id: tenantId } });
@@ -701,7 +718,7 @@ export class TripsService {
     }
 
     const username = tenant.uetdsUsername;
-    const password = tenant.uetdsPasswordEncrypted; // TODO: decrypt
+    const password = tenant.uetdsPasswordEncrypted;
     const environment = tenant.settings?.uetdsEnvironment || 'test';
 
     let groupsForSend: TripGroup[] = [];
@@ -711,12 +728,12 @@ export class TripsService {
       throw this.buildSendFailureFromValidation(validationError, tripId);
     }
 
-    // Update status to SENDING
     await this.tripRepo.update(tripId, { status: TripStatus.SENDING });
 
     try {
-      // STEP 1: Create trip on UETDS
-      this.logger.log(`[UETDS] Step 1: seferEkle for trip ${tripId} in ${environment} env`);
+      this.logger.log(
+        `[UETDS] Step 1: seferEkle for trip ${tripId} in ${environment} env`,
+      );
       const seferResult = await this.uetdsService.seferEkle(
         username,
         password,
@@ -742,8 +759,9 @@ export class TripsService {
       const seferRefNo = seferResult.uetdsSeferReferansNo;
       await this.tripRepo.update(tripId, { uetdsSeferRefNo: seferRefNo });
 
-      // STEP 2: Add groups
-      this.logger.log(`[UETDS] Step 2: seferGrupEkle for ${groupsForSend.length} groups`);
+      this.logger.log(
+        `[UETDS] Step 2: seferGrupEkle for ${groupsForSend.length} groups`,
+      );
       for (const group of groupsForSend) {
         const grupResult = await this.uetdsService.seferGrupEkle(
           username,
@@ -765,7 +783,6 @@ export class TripsService {
         group.uetdsGrupRefNo = grupResult.uetdsGrupRefNo;
       }
 
-      // STEP 3: Add personnel
       this.logger.log(
         `[UETDS] Step 3: personelEkle for ${trip.personnel.length} personnel`,
       );
@@ -783,24 +800,11 @@ export class TripsService {
           person.driver?.id ||
           '';
 
-        this.logger.warn(
-          `[UETDS][DEBUG][personelEkle][identity] ${JSON.stringify({
-            personId: person.id,
-            personnelType: person.personnelType,
-            firstName: person.firstName,
-            lastName: person.lastName,
-            tcPassportNo: person.tcPassportNo,
-            driverId: person.driverId,
-            driverTcKimlikNo: person.driver?.tcKimlikNo,
-            resolvedIdentityNo: identityNo,
-          })}`,
-        );
-
         let personnelSuccess = false;
         let personnelMessage = 'Personel gönderimi denenmedi';
 
         if (!identityNo) {
-          personnelMessage = `TC Kimlik / Pasaport No eksik`;
+          personnelMessage = 'TC Kimlik / Pasaport No eksik';
         } else {
           const personelResult = await this.uetdsService.personelEkle(
             username,
@@ -831,23 +835,9 @@ export class TripsService {
           success: personnelSuccess,
           message: personnelMessage,
         });
-
-        if (!personnelSuccess) {
-          this.logger.warn(
-            `[UETDS] personelEkle warning for ${person.firstName} ${person.lastName}: ${personnelMessage}`,
-          );
-        }
       }
 
-      const successfulPersonnelCount = personnelResults.filter((item) => item.success).length;
-      if (successfulPersonnelCount === 0) {
-        this.logger.warn(
-          `[UETDS] No personnel records were accepted for trip ${tripId}. Continuing to group/yolcu steps for diagnostics.`,
-        );
-      }
-
-      // STEP 4: Add passengers per group (batch)
-      this.logger.log(`[UETDS] Step 4: yolcuEkleCoklu`);
+      this.logger.log('[UETDS] Step 4: yolcuEkleCoklu');
       const passengerBatchResults: Array<{
         groupId: string;
         groupName: string;
@@ -893,7 +883,10 @@ export class TripsService {
           environment,
         );
 
-        if (yolcuResult?.sonucKodu !== undefined && ![0, 88].includes(yolcuResult.sonucKodu)) {
+        if (
+          yolcuResult?.sonucKodu !== undefined &&
+          ![0, 88].includes(yolcuResult.sonucKodu)
+        ) {
           throw new Error(`yolcuEkleCoklu failed: ${yolcuResult.sonucMesaji}`);
         }
 
@@ -939,18 +932,6 @@ export class TripsService {
         }
       }
 
-      // STEP 5: Verify with bildirimOzeti
-      const passengerSummary = passengerBatchResults
-        .map(
-          (result) =>
-            `${result.groupName}: ${result.successCount}/${result.expected} yolcu`,
-        )
-        .join(' | ');
-      const personnelSummary = `${personnelResults.filter((item) => item.success).length}/${personnelResults.length} personel`;
-      this.logger.log(`[UETDS] Validation snapshot -> ${personnelSummary}; ${passengerSummary}`);
-
-      // STEP 5: Verify with bildirimOzeti
-      this.logger.log(`[UETDS] Step 5: bildirimOzeti`);
       let ozet: any = null;
       try {
         ozet = await this.uetdsService.bildirimOzeti(
@@ -963,13 +944,14 @@ export class TripsService {
         );
       } catch (summaryError) {
         const summaryMessage =
-          summaryError instanceof Error ? summaryError.message : String(summaryError);
+          summaryError instanceof Error
+            ? summaryError.message
+            : String(summaryError);
         this.logger.warn(
           `[UETDS] bildirimOzeti warning for trip ${tripId}: ${summaryMessage}`,
         );
       }
 
-      // Update trip as SENT
       await this.tripRepo.update(tripId, {
         status: TripStatus.SENT,
         uetdsSeferRefNo: seferRefNo,
@@ -999,14 +981,13 @@ export class TripsService {
     }
   }
 
-  /** Cancel a trip on UETDS */
   async cancelOnUetds(tripId: string, tenantId: string, reason: string) {
     const trip = await this.findOne(tripId, tenantId);
     const tenant = await this.tenantRepo.findOne({ where: { id: tenantId } });
     const environment = tenant?.settings?.uetdsEnvironment || 'test';
 
     if (!trip.uetdsSeferRefNo) {
-      throw new BadRequestException('Bu sefer UETDS\'ye gönderilmemiş');
+      throw new BadRequestException("Bu sefer UETDS'ye gönderilmemiş");
     }
 
     const result = await this.uetdsService.seferIptal(
@@ -1026,13 +1007,12 @@ export class TripsService {
     return result;
   }
 
-  /** Get UETDS trip summary */
   async getUetdsSummary(tripId: string, tenantId: string) {
     const trip = await this.findOne(tripId, tenantId);
     const tenant = await this.tenantRepo.findOne({ where: { id: tenantId } });
 
     if (!trip.uetdsSeferRefNo) {
-      throw new BadRequestException('Bu sefer UETDS\'ye gönderilmemiş');
+      throw new BadRequestException("Bu sefer UETDS'ye gönderilmemiş");
     }
 
     return this.uetdsService.bildirimOzeti(
@@ -1044,16 +1024,25 @@ export class TripsService {
     );
   }
 
-  /** Get trip PDF from UETDS */
   async getUetdsPdf(tripId: string, tenantId: string) {
     const trip = await this.findOne(tripId, tenantId);
     const tenant = await this.tenantRepo.findOne({ where: { id: tenantId } });
-    const environment = tenant?.settings?.uetdsEnvironment || 'test';
 
     if (!trip.uetdsSeferRefNo) {
-      throw new BadRequestException('Bu sefer UETDS\'ye gönderilmemiş');
+      throw new BadRequestException("Bu sefer UETDS'ye gönderilmemiş");
     }
 
+    if (tenant?.settings?.isDemo && trip.firmTripNumber === DEMO_TRIP_NUMBER) {
+      await this.tenantsService.refreshDemoTenantSnapshot(tenantId);
+      const pdfBuffer = await this.tenantsService.getDemoPdfTemplateBuffer();
+      return {
+        sonucKodu: 0,
+        sonucMesaji: 'Demo PDF çıktısı hazır',
+        sonucPdf: pdfBuffer,
+      };
+    }
+
+    const environment = tenant?.settings?.uetdsEnvironment || 'test';
     return this.uetdsService.seferDetayCiktisiAl(
       tenant?.uetdsUsername || '',
       tenant?.uetdsPasswordEncrypted || '',

@@ -2,6 +2,8 @@ import { Injectable, NotFoundException, ConflictException } from '@nestjs/common
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import * as bcrypt from 'bcryptjs';
+import { readFile } from 'node:fs/promises';
+import { join } from 'node:path';
 import {
   Driver,
   Passenger,
@@ -20,10 +22,25 @@ import { v4 as uuid } from 'uuid';
 const DEMO_TENANT_TAX_NUMBER = '9999999999';
 const DEMO_ADMIN_EMAIL = 'demo@prouetds.com';
 const DEMO_ADMIN_PASSWORD = 'Demo123!';
+const DEMO_COMPANY_NAME =
+  'ALYA KARDEŞLER TURİZM OTOMOTİV İNŞAAT İÇ VE DIŞ TİCARET LİMİTED ŞİRKETİ';
+const DEMO_TRIP_NUMBER = 'DMO-2026-001';
+const DEMO_TRIP_REF = 2604206112446680;
+const DEMO_PDF_TEMPLATE_PATH =
+  'src/modules/pdf/uetdsresmidokuman/demo-trip-template.pdf';
+
 const DEMO_SETTINGS = {
   isDemo: true,
   readOnlyHint: true,
-  seededAt: '2026-04-19',
+  seededAt: '2026-04-20',
+  demoPdfTemplatePath: DEMO_PDF_TEMPLATE_PATH,
+};
+
+type CreateTenantInput = Partial<Tenant> & {
+  adminEmail?: string;
+  adminPassword?: string;
+  adminFirstName?: string;
+  adminLastName?: string;
 };
 
 @Injectable()
@@ -35,7 +52,8 @@ export class TenantsService {
     @InjectRepository(Driver) private driverRepo: Repository<Driver>,
     @InjectRepository(Trip) private tripRepo: Repository<Trip>,
     @InjectRepository(TripGroup) private groupRepo: Repository<TripGroup>,
-    @InjectRepository(TripPersonnel) private personnelRepo: Repository<TripPersonnel>,
+    @InjectRepository(TripPersonnel)
+    private personnelRepo: Repository<TripPersonnel>,
     @InjectRepository(Passenger) private passengerRepo: Repository<Passenger>,
   ) {}
 
@@ -43,7 +61,7 @@ export class TenantsService {
     return [
       {
         tenantId,
-        plateNumber: '34PRO001',
+        plateNumber: '34RD3388',
         brand: 'Mercedes-Benz',
         model: 'Sprinter VIP',
         seatCapacity: 16,
@@ -75,14 +93,14 @@ export class TenantsService {
     return [
       {
         tenantId,
-        firstName: 'Ahmet',
-        lastName: 'Demir',
-        tcKimlikNo: '10000000001',
+        firstName: 'Şehir',
+        lastName: 'Alya',
+        tcKimlikNo: '38700000772',
         phone: '05321234567',
         nationalityCode: 'TR',
         gender: 'E',
         srcCertificate: 'SRC2',
-        address: 'Başakşehir / İstanbul',
+        address: 'Bağcılar / İstanbul',
         isActive: true,
       },
       {
@@ -112,29 +130,33 @@ export class TenantsService {
     ];
   }
 
-  private buildDemoTrips(tenantId: string, createdById: string, vehicles: Vehicle[]) {
+  private buildDemoTrips(
+    tenantId: string,
+    createdById: string,
+    vehicles: Vehicle[],
+  ) {
     return [
       {
         tenantId,
         createdById,
-        firmTripNumber: 'DMO-2026-001',
+        firmTripNumber: DEMO_TRIP_NUMBER,
         vehiclePlate: vehicles[0].plateNumber,
         vehicleId: vehicles[0].id,
-        departureDate: '2026-04-19',
-        departureTime: '09:30',
-        endDate: '2026-04-19',
-        endTime: '11:15',
-        description: 'İstanbul Havalimanı karşılama transferi',
+        departureDate: '2026-04-20',
+        departureTime: '10:00',
+        endDate: '2026-04-20',
+        endTime: '23:59',
+        description: 'İstanbul içi transfer',
         vehiclePhone: '05321234567',
         originIlCode: 34,
-        originIlceCode: 2048,
+        originIlceCode: 1135,
         destIlCode: 34,
         destIlceCode: 1835,
-        originPlace: 'İstanbul Havalimanı Dış Hatlar',
-        destPlace: 'Sabiha Gökçen Havalimanı İç Hatlar',
+        originPlace: 'Bağcılar / İstanbul',
+        destPlace: 'Sabiha Gökçen Havalimanı / İstanbul',
         status: TripStatus.SENT,
-        uetdsSeferRefNo: 20260419001,
-        uetdsSentAt: new Date('2026-04-19T09:40:00.000Z'),
+        uetdsSeferRefNo: DEMO_TRIP_REF,
+        uetdsSentAt: new Date('2026-04-20T09:52:48.000Z'),
       },
       {
         tenantId,
@@ -180,10 +202,12 @@ export class TenantsService {
   }
 
   private buildDemoGroupData(trip: Trip) {
+    const isSentDemoTrip = trip.firmTripNumber === DEMO_TRIP_NUMBER;
+
     return {
       tripId: trip.id,
       tenantId: trip.tenantId,
-      groupName: 'Kurumsal Misafirler',
+      groupName: isSentDemoTrip ? '1' : 'Kurumsal Misafirler',
       groupDescription: trip.description || 'Demo grup',
       originCountryCode: 'TR',
       originIlCode: trip.originIlCode,
@@ -193,14 +217,34 @@ export class TenantsService {
       destIlCode: trip.destIlCode,
       destIlceCode: trip.destIlceCode,
       destPlace: trip.destPlace,
-      groupFee: 18500,
-      uetdsGrupRefNo: trip.status === TripStatus.SENT ? 880000 + Number(trip.firmTripNumber?.slice(-1) || 1) : null,
+      groupFee: isSentDemoTrip ? 500 : 18500,
+      uetdsGrupRefNo: isSentDemoTrip ? 1 : null,
       status: 'active',
     };
   }
 
   private buildDemoPersonnel(trip: Trip, drivers: Driver[]) {
     const [primaryDriver, secondaryDriver] = drivers;
+
+    if (trip.firmTripNumber === DEMO_TRIP_NUMBER) {
+      return [
+        {
+          tripId: trip.id,
+          tenantId: trip.tenantId,
+          driverId: primaryDriver.id,
+          personnelType: 0,
+          tcPassportNo: primaryDriver.tcKimlikNo,
+          nationalityCode: primaryDriver.nationalityCode,
+          firstName: primaryDriver.firstName,
+          lastName: primaryDriver.lastName,
+          gender: primaryDriver.gender,
+          phone: primaryDriver.phone,
+          address: primaryDriver.address,
+          status: 'active',
+        },
+      ];
+    }
+
     return [
       {
         tripId: trip.id,
@@ -234,6 +278,24 @@ export class TenantsService {
   }
 
   private buildDemoPassengers(group: TripGroup) {
+    if (group.groupName === '1') {
+      return [
+        {
+          tripGroupId: group.id,
+          tenantId: group.tenantId,
+          firstName: 'Orhan',
+          lastName: 'Güneş',
+          tcPassportNo: '000000',
+          nationalityCode: 'BILINMIYOR',
+          gender: 'E',
+          seatNumber: '1',
+          status: 'active',
+          source: PassengerSource.MANUAL,
+          uetdsYolcuRefNo: 1,
+        },
+      ];
+    }
+
     const suffix = group.tripId.slice(0, 4).toUpperCase();
     return [
       {
@@ -304,6 +366,92 @@ export class TenantsService {
     }
   }
 
+  async refreshDemoTenantSnapshot(tenantId: string) {
+    const tenant = await this.tenantRepo.findOne({ where: { id: tenantId } });
+    if (!tenant?.settings?.isDemo) return;
+
+    const sentTrip = await this.tripRepo.findOne({
+      where: { tenantId, firmTripNumber: DEMO_TRIP_NUMBER },
+      relations: ['groups'],
+    });
+
+    const vehicles = await this.vehicleRepo.find({
+      where: { tenantId },
+      order: { createdAt: 'ASC' },
+    });
+    const drivers = await this.driverRepo.find({
+      where: { tenantId },
+      order: { createdAt: 'ASC' },
+    });
+
+    if (!sentTrip || vehicles.length === 0 || drivers.length === 0) return;
+
+    const [primaryVehicle] = vehicles;
+    Object.assign(primaryVehicle, this.buildDemoVehicles(tenantId)[0]);
+    await this.vehicleRepo.save(primaryVehicle);
+
+    const driverTemplates = this.buildDemoDrivers(tenantId);
+    const savedDrivers: Driver[] = [];
+    for (const [index, template] of driverTemplates.entries()) {
+      const driver = drivers[index] || this.driverRepo.create({ tenantId });
+      Object.assign(driver, { ...template, tenantId, isActive: true });
+      savedDrivers.push(await this.driverRepo.save(driver));
+    }
+
+    Object.assign(sentTrip, {
+      vehicleId: primaryVehicle.id,
+      vehiclePlate: primaryVehicle.plateNumber,
+      departureDate: '2026-04-20',
+      departureTime: '10:00',
+      endDate: '2026-04-20',
+      endTime: '23:59',
+      description: 'İstanbul içi transfer',
+      vehiclePhone: '05321234567',
+      originIlCode: 34,
+      originIlceCode: 1135,
+      destIlCode: 34,
+      destIlceCode: 1835,
+      originPlace: 'Bağcılar / İstanbul',
+      destPlace: 'Sabiha Gökçen Havalimanı / İstanbul',
+      status: TripStatus.SENT,
+      uetdsSeferRefNo: DEMO_TRIP_REF,
+      uetdsSentAt: new Date('2026-04-20T09:52:48.000Z'),
+    });
+    await this.tripRepo.save(sentTrip);
+
+    await this.personnelRepo.delete({ tripId: sentTrip.id });
+
+    const groupIds = sentTrip.groups?.map((group) => group.id) || [];
+    if (groupIds.length > 0) {
+      await this.passengerRepo
+        .createQueryBuilder()
+        .delete()
+        .where('tripGroupId IN (:...groupIds)', { groupIds })
+        .execute();
+      await this.groupRepo.delete({ tripId: sentTrip.id });
+    }
+
+    const group = await this.groupRepo.save(
+      this.groupRepo.create(this.buildDemoGroupData(sentTrip)),
+    );
+
+    await this.personnelRepo.save(
+      this.personnelRepo.create(this.buildDemoPersonnel(sentTrip, savedDrivers)),
+    );
+    await this.passengerRepo.save(
+      this.passengerRepo.create(this.buildDemoPassengers(group)),
+    );
+  }
+
+  async isDemoTenant(tenantId: string) {
+    const tenant = await this.tenantRepo.findOne({ where: { id: tenantId } });
+    return Boolean(tenant?.settings?.isDemo);
+  }
+
+  async getDemoPdfTemplateBuffer() {
+    return readFile(join(process.cwd(), DEMO_PDF_TEMPLATE_PATH));
+  }
+
   async ensureDemoTenant() {
     const existingTenant = await this.tenantRepo.findOne({
       where: { taxNumber: DEMO_TENANT_TAX_NUMBER },
@@ -342,6 +490,8 @@ export class TenantsService {
         await this.seedDemoTenantData(existingTenant, existingUser);
       }
 
+      await this.refreshDemoTenantSnapshot(existingTenant.id);
+
       return {
         tenant: existingTenant,
         credentials: {
@@ -354,11 +504,11 @@ export class TenantsService {
     }
 
     const tenant = this.tenantRepo.create({
-      companyName: 'ProUETDS Demo Turizm',
+      companyName: DEMO_COMPANY_NAME,
       taxNumber: DEMO_TENANT_TAX_NUMBER,
       contactEmail: DEMO_ADMIN_EMAIL,
       contactPhone: '+90 554 581 20 34',
-      address: 'Başakşehir / İstanbul',
+      address: 'Bağcılar / İstanbul',
       isActive: true,
       subscriptionPlan: 'demo',
       settings: {
@@ -421,7 +571,7 @@ export class TenantsService {
     return tenant;
   }
 
-  async create(data: Partial<Tenant> & { adminEmail?: string; adminPassword?: string }) {
+  async create(data: CreateTenantInput) {
     const existing = await this.tenantRepo.findOne({
       where: { taxNumber: data.taxNumber },
     });
@@ -429,7 +579,6 @@ export class TenantsService {
       throw new ConflictException('Bu vergi numarası zaten kayıtlı');
     }
 
-    // Generate CRM API key
     const crmApiKey = uuid().replace(/-/g, '');
 
     const tenant = this.tenantRepo.create({
@@ -438,7 +587,6 @@ export class TenantsService {
     });
     const savedTenant = await this.tenantRepo.save(tenant);
 
-    // Create admin user for the tenant
     if (data.adminEmail && data.adminPassword) {
       const adminUser = this.userRepo.create({
         email: data.adminEmail,
@@ -456,12 +604,11 @@ export class TenantsService {
 
   async update(id: string, data: Partial<Tenant>) {
     const tenant = await this.findOne(id);
-    
-    // Safely merge settings if provided
+
     if (data.settings) {
       data.settings = { ...tenant.settings, ...data.settings };
     }
-    
+
     Object.assign(tenant, data);
     return this.tenantRepo.save(tenant);
   }

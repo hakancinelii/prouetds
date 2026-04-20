@@ -12,6 +12,7 @@ import {
 import { UetdsModule } from '../uetds/uetds.module';
 import { ParserModule } from '../parser/parser.module';
 import { OcrModule } from '../ocr/ocr.module';
+import { TenantsModule } from '../tenants/tenants.module';
 
 @Module({
   imports: [
@@ -19,6 +20,7 @@ import { OcrModule } from '../ocr/ocr.module';
     UetdsModule,
     ParserModule,
     OcrModule,
+    TenantsModule,
   ],
   controllers: [TripsController],
   providers: [TripsService],
