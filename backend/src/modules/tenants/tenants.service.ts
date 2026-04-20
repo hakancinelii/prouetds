@@ -121,7 +121,7 @@ export const normalizeTenantPackage = (value?: string | null): TenantPackageCode
 
   return DEFAULT_TENANT_PACKAGE;
 };
-'}
+
 export const getTenantPackageDefinition = (plan?: string | null) => {
   const code = normalizeTenantPackage(plan);
   return TENANT_PACKAGE_DEFINITIONS[code];
