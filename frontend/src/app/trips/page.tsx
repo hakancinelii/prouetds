@@ -175,8 +175,8 @@ const handleDriverSelect = (
 const getDriverLabel = (driver: any) =>
   driver ? `${driver.firstName} ${driver.lastName} · ${driver.tcKimlikNo}` : '';
 
-const TRIPS_HELPER_TEXT_CLASS = 'mt-1 text-[11px] text-slate-300 dark:text-slate-400';
-const TRIPS_SUGGESTED_BADGE_CLASS = 'mt-2 rounded-xl theme-note px-3 py-2 text-xs text-slate-200 dark:text-slate-300';
+const TRIPS_HELPER_TEXT_CLASS = 'mt-1 text-[11px] text-slate-200 dark:text-slate-400';
+const TRIPS_SUGGESTED_BADGE_CLASS = 'mt-2 rounded-xl theme-note px-3 py-2 text-xs text-slate-100 dark:text-slate-300';
 
 void getDriverLabel;
 void handleVehiclePlateSelect;
@@ -696,31 +696,6 @@ export default function TripsPage() {
               <div className="grid grid-cols-2 gap-4">
                 <div className="col-span-2">
                   <label className="label-muted text-sm">
-                    Araç Plaka
-                  </label>
-                  <input
-                    list="registered-vehicles"
-                    value={form.vehiclePlate}
-                    onChange={(e) => handleVehicleChange(e.target.value)}
-                    className="input-field"
-                    placeholder="Listeden seçin veya elle yazın (örn: 34ABC123)"
-                    required
-                  />
-                  <datalist id="registered-vehicles">
-                    {vehicles.map((v) => (
-                      <option key={v.id} value={v.plateNumber}>
-                        {v.brand ? `${v.plateNumber} (${v.brand})` : v.plateNumber}
-                      </option>
-                    ))}
-                  </datalist>
-                  {suggestedDriver && (
-                    <div className={TRIPS_SUGGESTED_BADGE_CLASS}>
-                      Önerilen şoför: <span className="theme-text-strong">{getDriverLabel(suggestedDriver)}</span>
-                    </div>
-                  )}
-                </div>
-                <div className="col-span-2">
-                  <label className="label-muted text-sm">
                     Seferde Kullanılacak Şoför
                   </label>
                   <div className="flex gap-2">
@@ -753,6 +728,31 @@ export default function TripsPage() {
                   <p className={TRIPS_HELPER_TEXT_CLASS}>
                     Araç için varsayılan şoför tanımlıysa otomatik gelir; isterseniz değiştirebilirsiniz.
                   </p>
+                </div>
+                <div className="col-span-2">
+                  <label className="label-muted text-sm">
+                    Araç Plaka
+                  </label>
+                  <input
+                    list="registered-vehicles"
+                    value={form.vehiclePlate}
+                    onChange={(e) => handleVehicleChange(e.target.value)}
+                    className="input-field"
+                    placeholder="Listeden seçin veya elle yazın (örn: 34ABC123)"
+                    required
+                  />
+                  <datalist id="registered-vehicles">
+                    {vehicles.map((v) => (
+                      <option key={v.id} value={v.plateNumber}>
+                        {v.brand ? `${v.plateNumber} (${v.brand})` : v.plateNumber}
+                      </option>
+                    ))}
+                  </datalist>
+                  {suggestedDriver && (
+                    <div className={TRIPS_SUGGESTED_BADGE_CLASS}>
+                      Önerilen şoför: <span className="theme-text-strong">{getDriverLabel(suggestedDriver)}</span>
+                    </div>
+                  )}
                   <p className={TRIPS_HELPER_TEXT_CLASS}>
                     Şoför seçildiğinde plaka bilgisi varsa araç alanı da otomatik dolar.
                   </p>

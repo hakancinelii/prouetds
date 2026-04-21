@@ -831,11 +831,11 @@ export default function TripDetailPage() {
           <p className="route-box-value mt-2 text-sm">Kalkış ve varış noktalarını tek karttan görüntüleyin ve haritada açın.</p>
         </div>
         <div className="grid gap-4 md:grid-cols-2">
-          <div className="theme-panel-soft rounded-xl p-4">
+          <div className="theme-panel-dark theme-surface-on-dark rounded-xl p-4">
             <p className="route-box-label text-xs uppercase tracking-wider">Kalkış Noktası</p>
             <p className="route-box-value mt-2 text-base font-semibold">{trip.originPlace || 'Kalkış bilgisi yok'}</p>
           </div>
-          <div className="theme-panel-soft rounded-xl p-4">
+          <div className="theme-panel-dark theme-surface-on-dark rounded-xl p-4">
             <p className="route-box-label text-xs uppercase tracking-wider">Varış Noktası</p>
             <p className="route-box-value mt-2 text-base font-semibold">{trip.destPlace || 'Varış bilgisi yok'}</p>
           </div>

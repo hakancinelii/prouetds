@@ -220,7 +220,7 @@ export default function UsersPage() {
             <h2 className="mt-2 text-xl font-semibold text-white">{capacity?.package?.label || 'Paket yükleniyor'}</h2>
             <p className="mt-2 text-sm text-slate-400">{getCapacityText(capacity)}</p>
           </div>
-          <div className="rounded-2xl border border-slate-800 bg-slate-950/40 p-4 text-sm text-slate-400">
+          <div className="rounded-2xl theme-panel-dark theme-surface-on-dark p-4 text-sm">
             {userLimitReached
               ? 'Kullanıcı limiti doldu. Yeni kullanıcı eklemek için paketi yükseltin veya pasif kullanıcı açın.'
               : 'Kalan kullanıcı hakkı oldukça tenant admin yeni şoför kullanıcı açabilir.'}
