@@ -17,6 +17,7 @@ type DriverUserCreateInput = {
   lastName: string;
   password: string;
   phone?: string | null;
+  plateNumber?: string | null;
   tcKimlikNo: string;
   nationalityCode?: string | null;
   gender?: string | null;
@@ -61,6 +62,7 @@ export class UsersService {
       firstName: user.firstName,
       lastName: user.lastName,
       phone: user.phone,
+      plateNumber: user.plateNumber,
       role: user.role,
       tenantId: user.tenantId,
       driverId: user.driverId,
@@ -160,6 +162,7 @@ export class UsersService {
         firstName,
         lastName,
         phone: normalizeText(data.phone),
+        plateNumber: normalizeText(data.plateNumber)?.toUpperCase() || null,
         role: UserRole.DRIVER,
         driverId: driver.id,
         isActive: data.isActive ?? true,
@@ -198,6 +201,9 @@ export class UsersService {
     user.firstName = nextFirstName;
     user.lastName = nextLastName;
     if (data.phone !== undefined) user.phone = normalizeText(data.phone);
+    if (data.plateNumber !== undefined) {
+      user.plateNumber = normalizeText(data.plateNumber)?.toUpperCase() || null;
+    }
     if (data.isActive !== undefined) user.isActive = data.isActive;
     if (data.password !== undefined) {
       user.passwordHash = await bcrypt.hash(normalizePassword(data.password), 12);

@@ -108,11 +108,13 @@ const getDefaultCreateForm = () => ({
 const normalizePlate = (value: string) =>
   value.trim().toUpperCase().replace(/\s+/g, '');
 
-const getSuggestedDriverId = (vehiclePlate: string, vehicles: any[]) => {
+const getSuggestedDriverId = (vehiclePlate: string, vehicles: any[], drivers: any[]) => {
   const normalizedPlate = normalizePlate(vehiclePlate);
   return (
     vehicles.find((vehicle) => normalizePlate(vehicle.plateNumber) === normalizedPlate)
-      ?.defaultDriver?.id || ''
+      ?.defaultDriver?.id ||
+    drivers.find((driver) => normalizePlate(driver.plateNumber || '') === normalizedPlate)?.id ||
+    ''
   );
 };
 
@@ -122,11 +124,12 @@ const getSuggestedDriver = (selectedDriverId: string, drivers: any[]) =>
 const handleVehiclePlateSelect = (
   nextPlate: string,
   vehicles: any[],
+  drivers: any[],
   currentForm: ReturnType<typeof getDefaultCreateForm>,
   setForm: React.Dispatch<React.SetStateAction<ReturnType<typeof getDefaultCreateForm>>>,
 ) => {
   const normalizedPlate = normalizePlate(nextPlate);
-  const suggestedDriverId = getSuggestedDriverId(normalizedPlate, vehicles);
+  const suggestedDriverId = getSuggestedDriverId(normalizedPlate, vehicles, drivers);
   setForm({
     ...currentForm,
     vehiclePlate: normalizedPlate,
@@ -217,7 +220,7 @@ export default function TripsPage() {
   };
 
   const handleVehicleChange = (nextPlate: string) => {
-    handleVehiclePlateSelect(nextPlate, vehicles, form, setForm);
+    handleVehiclePlateSelect(nextPlate, vehicles, drivers, form, setForm);
   };
 
   const clearSuggestedDriver = () => {

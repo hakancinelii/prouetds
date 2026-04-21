@@ -12,6 +12,7 @@ const getEmptyForm = () => ({
   lastName: '',
   password: '',
   phone: '',
+  plateNumber: '',
   tcKimlikNo: '',
   nationalityCode: 'TR',
   gender: 'E',
@@ -74,6 +75,7 @@ export default function UsersPage() {
       lastName: item.lastName || '',
       password: '',
       phone: item.phone || '',
+      plateNumber: item.plateNumber || '',
       tcKimlikNo: item.driver?.tcKimlikNo || '',
       nationalityCode: item.driver?.nationalityCode || 'TR',
       gender: item.driver?.gender || 'E',
@@ -95,6 +97,7 @@ export default function UsersPage() {
         lastName: form.lastName.trim(),
         password: form.password.trim(),
         phone: form.phone.trim(),
+        plateNumber: form.plateNumber.trim().toUpperCase(),
         tcKimlikNo: form.tcKimlikNo.trim(),
         nationalityCode: form.nationalityCode.trim(),
         gender: form.gender.trim(),
@@ -182,6 +185,7 @@ export default function UsersPage() {
                     <p className="text-sm text-slate-400">{item.email}</p>
                     <div className="mt-2 flex flex-wrap gap-2 text-xs text-slate-500">
                       <span>TC: {item.driver?.tcKimlikNo || '-'}</span>
+                      <span>Plaka: {item.plateNumber || '-'}</span>
                       <span>SRC: {item.driver?.srcCertificate || '-'}</span>
                       <span>{item.isActive ? 'Aktif' : 'Pasif'}</span>
                     </div>
@@ -248,6 +252,10 @@ export default function UsersPage() {
               <div>
                 <label htmlFor="user-phone" className="label-muted">Telefon</label>
                 <input id="user-phone" title="Telefon" className="input-field" value={form.phone} onChange={(e) => setForm({ ...form, phone: e.target.value })} />
+              </div>
+              <div>
+                <label htmlFor="user-plate" className="label-muted">Plaka</label>
+                <input id="user-plate" title="Plaka" className="input-field" value={form.plateNumber} onChange={(e) => setForm({ ...form, plateNumber: e.target.value.toUpperCase() })} placeholder="34ABC123" />
               </div>
               <div>
                 <label htmlFor="user-tc" className="label-muted">TC Kimlik No</label>
