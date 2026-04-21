@@ -121,6 +121,11 @@ const getSuggestedDriverId = (vehiclePlate: string, vehicles: any[], drivers: an
 const getSuggestedDriver = (selectedDriverId: string, drivers: any[]) =>
   drivers.find((driver) => driver.id === selectedDriverId) || null;
 
+const getSuggestedPlateByDriver = (selectedDriverId: string, drivers: any[]) =>
+  normalizePlate(
+    drivers.find((driver) => driver.id === selectedDriverId)?.plateNumber || '',
+  );
+
 const handleVehiclePlateSelect = (
   nextPlate: string,
   vehicles: any[],
@@ -137,15 +142,52 @@ const handleVehiclePlateSelect = (
   });
 };
 
+const handleDriverSelect = (
+  nextDriverId: string,
+  vehicles: any[],
+  drivers: any[],
+  currentForm: ReturnType<typeof getDefaultCreateForm>,
+  setForm: React.Dispatch<React.SetStateAction<ReturnType<typeof getDefaultCreateForm>>>,
+) => {
+  const selectedDriver = getSuggestedDriver(nextDriverId, drivers);
+  if (!selectedDriver) {
+    setForm({
+      ...currentForm,
+      selectedDriverId: '',
+    });
+    return;
+  }
+
+  const suggestedPlate = getSuggestedPlateByDriver(nextDriverId, drivers);
+  const matchedVehicle = vehicles.find(
+    (vehicle) => normalizePlate(vehicle.plateNumber) === suggestedPlate,
+  );
+
+  setForm({
+    ...currentForm,
+    selectedDriverId: nextDriverId,
+    vehiclePlate: matchedVehicle?.plateNumber
+      ? normalizePlate(matchedVehicle.plateNumber)
+      : suggestedPlate || currentForm.vehiclePlate,
+  });
+};
+
 const getDriverLabel = (driver: any) =>
   driver ? `${driver.firstName} ${driver.lastName} · ${driver.tcKimlikNo}` : '';
 
+const TRIPS_HELPER_TEXT_CLASS = 'mt-1 text-[11px] text-slate-300 dark:text-slate-400';
+const TRIPS_SUGGESTED_BADGE_CLASS = 'mt-2 rounded-xl theme-note px-3 py-2 text-xs text-slate-200 dark:text-slate-300';
+
 void getDriverLabel;
 void handleVehiclePlateSelect;
+void handleDriverSelect;
 void getSuggestedDriver;
 void getSuggestedDriverId;
+void getSuggestedPlateByDriver;
 void normalizePlate;
-
+void TRIPS_HELPER_TEXT_CLASS;
+void TRIPS_SUGGESTED_BADGE_CLASS;
+'},
 import { useRouter } from 'next/navigation';
 import { driversApi, tripsApi, vehiclesApi } from '@/lib/api';
 import { MERNIS_LOCATIONS, getProvinceByCode } from '@/lib/mernis-locations';
@@ -673,7 +715,7 @@ export default function TripsPage() {
                     ))}
                   </datalist>
                   {suggestedDriver && (
-                    <div className="mt-2 rounded-xl theme-note px-3 py-2 text-xs theme-text-soft">
+                    <div className={TRIPS_SUGGESTED_BADGE_CLASS}>
                       Önerilen şoför: <span className="theme-text-strong">{getDriverLabel(suggestedDriver)}</span>
                     </div>
                   )}
@@ -687,7 +729,9 @@ export default function TripsPage() {
                       title="Seferde kullanılacak şoför"
                       aria-label="Seferde kullanılacak şoför"
                       value={form.selectedDriverId}
-                      onChange={(e) => setForm({ ...form, selectedDriverId: e.target.value })}
+                      onChange={(e) =>
+                        handleDriverSelect(e.target.value, vehicles, drivers, form, setForm)
+                      }
                       className="input-field flex-1"
                     >
                       <option value="">Şoför seçilmedi</option>
@@ -707,8 +751,11 @@ export default function TripsPage() {
                       </button>
                     )}
                   </div>
-                  <p className="mt-1 text-[11px] theme-text-soft">
+                  <p className={TRIPS_HELPER_TEXT_CLASS}>
                     Araç için varsayılan şoför tanımlıysa otomatik gelir; isterseniz değiştirebilirsiniz.
+                  </p>
+                  <p className={TRIPS_HELPER_TEXT_CLASS}>
+                    Şoför seçildiğinde plaka bilgisi varsa araç alanı da otomatik dolar.
                   </p>
                 </div>
                 <div>
