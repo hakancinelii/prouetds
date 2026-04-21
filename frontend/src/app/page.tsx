@@ -184,19 +184,19 @@ export default function Home() {
   };
 
   return (
-    <div className="min-h-screen bg-[rgb(var(--background-start-rgb))] text-[rgb(var(--foreground-rgb))]">
+    <div className="theme-landing-shell theme-readability-fix min-h-screen bg-[rgb(var(--background-start-rgb))] text-[rgb(var(--foreground-rgb))]">
       <main className="mx-auto max-w-7xl px-6 pb-24 pt-10 lg:px-10">
-        <section className="grid gap-10 lg:grid-cols-[1.1fr_0.9fr] lg:items-center">
+        <section className="theme-landing-shell grid gap-10 lg:grid-cols-[1.1fr_0.9fr] lg:items-center">
           <div className="space-y-8">
             <div className="inline-flex items-center gap-2 rounded-full border border-emerald-500/20 bg-emerald-500/8 px-4 py-2 text-sm text-emerald-600 dark:text-emerald-300">
               <BadgeCheck size={16} /> {landingBadge}
             </div>
 
             <div className="space-y-5">
-              <h1 className="max-w-4xl text-balance text-5xl font-black tracking-tight text-slate-950 dark:text-white md:text-6xl">
+              <h1 className="theme-landing-heading max-w-4xl text-balance text-5xl font-black tracking-tight md:text-6xl">
                 {landingTitle}
               </h1>
-              <p className="max-w-3xl text-pretty text-lg leading-8 text-slate-600 dark:text-slate-300">
+              <p className="theme-landing-text max-w-3xl text-pretty text-lg leading-8">
                 {landingBody}
               </p>
             </div>
@@ -212,7 +212,7 @@ export default function Home() {
                 type="button"
                 onClick={handleDemoLogin}
                 disabled={demoLoading}
-                className="inline-flex items-center gap-2 rounded-2xl border border-slate-900/10 bg-white/90 px-6 py-3 text-base font-semibold text-slate-900 shadow-sm transition hover:bg-white disabled:cursor-not-allowed disabled:opacity-70 dark:border-white/10 dark:bg-white/5 dark:text-white dark:hover:bg-white/10"
+                className="theme-landing-action-secondary inline-flex items-center gap-2 rounded-2xl border px-6 py-3 text-base font-semibold shadow-sm transition disabled:cursor-not-allowed disabled:opacity-70"
               >
                 {demoLoading ? (
                   <>
@@ -228,7 +228,7 @@ export default function Home() {
                 href={whatsappHref}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="inline-flex items-center gap-2 rounded-2xl border border-[rgb(var(--border-rgb))]/40 bg-white/80 px-6 py-3 text-base font-semibold text-slate-900 shadow-sm transition hover:bg-white dark:border-white/10 dark:bg-white/5 dark:text-white dark:hover:bg-white/10"
+                className="theme-landing-action-secondary inline-flex items-center gap-2 rounded-2xl border px-6 py-3 text-base font-semibold shadow-sm transition"
               >
                 <MessageCircle size={18} /> WhatsApp ile yaz
               </a>
@@ -253,7 +253,7 @@ export default function Home() {
             </div>
           </div>
 
-          <div className="relative overflow-hidden rounded-[2rem] border border-[rgb(var(--border-rgb))]/26 bg-[radial-gradient(circle_at_top_left,rgba(16,185,129,0.16),transparent_42%),linear-gradient(180deg,rgba(255,255,255,0.92),rgba(248,250,252,0.88))] p-6 shadow-[0_30px_80px_-48px_rgba(15,23,42,0.4)] dark:border-white/8 dark:bg-[radial-gradient(circle_at_top_left,rgba(16,185,129,0.16),transparent_42%),linear-gradient(180deg,rgba(15,23,42,0.96),rgba(17,24,39,0.94))]">
+          <div className="theme-landing-surface theme-contrast-box relative overflow-hidden rounded-[2rem] border border-[rgb(var(--border-rgb))]/26 bg-[radial-gradient(circle_at_top_left,rgba(16,185,129,0.16),transparent_42%),linear-gradient(180deg,rgba(255,255,255,0.92),rgba(248,250,252,0.88))] p-6 shadow-[0_30px_80px_-48px_rgba(15,23,42,0.4)] dark:border-white/8 dark:bg-[radial-gradient(circle_at_top_left,rgba(16,185,129,0.16),transparent_42%),linear-gradient(180deg,rgba(15,23,42,0.96),rgba(17,24,39,0.94))]">
             <div className="space-y-5">
               <div className="flex items-center justify-between">
                 <div>

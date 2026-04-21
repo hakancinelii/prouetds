@@ -167,13 +167,13 @@ export default function TenantsPage() {
   }
 
   return (
-    <div className="p-6 lg:p-8 space-y-8 animate-fade-in">
+    <div className="theme-tenant-shell theme-readability-fix p-6 lg:p-8 space-y-8 animate-fade-in">
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
-          <h1 className="text-3xl font-bold text-white flex items-center gap-3">
+          <h1 className="text-3xl font-bold theme-heading flex items-center gap-3">
             <Building2 className="text-emerald-400" /> Şirket Yönetimi
           </h1>
-          <p className="text-slate-400 mt-1">SaaS üzerindeki tüm şirketleri yönetin ve yapılandırın.</p>
+          <p className="theme-text-soft mt-1">SaaS üzerindeki tüm şirketleri yönetin ve yapılandırın.</p>
         </div>
         <button 
           onClick={() => handleOpenModal()}
@@ -185,45 +185,49 @@ export default function TenantsPage() {
 
       {/* Stats & Tools */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-        <div className="glass-card p-6 flex items-center gap-4 border-l-4 border-l-emerald-500">
+        <div className="glass-card theme-kpi-card p-6 flex items-center gap-4 border-l-4 border-l-emerald-500">
           <div className="w-12 h-12 bg-emerald-500/20 rounded-2xl flex items-center justify-center text-emerald-400 shadow-inner">
             <Building2 size={24} />
           </div>
           <div>
-            <p className="text-xs text-slate-400 uppercase tracking-widest font-bold">Toplam Şirket</p>
-            <p className="text-2xl font-black text-white">{tenants.length}</p>
+            <p className="theme-kpi-label text-xs uppercase tracking-widest font-bold">Toplam Şirket</p>
+            <p className="theme-kpi-number text-2xl font-black">{tenants.length}</p>
           </div>
         </div>
-        <div className="glass-card p-6 flex items-center gap-4 border-l-4 border-l-cyan-500">
+        <div className="glass-card theme-kpi-card p-6 flex items-center gap-4 border-l-4 border-l-cyan-500">
           <div className="w-12 h-12 bg-cyan-500/20 rounded-2xl flex items-center justify-center text-cyan-400 shadow-inner">
             <Users size={24} />
           </div>
           <div>
-            <p className="text-xs text-slate-400 uppercase tracking-widest font-bold">Aktif Şirketler</p>
-            <p className="text-2xl font-black text-white">{tenants.filter(t => t.isActive).length}</p>
+            <p className="theme-kpi-label text-xs uppercase tracking-widest font-bold">Aktif Şirketler</p>
+            <p className="theme-kpi-number text-2xl font-black">{tenants.filter(t => t.isActive).length}</p>
           </div>
         </div>
-        <div className="glass-card p-6 flex items-center gap-2 bg-slate-800/10">
+        <div className="glass-card theme-toolbar-shell theme-surface-on-dark p-6 flex items-center gap-2">
           <div className="search-input-shell flex-1">
-            <Search className="input-icon-left-search text-slate-500" size={18} />
+            <Search className="input-icon-left-search theme-icon-muted" size={18} />
             <input
               type="text"
               placeholder="Şirket adı veya VKN ile ara..."
-              className="w-full bg-slate-900/50 border border-slate-700/50 rounded-xl py-3 pr-4 text-sm focus:ring-2 focus:ring-emerald-500/50 focus:border-emerald-500 outline-none transition-all placeholder:text-slate-600 input-with-icon"
+              className="w-full rounded-xl py-3 pr-4 text-sm outline-none transition-all input-with-icon input-field"
               value={search}
               onChange={(e) => setSearch(e.target.value)}
             />
           </div>
-          <div className="flex bg-slate-900/80 p-1 rounded-xl border border-slate-700/50 shadow-inner">
-            <button 
+          <div className="flex theme-toolbar-surface p-1 rounded-xl theme-toolbar-surface-border shadow-inner">
+            <button
+              type="button"
+              title="Kart görünümü"
               onClick={() => setViewMode('grid')}
-              className={`p-2 rounded-lg transition-all ${viewMode === 'grid' ? 'bg-emerald-500 text-white shadow-lg' : 'text-slate-500 hover:text-slate-300'}`}
+              className={`p-2 rounded-lg transition-all ${viewMode === 'grid' ? 'bg-emerald-500 text-white shadow-lg theme-toggle-button-active' : 'theme-toggle-button hover:text-white'}`}
             >
               <LayoutGrid size={18} />
             </button>
-            <button 
+            <button
+              type="button"
+              title="Liste görünümü"
               onClick={() => setViewMode('list')}
-              className={`p-2 rounded-lg transition-all ${viewMode === 'list' ? 'bg-emerald-500 text-white shadow-lg' : 'text-slate-500 hover:text-slate-300'}`}
+              className={`p-2 rounded-lg transition-all ${viewMode === 'list' ? 'bg-emerald-500 text-white shadow-lg theme-toggle-button-active' : 'theme-toggle-button hover:text-white'}`}
             >
               <List size={18} />
             </button>
@@ -234,34 +238,36 @@ export default function TenantsPage() {
       {loading ? (
         <div className="h-64 flex flex-col items-center justify-center gap-4">
           <Loader2 className="animate-spin text-emerald-400" size={48} />
-          <p className="text-slate-500 animate-pulse font-medium">Şirketler Yükleniyor...</p>
+          <p className="theme-text-soft animate-pulse font-medium">Şirketler Yükleniyor...</p>
         </div>
       ) : filteredTenants.length === 0 ? (
-          <div className="glass-card h-64 flex flex-col items-center justify-center text-center p-6 border-dashed border-2 border-slate-700/50">
-            <Building2 size={48} className="text-slate-700 mb-4" />
-            <h3 className="text-lg font-bold text-slate-400">Şirket Bulunamadı</h3>
-            <p className="text-sm text-slate-500 mt-1">Arama kriterini değiştirin veya yeni bir şirket ekleyin.</p>
+          <div className="glass-card theme-panel-dark h-64 flex flex-col items-center justify-center text-center p-6 border-dashed border-2 theme-surface-border">
+            <Building2 size={48} className="theme-icon-muted mb-4" />
+            <h3 className="text-lg font-bold theme-heading">Şirket Bulunamadı</h3>
+            <p className="text-sm theme-text-soft mt-1">Arama kriterini değiştirin veya yeni bir şirket ekleyin.</p>
           </div>
       ) : viewMode === 'grid' ? (
         <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
           {filteredTenants.map((tenant) => (
-            <div key={tenant.id} className="glass-card group hover:scale-[1.02] transition-all duration-300 overflow-hidden border-t-4 border-t-emerald-500 hover:shadow-2xl hover:shadow-emerald-500/10 active:scale-[0.98]">
+            <div key={tenant.id} className="glass-card theme-readability-fix group hover:scale-[1.02] transition-all duration-300 overflow-hidden border-t-4 border-t-emerald-500 hover:shadow-2xl hover:shadow-emerald-500/10 active:scale-[0.98]">
               <div className="p-6 space-y-4">
                 <div className="flex items-start justify-between">
-                  <div className="w-14 h-14 bg-slate-800/80 rounded-2xl flex items-center justify-center text-emerald-400 group-hover:bg-emerald-500 group-hover:text-white transition-all duration-300 shadow-lg shadow-black/20 group-hover:rotate-6">
+                  <div className="w-14 h-14 theme-panel-dark rounded-2xl flex items-center justify-center theme-surface-dark-icon group-hover:bg-emerald-500 group-hover:text-white transition-all duration-300 shadow-lg shadow-black/20 group-hover:rotate-6">
                     <Building2 size={28} />
                   </div>
                   <div className="flex items-center gap-2">
-                    <button 
+                    <button
+                      type="button"
                       onClick={() => handleOpenModal(tenant)}
-                      className="p-3 bg-slate-800/50 rounded-xl text-slate-400 hover:text-emerald-400 hover:bg-emerald-400/10 transition-all border border-transparent hover:border-emerald-500/20 shadow-sm"
+                      className="p-3 theme-dark-action rounded-xl transition-all border border-transparent hover:border-emerald-500/20 shadow-sm"
                       title="Düzenle"
                     >
                       <Edit2 size={18} />
                     </button>
-                    <button 
+                    <button
+                      type="button"
                       onClick={() => toggleTenantStatus(tenant)}
-                      className={`p-3 bg-slate-800/50 rounded-xl transition-all border border-transparent ${tenant.isActive ? 'text-red-400 hover:text-red-500 hover:bg-red-500/10 hover:border-red-500/20' : 'text-emerald-400 hover:text-emerald-500 hover:bg-emerald-500/10 hover:border-emerald-500/20'} shadow-sm`}
+                      className={`p-3 theme-dark-action rounded-xl transition-all border border-transparent ${tenant.isActive ? 'text-red-400 hover:text-red-500 hover:bg-red-500/10 hover:border-red-500/20' : 'text-emerald-400 hover:text-emerald-500 hover:bg-emerald-500/10 hover:border-emerald-500/20'} shadow-sm`}
                       title={tenant.isActive ? 'Devre Dışı Bırak' : 'Aktif Et'}
                     >
                       {tenant.isActive ? <PowerOff size={18} /> : <Power size={18} />}
@@ -270,7 +276,7 @@ export default function TenantsPage() {
                 </div>
 
                 <div>
-                  <h3 className="text-xl font-black text-white truncate group-hover:text-emerald-300 transition-colors uppercase tracking-tight">{tenant.companyName}</h3>
+                  <h3 className="text-xl font-black theme-heading truncate group-hover:text-emerald-300 transition-colors uppercase tracking-tight">{tenant.companyName}</h3>
                   <div className="flex items-center gap-2 mt-2">
                     <span className={`px-2.5 py-1 rounded-lg text-[10px] uppercase font-black tracking-widest ${tenant.isActive ? 'bg-emerald-500/10 text-emerald-400 ring-1 ring-emerald-500/30' : 'bg-red-500/10 text-red-400 ring-1 ring-red-500/30'}`}>
                       {tenant.isActive ? 'AKTİF' : 'PASİF'}
@@ -281,37 +287,38 @@ export default function TenantsPage() {
                   </div>
                 </div>
 
-                <div className="rounded-2xl bg-slate-950/40 border border-slate-800/60 px-4 py-3">
-                  <p className="text-[11px] font-black uppercase tracking-[0.18em] text-slate-500">Kota Kullanımı</p>
-                  <p className="mt-2 text-sm font-semibold text-slate-200">{getCapacityText(tenant)}</p>
+                <div className="rounded-2xl theme-kpi-box theme-surface-on-dark px-4 py-3">
+                  <p className="theme-kpi-label text-[11px] font-black uppercase tracking-[0.18em]">Kota Kullanımı</p>
+                  <p className="theme-text mt-2 text-sm font-semibold">{getCapacityText(tenant)}</p>
                 </div>
 
-                <div className="space-y-3 pt-2 text-sm text-slate-400 border-t border-slate-700/30">
+                <div className="space-y-3 pt-2 text-sm theme-text-soft theme-divider-top">
                   <div className="flex items-center gap-3">
-                    <div className="w-6 h-6 rounded-md bg-slate-900 border border-slate-700/50 flex items-center justify-center">
-                      <FileText size={12} className="text-slate-500" />
+                    <div className="w-6 h-6 rounded-md theme-panel-dark theme-surface-border flex items-center justify-center">
+                      <FileText size={12} className="theme-icon-muted" />
                     </div>
-                    <span className="font-medium">VKN: <span className="text-slate-300">{tenant.taxNumber || 'Belirtilmedi'}</span></span>
+                    <span className="theme-text">VKN: <span className="theme-text-strong">{tenant.taxNumber || 'Belirtilmedi'}</span></span>
                   </div>
                   <div className="flex items-center gap-3">
-                    <div className="w-6 h-6 rounded-md bg-slate-900 border border-slate-700/50 flex items-center justify-center">
-                      <Globe size={12} className="text-slate-500" />
+                    <div className="w-6 h-6 rounded-md theme-panel-dark theme-surface-border flex items-center justify-center">
+                      <Globe size={12} className="theme-icon-muted" />
                     </div>
-                    <span className="font-medium">UETDS: <span className={tenant.uetdsUsername ? "text-emerald-400 font-bold" : "text-slate-500 italic"}>{tenant.uetdsUsername ? '✓ Tanımlı' : '✗ Tanımsız'}</span></span>
+                    <span className="theme-text">UETDS: <span className={tenant.uetdsUsername ? 'text-emerald-400 font-bold' : 'theme-text-soft italic'}>{tenant.uetdsUsername ? '✓ Tanımlı' : '✗ Tanımsız'}</span></span>
                   </div>
                   <div className="flex items-center gap-3">
-                    <div className="w-6 h-6 rounded-md bg-slate-900 border border-slate-700/50 flex items-center justify-center">
-                      <Mail size={12} className="text-slate-500" />
+                    <div className="w-6 h-6 rounded-md theme-panel-dark theme-surface-border flex items-center justify-center">
+                      <Mail size={12} className="theme-icon-muted" />
                     </div>
-                    <span className="truncate text-slate-400 italic">{tenant.contactEmail || '-'}</span>
+                    <span className="truncate theme-text-soft italic">{tenant.contactEmail || '-'}</span>
                   </div>
                 </div>
               </div>
-              <div className="px-6 py-4 bg-slate-950/40 border-t border-slate-700/50 flex justify-between items-center text-xs">
-                <span className="text-slate-500 font-medium">Kayıt: {new Date(tenant.createdAt).toLocaleDateString('tr-TR')}</span>
-                <button 
+              <div className="px-6 py-4 theme-card-footer-dark flex justify-between items-center text-xs">
+                <span className="theme-text-soft font-medium">Kayıt: {new Date(tenant.createdAt).toLocaleDateString('tr-TR')}</span>
+                <button
+                   type="button"
                    onClick={() => handleOpenModal(tenant)}
-                   className="text-emerald-400 font-black hover:text-emerald-300 hover:translate-x-1 transition-all flex items-center gap-1"
+                   className="theme-link font-black hover:text-emerald-300 hover:translate-x-1 transition-all flex items-center gap-1"
                 >
                   YÖNET <span className="text-[14px]">→</span>
                 </button>
@@ -320,9 +327,9 @@ export default function TenantsPage() {
           ))}
         </div>
       ) : (
-        <div className="glass-card overflow-hidden shadow-2xl">
+        <div className="glass-card theme-panel-dark overflow-hidden shadow-2xl">
           <table className="w-full text-left">
-            <thead className="bg-slate-900/80 border-b border-slate-700/50">
+            <thead className="theme-panel-dark theme-surface-border border-b">
               <tr>
                 <th className="px-6 py-5 text-xs font-black text-slate-400 uppercase tracking-[0.2em]">Şirket Adı</th>
                 <th className="px-6 py-5 text-xs font-black text-slate-400 uppercase tracking-[0.2em]">VKN</th>
@@ -337,13 +344,13 @@ export default function TenantsPage() {
                 <tr key={tenant.id} className="hover:bg-slate-700/10 transition-all group">
                   <td className="px-6 py-5">
                     <div className="flex items-center gap-4">
-                      <div className="w-10 h-10 bg-slate-800 rounded-xl flex items-center justify-center text-emerald-400 group-hover:bg-emerald-500 group-hover:text-white transition-all shadow-lg border border-slate-700/30">
+                      <div className="w-10 h-10 theme-panel-dark rounded-xl flex items-center justify-center text-emerald-400 group-hover:bg-emerald-500 group-hover:text-white transition-all shadow-lg border theme-surface-border">
                         <Building2 size={20} />
                       </div>
-                      <span className="text-base font-black text-white group-hover:text-emerald-300 transition-colors">{tenant.companyName}</span>
+                      <span className="text-base font-black theme-heading group-hover:text-emerald-300 transition-colors">{tenant.companyName}</span>
                     </div>
                   </td>
-                  <td className="px-6 py-5 text-sm font-bold text-slate-400">{tenant.taxNumber || '-'}</td>
+                  <td className="px-6 py-5 text-sm font-bold theme-text-soft">{tenant.taxNumber || '-'}</td>
                   <td className="px-6 py-5">
                     <div className="space-y-1">
                       <span className="px-2.5 py-1.5 rounded-lg bg-cyan-500/10 text-cyan-400 text-[11px] font-black uppercase ring-1 ring-cyan-500/20">{tenant.package?.label || tenant.subscriptionPlan}</span>
@@ -363,8 +370,8 @@ export default function TenantsPage() {
                   </td>
                   <td className="px-6 py-5 text-right">
                     <div className="flex justify-end gap-2 opacity-0 group-hover:opacity-100 transition-opacity translate-x-4 group-hover:translate-x-0">
-                      <button onClick={() => handleOpenModal(tenant)} className="p-2.5 text-slate-400 hover:text-emerald-400 bg-slate-800/80 rounded-xl border border-slate-700/30 shadow-lg"><Edit2 size={16} /></button>
-                      <button onClick={() => toggleTenantStatus(tenant)} className={`p-2.5 bg-slate-800/80 rounded-xl border border-slate-700/30 shadow-lg ${tenant.isActive ? 'text-red-400 hover:text-red-500' : 'text-emerald-400 hover:text-emerald-500'}`}>
+                      <button type="button" title="Şirketi düzenle" onClick={() => handleOpenModal(tenant)} className="p-2.5 theme-dark-action rounded-xl border theme-surface-border shadow-lg"><Edit2 size={16} /></button>
+                      <button type="button" title={tenant.isActive ? 'Şirketi pasif yap' : 'Şirketi aktif yap'} onClick={() => toggleTenantStatus(tenant)} className={`p-2.5 theme-dark-action rounded-xl border theme-surface-border shadow-lg ${tenant.isActive ? 'text-red-400 hover:text-red-500' : 'text-emerald-400 hover:text-emerald-500'}`}>
                         {tenant.isActive ? <PowerOff size={16} /> : <Power size={16} />}
                       </button>
                     </div>
@@ -379,9 +386,9 @@ export default function TenantsPage() {
       {/* Tenant Modal */}
       {isModalOpen && (
         <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
-          <div className="absolute inset-0 bg-slate-950/90 backdrop-blur-md animate-fade-in" onClick={() => setIsModalOpen(false)} />
-          <div className="relative glass-card w-full max-w-2xl max-h-[90vh] overflow-y-auto shadow-[0_0_100px_rgba(16,185,129,0.15)] animate-pop-in border-emerald-500/10">
-            <div className="sticky top-0 z-10 p-6 border-b border-slate-700/50 flex justify-between items-center bg-slate-900/90 backdrop-blur-xl">
+          <div className="absolute inset-0 theme-overlay-strong backdrop-blur-md animate-fade-in" onClick={() => setIsModalOpen(false)} />
+          <div className="relative glass-card theme-modal-shell w-full max-w-2xl max-h-[90vh] overflow-y-auto shadow-[0_0_100px_rgba(16,185,129,0.15)] animate-pop-in border-emerald-500/10">
+            <div className="sticky top-0 z-10 p-6 theme-panel-dark theme-surface-border flex justify-between items-center backdrop-blur-xl">
               <div className="flex items-center gap-4">
                 <div className="w-12 h-12 bg-emerald-500/10 rounded-2xl flex items-center justify-center text-emerald-400 ring-1 ring-emerald-500/20">
                   {editingTenant ? <Edit2 size={24} /> : <Plus size={24} />}
@@ -404,7 +411,7 @@ export default function TenantsPage() {
             <form onSubmit={handleSubmit} className="p-8 space-y-8">
               {/* Core Info Section */}
               <div className="space-y-6">
-                <h3 className="text-xs font-black text-slate-500 uppercase tracking-[0.2em] border-l-4 border-emerald-500 pl-3">Kurumsal Bilgiler</h3>
+                <h3 className="text-xs font-black theme-text-soft uppercase tracking-[0.2em] border-l-4 border-emerald-500 pl-3">Kurumsal Bilgiler</h3>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                   <div className="space-y-2">
                     <label className="text-xs font-black text-slate-400 uppercase tracking-widest ml-1">Şirket Adı / Ünvan</label>
@@ -413,8 +420,9 @@ export default function TenantsPage() {
                       <input
                         required
                         type="text"
+                        title="Şirket adı"
                         placeholder="Örn: ProUETDS Lojistik A.Ş."
-                        className="w-full bg-slate-950 border border-slate-800 rounded-2xl pl-12 pr-4 py-3.5 text-white outline-none focus:ring-2 focus:ring-emerald-500/30 focus:border-emerald-500 transition-all font-medium placeholder:text-slate-700"
+                        className="w-full theme-panel-dark theme-surface-border rounded-2xl pl-12 pr-4 py-3.5 theme-text outline-none focus:ring-2 focus:ring-emerald-500/30 focus:border-emerald-500 transition-all font-medium placeholder:text-slate-700"
                         value={formData.companyName}
                         onChange={(e) => setFormData({...formData, companyName: e.target.value})}
                       />
@@ -427,9 +435,10 @@ export default function TenantsPage() {
                       <input
                         required
                         type="text"
+                        title="Vergi numarası"
                         maxLength={11}
                         placeholder="10 veya 11 haneli"
-                        className="w-full bg-slate-950 border border-slate-800 rounded-2xl pl-12 pr-4 py-3.5 text-white outline-none focus:ring-2 focus:ring-emerald-500/30 focus:border-emerald-500 transition-all font-medium font-mono placeholder:text-slate-700"
+                        className="w-full theme-panel-dark theme-surface-border rounded-2xl pl-12 pr-4 py-3.5 theme-code outline-none focus:ring-2 focus:ring-emerald-500/30 focus:border-emerald-500 transition-all font-medium font-mono placeholder:text-slate-700"
                         value={formData.taxNumber}
                         onChange={(e) => setFormData({...formData, taxNumber: e.target.value})}
                       />
