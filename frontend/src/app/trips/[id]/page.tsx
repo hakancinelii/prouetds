@@ -825,7 +825,7 @@ export default function TripDetailPage() {
         </div>
       </div>
 
-      <div className="route-box rounded-2xl p-5 space-y-5">
+      <div className="route-box rounded-2xl p-5 space-y-5 border theme-panel-dark theme-surface-on-dark">
         <div>
           <p className="route-box-label text-xs uppercase tracking-wider">Rota Özeti</p>
           <p className="route-box-value mt-2 text-sm">Kalkış ve varış noktalarını tek karttan görüntüleyin ve haritada açın.</p>

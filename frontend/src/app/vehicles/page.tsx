@@ -400,7 +400,7 @@ export default function VehiclesPage() {
       {showModal && (
         <div className="fixed inset-0 theme-overlay-strong backdrop-blur-sm z-50 flex items-center justify-center p-4">
           <div className="glass-card theme-modal theme-panel-soft w-full max-w-md p-6 animate-slide-in">
-            <h3 className="text-lg theme-heading mb-4">
+            <h3 className="text-lg theme-heading text-white mb-4">
               {editId ? 'Araç Düzenle' : 'Yeni Araç'}
             </h3>
             <form onSubmit={handleSubmit} className="space-y-3">

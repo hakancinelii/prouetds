@@ -217,10 +217,10 @@ export default function UsersPage() {
         <aside className="glass-card p-5 space-y-4">
           <div>
             <p className="text-[11px] font-black uppercase tracking-[0.18em] text-cyan-300">Paket Özeti</p>
-            <h2 className="mt-2 text-xl font-semibold text-white">{capacity?.package?.label || 'Paket yükleniyor'}</h2>
-            <p className="mt-2 text-sm text-slate-400">{getCapacityText(capacity)}</p>
+            <h2 className="mt-2 text-xl font-semibold theme-text-strong">{capacity?.package?.label || 'Paket yükleniyor'}</h2>
+            <p className="mt-2 text-sm theme-text-soft">{getCapacityText(capacity)}</p>
           </div>
-          <div className="rounded-2xl theme-panel-dark theme-surface-on-dark p-4 text-sm">
+          <div className="rounded-2xl theme-panel-dark theme-surface-on-dark p-4 text-sm theme-text-strong">
             {userLimitReached
               ? 'Kullanıcı limiti doldu. Yeni kullanıcı eklemek için paketi yükseltin veya pasif kullanıcı açın.'
               : 'Kalan kullanıcı hakkı oldukça tenant admin yeni şoför kullanıcı açabilir.'}
@@ -231,7 +231,7 @@ export default function UsersPage() {
       {showModal && (
         <div className="fixed inset-0 theme-overlay-strong backdrop-blur-sm z-50 flex items-center justify-center p-4">
           <div className="glass-card theme-modal theme-panel-soft w-full max-w-2xl p-6 animate-slide-in">
-            <h3 className="text-lg theme-heading mb-4">{editingUser ? 'Alt Kullanıcı Düzenle' : 'Yeni Alt Kullanıcı'}</h3>
+            <h3 className="text-lg theme-heading text-white mb-4">{editingUser ? 'Alt Kullanıcı Düzenle' : 'Yeni Alt Kullanıcı'}</h3>
             <form onSubmit={handleSubmit} className="grid gap-4 md:grid-cols-2">
               <div>
                 <label htmlFor="user-first-name" className="label-muted">Ad</label>

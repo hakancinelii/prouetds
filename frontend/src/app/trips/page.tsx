@@ -688,7 +688,7 @@ export default function TripsPage() {
       {showCreateModal && (
         <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-start justify-center p-3 sm:p-4 overflow-y-auto">
           <div className="glass-card theme-modal w-full max-w-lg p-4 sm:p-6 animate-slide-in my-[calc(env(safe-area-inset-top)+0.75rem)] mb-[calc(env(safe-area-inset-bottom)+1rem)] max-h-[calc(100dvh-2rem-env(safe-area-inset-top)-env(safe-area-inset-bottom))] overflow-y-auto">
-            <h2 className="text-xl theme-heading mb-5 flex items-center gap-2">
+            <h2 className="text-xl theme-heading text-white mb-5 flex items-center gap-2">
               <Plus size={20} className="text-emerald-400" />
               Yeni Sefer Oluştur
             </h2>
@@ -749,7 +749,7 @@ export default function TripsPage() {
                     ))}
                   </datalist>
                   {suggestedDriver && (
-                    <div className={TRIPS_SUGGESTED_BADGE_CLASS}>
+                    <div className="mt-2 rounded-xl theme-note px-3 py-2 text-xs text-slate-100 dark:text-slate-300">
                       Önerilen şoför: <span className="theme-text-strong">{getDriverLabel(suggestedDriver)}</span>
                     </div>
                   )}
