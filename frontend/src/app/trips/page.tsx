@@ -93,6 +93,7 @@ const getDefaultCreateForm = () => ({
   originSelection: '',
   destSelection: '',
   vehiclePlate: '',
+  selectedDriverId: '',
   ...getDefaultTripDateTime(),
   description: DEFAULT_TRIP_DESCRIPTION,
   firmTripNumber: '',
@@ -104,8 +105,46 @@ const getDefaultCreateForm = () => ({
   destPlace: '',
 });
 
+const normalizePlate = (value: string) =>
+  value.trim().toUpperCase().replace(/\s+/g, '');
+
+const getSuggestedDriverId = (vehiclePlate: string, vehicles: any[]) => {
+  const normalizedPlate = normalizePlate(vehiclePlate);
+  return (
+    vehicles.find((vehicle) => normalizePlate(vehicle.plateNumber) === normalizedPlate)
+      ?.defaultDriver?.id || ''
+  );
+};
+
+const getSuggestedDriver = (selectedDriverId: string, drivers: any[]) =>
+  drivers.find((driver) => driver.id === selectedDriverId) || null;
+
+const handleVehiclePlateSelect = (
+  nextPlate: string,
+  vehicles: any[],
+  currentForm: ReturnType<typeof getDefaultCreateForm>,
+  setForm: React.Dispatch<React.SetStateAction<ReturnType<typeof getDefaultCreateForm>>>,
+) => {
+  const normalizedPlate = normalizePlate(nextPlate);
+  const suggestedDriverId = getSuggestedDriverId(normalizedPlate, vehicles);
+  setForm({
+    ...currentForm,
+    vehiclePlate: normalizedPlate,
+    selectedDriverId: suggestedDriverId,
+  });
+};
+
+const getDriverLabel = (driver: any) =>
+  driver ? `${driver.firstName} ${driver.lastName} · ${driver.tcKimlikNo}` : '';
+
+void getDriverLabel;
+void handleVehiclePlateSelect;
+void getSuggestedDriver;
+void getSuggestedDriverId;
+void normalizePlate;
+
 import { useRouter } from 'next/navigation';
-import { tripsApi, vehiclesApi } from '@/lib/api';
+import { driversApi, tripsApi, vehiclesApi } from '@/lib/api';
 import { MERNIS_LOCATIONS, getProvinceByCode } from '@/lib/mernis-locations';
 import toast from 'react-hot-toast';
 import {
@@ -130,7 +169,11 @@ export default function TripsPage() {
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState('');
   const [showCreateModal, setShowCreateModal] = useState(false);
+  const [showImportModal, setShowImportModal] = useState(false);
+  const [importing, setImporting] = useState(false);
+  const [importRefNo, setImportRefNo] = useState('');
   const [vehicles, setVehicles] = useState<any[]>([]);
+  const [drivers, setDrivers] = useState<any[]>([]);
 
   // Create form
   const [form, setForm] = useState(getDefaultCreateForm);
@@ -154,13 +197,16 @@ export default function TripsPage() {
   const originSelection = form.originSelection || (form.originIlceCode ? `district:${form.originIlceCode}` : '');
   const destSelection = form.destSelection || (form.destIlceCode ? `district:${form.destIlceCode}` : '');
 
+  const suggestedDriver = getSuggestedDriver(form.selectedDriverId, drivers);
+
   const getTripSubmitPayload = () => {
     const originOption = getOptionByValue(originSelection, originDistrictOptions);
     const destOption = getOptionByValue(destSelection, destDistrictOptions);
 
     return {
       ...form,
-      vehiclePlate: form.vehiclePlate.trim().toUpperCase().replace(/\s+/g, ''),
+      vehiclePlate: normalizePlate(form.vehiclePlate),
+      selectedDriverId: form.selectedDriverId || undefined,
       originIlCode: Number(form.originIlCode),
       originIlceCode: originOption?.districtCode ? Number(originOption.districtCode) : undefined,
       originPlace: (originOption?.place || form.originPlace).trim(),
@@ -169,6 +215,18 @@ export default function TripsPage() {
       destPlace: (destOption?.place || form.destPlace).trim(),
     };
   };
+
+  const handleVehicleChange = (nextPlate: string) => {
+    handleVehiclePlateSelect(nextPlate, vehicles, form, setForm);
+  };
+
+  const clearSuggestedDriver = () => {
+    setForm((prev) => ({ ...prev, selectedDriverId: '' }));
+  };
+
+  void clearSuggestedDriver;
+  void handleVehicleChange;
+  void suggestedDriver;
 
   const handleDistrictSelection = (
     field: 'originSelection' | 'destSelection',
@@ -221,9 +279,19 @@ export default function TripsPage() {
     }
   };
 
+  const fetchDrivers = async () => {
+    try {
+      const res = await driversApi.list();
+      setDrivers(res.data);
+    } catch {
+      console.error('Şoförler yüklenemedi');
+    }
+  };
+
   useEffect(() => {
     fetchTrips();
     fetchVehicles();
+    fetchDrivers();
   }, [page, statusFilter]);
 
   useEffect(() => {
@@ -245,6 +313,29 @@ export default function TripsPage() {
       router.push(`/trips/${res.data.id}`);
     } catch (err: any) {
       toast.error(err.response?.data?.message || 'Sefer oluşturulamadı');
+    }
+  };
+
+  const handleImportFromUetds = async (e: React.FormEvent) => {
+    e.preventDefault();
+    const uetdsSeferReferansNo = Number(importRefNo);
+    if (!uetdsSeferReferansNo || Number.isNaN(uetdsSeferReferansNo)) {
+      toast.error('Geçerli UETDS sefer referans numarası girin');
+      return;
+    }
+
+    setImporting(true);
+    try {
+      const res = await tripsApi.importFromUetds(uetdsSeferReferansNo);
+      toast.success('Sefer UETDS üzerinden içe aktarıldı');
+      setShowImportModal(false);
+      setImportRefNo('');
+      fetchTrips();
+      router.push(`/trips/${res.data.id}`);
+    } catch (err: any) {
+      toast.error(err.response?.data?.message || 'UETDS seferi içe aktarılamadı');
+    } finally {
+      setImporting(false);
     }
   };
 
@@ -287,16 +378,25 @@ export default function TripsPage() {
             Toplam {total} sefer · Sayfa {page}/{totalPages || 1}
           </p>
         </div>
-        <button
-          type="button"
-          onClick={() => setShowCreateModal(true)}
-          className="btn-primary flex items-center gap-2"
-        >
-          <Plus size={18} />
-          Yeni Sefer
-        </button>
+        <div className="flex flex-wrap gap-3">
+          <button
+            type="button"
+            onClick={() => setShowImportModal(true)}
+            className="btn-secondary flex items-center gap-2"
+          >
+            <FileText size={18} />
+            UETDS'den İçe Aktar
+          </button>
+          <button
+            type="button"
+            onClick={() => setShowCreateModal(true)}
+            className="btn-primary flex items-center gap-2"
+          >
+            <Plus size={18} />
+            Yeni Sefer
+          </button>
+        </div>
       </div>
-
       {/* Filters */}
       <div className="glass-card p-4 flex flex-col sm:flex-row gap-3 theme-panel-border">
         <div className="search-input-shell flex-1">
@@ -501,6 +601,45 @@ export default function TripsPage() {
         )}
       </div>
 
+      {showImportModal && (
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+          <div className="glass-card theme-modal w-full max-w-md p-6 animate-slide-in">
+            <h2 className="text-xl theme-heading mb-4 flex items-center gap-2">
+              <FileText size={20} className="text-emerald-400" />
+              UETDS Seferini İçe Aktar
+            </h2>
+            <form onSubmit={handleImportFromUetds} className="space-y-4">
+              <div>
+                <label className="label-muted text-sm">UETDS Sefer Referans No</label>
+                <input
+                  type="number"
+                  value={importRefNo}
+                  onChange={(e) => setImportRefNo(e.target.value)}
+                  className="input-field"
+                  placeholder="Örn: 2604206112446680"
+                  required
+                />
+                <p className="mt-1 text-[11px] theme-text-soft">
+                  E-Devlet / UETDS üzerinden manuel girilmiş seferi referans numarasıyla arayüze aktarır.
+                </p>
+              </div>
+              <div className="flex gap-3 justify-end">
+                <button
+                  type="button"
+                  onClick={() => setShowImportModal(false)}
+                  className="btn-secondary"
+                >
+                  Vazgeç
+                </button>
+                <button type="submit" disabled={importing} className="btn-primary">
+                  {importing ? 'İçe aktarılıyor...' : 'İçe Aktar'}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
       {/* Create Trip Modal */}
       {showCreateModal && (
         <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-start justify-center p-3 sm:p-4 overflow-y-auto">
@@ -518,9 +657,7 @@ export default function TripsPage() {
                   <input
                     list="registered-vehicles"
                     value={form.vehiclePlate}
-                    onChange={(e) =>
-                      setForm({ ...form, vehiclePlate: e.target.value.toUpperCase() })
-                    }
+                    onChange={(e) => handleVehicleChange(e.target.value)}
                     className="input-field"
                     placeholder="Listeden seçin veya elle yazın (örn: 34ABC123)"
                     required
@@ -532,6 +669,44 @@ export default function TripsPage() {
                       </option>
                     ))}
                   </datalist>
+                  {suggestedDriver && (
+                    <div className="mt-2 rounded-xl theme-note px-3 py-2 text-xs theme-text-soft">
+                      Önerilen şoför: <span className="theme-text-strong">{getDriverLabel(suggestedDriver)}</span>
+                    </div>
+                  )}
+                </div>
+                <div className="col-span-2">
+                  <label className="label-muted text-sm">
+                    Seferde Kullanılacak Şoför
+                  </label>
+                  <div className="flex gap-2">
+                    <select
+                      title="Seferde kullanılacak şoför"
+                      aria-label="Seferde kullanılacak şoför"
+                      value={form.selectedDriverId}
+                      onChange={(e) => setForm({ ...form, selectedDriverId: e.target.value })}
+                      className="input-field flex-1"
+                    >
+                      <option value="">Şoför seçilmedi</option>
+                      {drivers.map((driver) => (
+                        <option key={driver.id} value={driver.id}>
+                          {getDriverLabel(driver)}
+                        </option>
+                      ))}
+                    </select>
+                    {form.selectedDriverId && (
+                      <button
+                        type="button"
+                        onClick={clearSuggestedDriver}
+                        className="btn-secondary"
+                      >
+                        Temizle
+                      </button>
+                    )}
+                  </div>
+                  <p className="mt-1 text-[11px] theme-text-soft">
+                    Araç için varsayılan şoför tanımlıysa otomatik gelir; isterseniz değiştirebilirsiniz.
+                  </p>
                 </div>
                 <div>
                   <label className="label-muted text-sm">

@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useMemo, useState } from 'react';
-import { uetdsApi, vehiclesApi } from '@/lib/api';
+import { driversApi, uetdsApi, vehiclesApi } from '@/lib/api';
 import toast from 'react-hot-toast';
 import {
   CarFront,
@@ -19,6 +19,7 @@ const getEmptyVehicleForm = () => ({
   plateNumber: '',
   brand: '',
   model: '',
+  defaultDriverId: '',
   hasInspectionDate: false,
   inspectionExpiry: '',
 });
@@ -97,6 +98,7 @@ export default function VehiclesPage() {
   const [submitting, setSubmitting] = useState(false);
   const [bulkSubmitting, setBulkSubmitting] = useState(false);
   const [bulkText, setBulkText] = useState('');
+  const [drivers, setDrivers] = useState<any[]>([]);
   const [form, setForm] = useState(getEmptyVehicleForm);
   const [inspectionLookupLoading, setInspectionLookupLoading] = useState(false);
   const [inspectionLookupResult, setInspectionLookupResult] = useState<any | null>(null);
@@ -113,8 +115,18 @@ export default function VehiclesPage() {
     setLoading(false);
   };
 
+  const fetchDrivers = async () => {
+    try {
+      const res = await driversApi.list();
+      setDrivers(res.data);
+    } catch {
+      toast.error('Şoförler yüklenemedi');
+    }
+  };
+
   useEffect(() => {
     fetchVehicles();
+    fetchDrivers();
   }, []);
 
   const resetLookupState = () => {
@@ -141,6 +153,7 @@ export default function VehiclesPage() {
       plateNumber: vehicle.plateNumber || '',
       brand: vehicle.brand || '',
       model: vehicle.model || '',
+      defaultDriverId: vehicle.defaultDriverId || vehicle.defaultDriver?.id || '',
       hasInspectionDate: Boolean(vehicle.inspectionExpiry),
       inspectionExpiry: vehicle.inspectionExpiry || '',
     });
@@ -157,6 +170,7 @@ export default function VehiclesPage() {
         plateNumber: normalizePlate(form.plateNumber),
         brand: form.brand.trim(),
         model: form.model.trim(),
+        defaultDriverId: form.defaultDriverId || null,
         inspectionExpiry: form.hasInspectionDate ? form.inspectionExpiry : '',
       };
       if (editId) {
@@ -362,6 +376,11 @@ export default function VehiclesPage() {
                   </p>
                   <div className="mt-3 flex flex-wrap gap-2">
                     <span className={inspectionInfo.className}>{inspectionInfo.label}</span>
+                    {vehicle.defaultDriver && (
+                      <span className="badge badge-ready">
+                        Şoför: {vehicle.defaultDriver.firstName} {vehicle.defaultDriver.lastName}
+                      </span>
+                    )}
                     {vehicle.documentNumber && (
                       <span className="badge badge-ready">Belge: {vehicle.documentNumber}</span>
                     )}
@@ -467,6 +486,35 @@ export default function VehiclesPage() {
                   />
                 </div>
               </div>
+
+              <div>
+                <label htmlFor="vehicle-default-driver" className="label-muted">
+                  Varsayılan Şoför
+                </label>
+                <select
+                  id="vehicle-default-driver"
+                  title="Varsayılan şoför"
+                  value={form.defaultDriverId}
+                  onChange={(e) => setForm({ ...form, defaultDriverId: e.target.value })}
+                  className="input-field"
+                >
+                  <option value="">Şoför seçilmedi</option>
+                  {drivers.map((driver) => (
+                    <option key={driver.id} value={driver.id}>
+                      {driver.firstName} {driver.lastName} · {driver.tcKimlikNo}
+                    </option>
+                  ))}
+                </select>
+                <p className="mt-1 text-[11px] theme-text-soft">
+                  Bu araç seçildiğinde yeni seferde önerilen şoför olarak gelir.
+                </p>
+              </div>
+
+              {form.defaultDriverId && (
+                <div className="theme-note rounded-xl p-3 text-sm theme-text-soft">
+                  Önerilen şoför, sefer oluştururken otomatik gelir; isterseniz seferde değiştirebilirsiniz.
+                </div>
+              )}
 
               <div className="theme-form-shell rounded-xl p-3 space-y-3">
                 <label className="flex items-center gap-2 text-sm theme-text cursor-pointer">

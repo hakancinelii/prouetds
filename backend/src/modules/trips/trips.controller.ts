@@ -221,6 +221,20 @@ export class TripsController {
     throw new BadRequestException('Kimlik bilgileri tespit edilemedi. Manuel giriniz.');
   }
 
+  @Post('import-from-uetds')
+  @Roles(UserRole.COMPANY_ADMIN, UserRole.OPERATOR)
+  importFromUetds(
+    @TenantId() tenantId: string,
+    @CurrentUser('id') userId: string,
+    @Body('uetdsSeferReferansNo') uetdsSeferReferansNo: number,
+  ) {
+    return this.tripsService.importFromUetds(
+      tenantId,
+      userId,
+      Number(uetdsSeferReferansNo),
+    );
+  }
+
   @Post(':id/send-to-uetds')
   @Roles(UserRole.COMPANY_ADMIN, UserRole.OPERATOR, UserRole.DRIVER)
   sendToUetds(@Param('id') id: string, @TenantId() tenantId: string) {

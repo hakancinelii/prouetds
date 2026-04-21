@@ -8,7 +8,8 @@ import {
   JoinColumn,
   Index,
 } from 'typeorm';
-import type { Tenant  } from './tenant.entity';
+import type { Tenant } from './tenant.entity';
+import type { Driver } from './driver.entity';
 
 @Entity('vehicles')
 @Index(['tenantId', 'plateNumber'], { unique: true })
@@ -43,6 +44,9 @@ export class Vehicle {
   @Column({ default: true })
   isActive: boolean;
 
+  @Column({ type: 'uuid', nullable: true })
+  defaultDriverId: string;
+
   @CreateDateColumn()
   createdAt: Date;
 
@@ -52,4 +56,8 @@ export class Vehicle {
   @ManyToOne(() => 'Tenant', (tenant) => tenant.vehicles)
   @JoinColumn({ name: 'tenantId' })
   tenant: Tenant;
+
+  @ManyToOne(() => 'Driver', { nullable: true })
+  @JoinColumn({ name: 'defaultDriverId' })
+  defaultDriver: Driver;
 }

@@ -8,6 +8,7 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { PDFDocument, StandardFonts, rgb } from 'pdf-lib';
 import {
+  Driver,
   Trip,
   TripStatus,
   TripGroup,
@@ -19,6 +20,65 @@ import { UetdsService } from '../uetds/uetds.service';
 import { TenantsService } from '../tenants/tenants.service';
 
 const DEMO_TRIP_NUMBER = 'DMO-2026-001';
+const IMPORT_TRIP_PREFIX = 'UETDS-IMPORT';
+
+const pickFirst = (payload: any, keys: string[]) => {
+  for (const key of keys) {
+    const value = payload?.[key];
+    if (value !== undefined && value !== null && value !== '') {
+      return value;
+    }
+  }
+  return null;
+};
+
+const normalizeDateInput = (value?: string | null) => {
+  if (!value) return '';
+  const raw = String(value).trim();
+  const iso = raw.match(/^(\d{4})-(\d{2})-(\d{2})/);
+  if (iso) return `${iso[1]}-${iso[2]}-${iso[3]}`;
+  const tr = raw.match(/^(\d{2})\/(\d{2})\/(\d{4})/);
+  if (tr) return `${tr[3]}-${tr[2]}-${tr[1]}`;
+  return '';
+};
+
+const normalizeTimeInput = (value?: string | null) => {
+  if (!value) return '';
+  const raw = String(value).trim();
+  const match = raw.match(/(\d{2}):(\d{2})/);
+  return match ? `${match[1]}:${match[2]}` : '';
+};
+
+const normalizeFullDateTime = (value?: string | null) => {
+  if (!value) return { date: '', time: '' };
+  const raw = String(value).trim();
+  const [datePart, timePart] = raw.split(/\s+/);
+  return {
+    date: normalizeDateInput(datePart),
+    time: normalizeTimeInput(timePart),
+  };
+};
+
+const normalizeImportedName = (value?: string | null) =>
+  String(value || '').trim().replace(/\s+/g, ' ');
+
+const normalizeImportedIdentity = (value?: string | null) =>
+  String(value || '').trim();
+
+const normalizeImportedGender = (value?: string | null) => {
+  const normalized = String(value || '').trim().toUpperCase();
+  if (normalized === 'K' || normalized === 'E') return normalized;
+  return 'E';
+};
+
+void pickFirst;
+void normalizeDateInput;
+void normalizeTimeInput;
+void normalizeFullDateTime;
+void normalizeImportedName;
+void normalizeImportedIdentity;
+void normalizeImportedGender;
+void IMPORT_TRIP_PREFIX;
 
 @Injectable()
 export class TripsService {
@@ -564,9 +624,54 @@ export class TripsService {
     private personnelRepo: Repository<TripPersonnel>,
     @InjectRepository(Passenger) private passengerRepo: Repository<Passenger>,
     @InjectRepository(Tenant) private tenantRepo: Repository<Tenant>,
+    @InjectRepository(Driver) private driverRepo: Repository<Driver>,
     private uetdsService: UetdsService,
     private tenantsService: TenantsService,
   ) {}
+
+  private async maybeAttachSuggestedDriver(
+    tripId: string,
+    tenantId: string,
+    selectedDriverId?: string,
+  ) {
+    if (!selectedDriverId) return;
+
+    const driver = await this.driverRepo.findOne({
+      where: { id: selectedDriverId, tenantId, isActive: true },
+    });
+
+    if (!driver) {
+      throw new BadRequestException('Önerilen şoför bulunamadı');
+    }
+
+    const existingPersonnel = await this.personnelRepo.findOne({
+      where: {
+        tripId,
+        tenantId,
+        tcPassportNo: driver.tcKimlikNo,
+        personnelType: 0,
+      },
+    });
+
+    if (existingPersonnel) return;
+
+    await this.personnelRepo.save(
+      this.personnelRepo.create({
+        tripId,
+        tenantId,
+        driverId: driver.id,
+        personnelType: 0,
+        tcPassportNo: driver.tcKimlikNo,
+        nationalityCode: driver.nationalityCode || 'TR',
+        firstName: driver.firstName,
+        lastName: driver.lastName,
+        gender: driver.gender || 'E',
+        phone: driver.phone,
+        address: driver.address,
+        status: 'active',
+      }),
+    );
+  }
 
   async findAll(tenantId: string, query: any = {}) {
     const page = Number(query.page) > 0 ? Number(query.page) : 1;
@@ -642,12 +747,13 @@ export class TripsService {
   }
 
   async create(tenantId: string, userId: string, data: Partial<Trip>) {
-    const tripData = this.normalizeTripFormData(
-      data as Partial<Trip> & {
-        originPlace?: string;
-        destPlace?: string;
-      },
-    );
+    const { selectedDriverId, ...tripInput } = data as Partial<Trip> & {
+      originPlace?: string;
+      destPlace?: string;
+      selectedDriverId?: string;
+    };
+
+    const tripData = this.normalizeTripFormData(tripInput);
 
     this.validateVehiclePlate(tripData.vehiclePlate || '');
     this.validateTripInput(tripData);
@@ -668,7 +774,13 @@ export class TripsService {
       this.buildNormalizedDefaultGroup(savedTrip),
     );
 
-    return savedTrip;
+    await this.maybeAttachSuggestedDriver(
+      savedTrip.id,
+      tenantId,
+      selectedDriverId,
+    );
+
+    return this.findOne(savedTrip.id, tenantId);
   }
 
   async update(id: string, tenantId: string, data: Partial<Trip>) {
@@ -1149,5 +1261,139 @@ export class TripsService {
       trip.uetdsSeferRefNo,
       environment,
     );
+  }
+
+  async importFromUetds(
+    tenantId: string,
+    userId: string,
+    uetdsSeferReferansNo: number,
+  ) {
+    if (!uetdsSeferReferansNo || Number.isNaN(uetdsSeferReferansNo)) {
+      throw new BadRequestException('Geçerli UETDS sefer referans numarası girin');
+    }
+
+    const existingTrip = await this.tripRepo.findOne({
+      where: { tenantId, uetdsSeferRefNo: uetdsSeferReferansNo },
+    });
+    if (existingTrip) {
+      throw new BadRequestException('Bu UETDS seferi zaten içe aktarılmış');
+    }
+
+    const tenant = await this.tenantRepo.findOne({ where: { id: tenantId } });
+    if (!tenant?.uetdsUsername || !tenant?.uetdsPasswordEncrypted) {
+      throw new BadRequestException('UETDS kimlik bilgileri tanımlanmamış');
+    }
+
+    const environment = tenant.settings?.uetdsEnvironment || 'test';
+    const summary = await this.uetdsService.bildirimOzeti(
+      tenant.uetdsUsername,
+      tenant.uetdsPasswordEncrypted,
+      tenantId,
+      `import-${uetdsSeferReferansNo}`,
+      uetdsSeferReferansNo,
+      environment,
+    );
+    const groupSummary = await this.uetdsService.seferGrupListele(
+      tenant.uetdsUsername,
+      tenant.uetdsPasswordEncrypted,
+      tenantId,
+      `import-${uetdsSeferReferansNo}`,
+      uetdsSeferReferansNo,
+    );
+
+    const departure = normalizeFullDateTime(
+      pickFirst(summary, ['hareketTarihiSaati', 'seferTarihiSaati', 'seferTarihSaati']),
+    );
+    const finish = normalizeFullDateTime(
+      pickFirst(summary, ['seferBitisTarihiSaati', 'bitisTarihiSaati']),
+    );
+
+    const trip = await this.tripRepo.save(
+      this.tripRepo.create({
+        tenantId,
+        createdById: userId,
+        firmTripNumber: `${IMPORT_TRIP_PREFIX}-${uetdsSeferReferansNo}`,
+        vehiclePlate: normalizePlate(String(pickFirst(summary, ['plaka', 'aracPlaka']) || 'BILINMIYOR')),
+        departureDate: departure.date,
+        departureTime: departure.time || '00:00',
+        endDate: finish.date || departure.date,
+        endTime: finish.time || '23:59',
+        description: normalizeImportedName(
+          pickFirst(summary, ['grupAciklama', 'seferAciklama']) || 'UETDS içe aktarılan sefer',
+        ),
+        originPlace: normalizeImportedName(pickFirst(summary, ['baslangicYer', 'grupBaslangicYer'])),
+        destPlace: normalizeImportedName(pickFirst(summary, ['bitisYer', 'grupBitisYer'])),
+        status: TripStatus.SENT,
+        uetdsSeferRefNo: uetdsSeferReferansNo,
+        uetdsSentAt: new Date(),
+      }),
+    );
+
+    const groupPayloads = Array.isArray(groupSummary?.return)
+      ? groupSummary.return
+      : Array.isArray(groupSummary?.return?.uetdsGrup)
+        ? groupSummary.return.uetdsGrup
+        : [];
+
+    const groups = groupPayloads.length
+      ? groupPayloads
+      : [
+          {
+            grupAdi: pickFirst(summary, ['grupAdi']) || '1. Grup',
+            grupAciklama: pickFirst(summary, ['grupAciklama']) || trip.description,
+            baslangicYer: pickFirst(summary, ['baslangicYer']) || trip.originPlace,
+            bitisYer: pickFirst(summary, ['bitisYer']) || trip.destPlace,
+            grupUcret: pickFirst(summary, ['grupUcret']) || 0,
+            uetdsGrupRefNo: pickFirst(summary, ['uetdsGrupRefNo']) || null,
+          },
+        ];
+
+    for (const groupPayload of groups) {
+      const group = await this.groupRepo.save(
+        this.groupRepo.create({
+          tripId: trip.id,
+          tenantId,
+          groupName: normalizeImportedName(groupPayload.grupAdi || '1. Grup'),
+          groupDescription: normalizeImportedName(groupPayload.grupAciklama || trip.description),
+          originCountryCode: 'TR',
+          originIlCode: trip.originIlCode,
+          originIlceCode: trip.originIlceCode,
+          originPlace: normalizeImportedName(groupPayload.baslangicYer || trip.originPlace),
+          destCountryCode: 'TR',
+          destIlCode: trip.destIlCode,
+          destIlceCode: trip.destIlceCode,
+          destPlace: normalizeImportedName(groupPayload.bitisYer || trip.destPlace),
+          groupFee: Number(groupPayload.grupUcret || 0),
+          uetdsGrupRefNo: groupPayload.uetdsGrupRefNo || null,
+          status: 'active',
+        }),
+      );
+
+      const passengerList = Array.isArray(groupPayload?.yolcular)
+        ? groupPayload.yolcular
+        : [];
+
+      if (passengerList.length) {
+        await this.passengerRepo.save(
+          passengerList.map((passenger: any, index: number) =>
+            this.passengerRepo.create({
+              tripGroupId: group.id,
+              tenantId,
+              firstName: normalizeImportedName(passenger.adi || 'Yolcu'),
+              lastName: normalizeImportedName(passenger.soyadi || `${index + 1}`),
+              tcPassportNo: normalizeImportedIdentity(passenger.tcKimlikPasaportNo || '000000'),
+              nationalityCode: normalizeImportedName(passenger.uyrukUlke || 'TR'),
+              gender: normalizeImportedGender(passenger.cinsiyet),
+              seatNumber: normalizeImportedName(passenger.koltukNo || `${index + 1}`),
+              source: PassengerSource.MANUAL,
+              status: 'active',
+              uetdsYolcuRefNo: passenger.uetdsBiletRefNo || null,
+            }),
+          ),
+        );
+      }
+    }
+
+    return this.findOne(trip.id, tenantId);
   }
 }

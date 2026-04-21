@@ -124,6 +124,8 @@ export const tripsApi = {
       headers: { 'Content-Type': 'multipart/form-data' },
     });
   },
+  importFromUetds: (uetdsSeferReferansNo: number) =>
+    api.post('/api/trips/import-from-uetds', { uetdsSeferReferansNo }),
   sendToUetds: (tripId: string) =>
     api.post(`/api/trips/${tripId}/send-to-uetds`),
   cancel: (tripId: string, reason: string) =>

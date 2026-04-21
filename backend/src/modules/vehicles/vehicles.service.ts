@@ -1,8 +1,43 @@
 import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
-import { Vehicle } from '../../database/entities';
+import { Driver, Vehicle } from '../../database/entities';
 import { TenantsService } from '../tenants/tenants.service';
+
+const normalizeDriverId = (value?: string | null) => value?.trim() || null;
+
+const normalizeVehicleResponse = async (
+  repo: Repository<Vehicle>,
+  tenantId: string,
+  id?: string,
+  plateNumber?: string,
+) => {
+  const where = id ? { id, tenantId } : { tenantId, plateNumber };
+  return repo.findOneOrFail({
+    where,
+    relations: ['defaultDriver'],
+  });
+};
+
+const ensureTenantDriver = async (
+  driverRepo: Repository<Driver>,
+  tenantId: string,
+  driverId?: string | null,
+) => {
+  const normalizedDriverId = normalizeDriverId(driverId);
+  if (!normalizedDriverId) return null;
+  const driver = await driverRepo.findOne({
+    where: { id: normalizedDriverId, tenantId, isActive: true },
+  });
+  if (!driver) {
+    throw new BadRequestException('Varsayılan şoför bulunamadı');
+  }
+  return driver.id;
+};
+
+void normalizeDriverId;
+void normalizeVehicleResponse;
+void ensureTenantDriver;
 
 interface VehicleBulkResult {
   createdCount: number;
@@ -15,6 +50,7 @@ interface VehicleBulkResult {
 export class VehiclesService {
   constructor(
     @InjectRepository(Vehicle) private vehicleRepo: Repository<Vehicle>,
+    @InjectRepository(Driver) private driverRepo: Repository<Driver>,
     private tenantsService: TenantsService,
   ) {}
 
@@ -36,6 +72,7 @@ export class VehiclesService {
     const brand = data.brand?.trim() || null;
     const model = data.model?.trim() || null;
     const inspectionExpiry = data.inspectionExpiry?.trim() || null;
+    const defaultDriverId = normalizeDriverId(data.defaultDriverId);
 
     if (inspectionExpiry && !/^\d{4}-\d{2}-\d{2}$/.test(inspectionExpiry)) {
       throw new BadRequestException('Muayene tarihi YYYY-MM-DD formatında olmalı');
@@ -46,6 +83,7 @@ export class VehiclesService {
       brand,
       model,
       inspectionExpiry,
+      defaultDriverId,
       year: data.year ?? null,
       seatCapacity: data.seatCapacity ?? null,
     };
@@ -63,7 +101,14 @@ export class VehiclesService {
 
     const existingVehicle = await this.vehicleRepo.findOne({
       where: { tenantId, plateNumber: normalized.plateNumber },
+      relations: ['defaultDriver'],
     });
+
+    const nextDefaultDriverId = await ensureTenantDriver(
+      this.driverRepo,
+      tenantId,
+      normalized.defaultDriverId,
+    );
 
     if (existingVehicle) {
       const needsReactivation = !existingVehicle.isActive;
@@ -77,6 +122,7 @@ export class VehiclesService {
         normalized.inspectionExpiry === null && data.inspectionExpiry !== undefined
           ? null
           : normalized.inspectionExpiry || existingVehicle.inspectionExpiry;
+      existingVehicle.defaultDriverId = nextDefaultDriverId;
       await this.vehicleRepo.save(existingVehicle);
       return 'reactivated';
     }
@@ -86,6 +132,7 @@ export class VehiclesService {
     const vehicle = this.vehicleRepo.create({
       ...normalized,
       tenantId,
+      defaultDriverId: nextDefaultDriverId,
       isActive: true,
     });
     await this.vehicleRepo.save(vehicle);
@@ -95,12 +142,16 @@ export class VehiclesService {
   async findAll(tenantId: string) {
     return this.vehicleRepo.find({
       where: { tenantId, isActive: true },
+      relations: ['defaultDriver'],
       order: { plateNumber: 'ASC' },
     });
   }
 
   async findOne(id: string, tenantId: string) {
-    const vehicle = await this.vehicleRepo.findOne({ where: { id, tenantId } });
+    const vehicle = await this.vehicleRepo.findOne({
+      where: { id, tenantId },
+      relations: ['defaultDriver'],
+    });
     if (!vehicle) throw new NotFoundException('Araç bulunamadı');
     return vehicle;
   }
@@ -108,9 +159,7 @@ export class VehiclesService {
   async create(tenantId: string, data: Partial<Vehicle>) {
     await this.upsertVehicle(tenantId, data);
     const normalizedPlate = this.normalizePlate(data.plateNumber || '');
-    const vehicle = await this.vehicleRepo.findOne({ where: { tenantId, plateNumber: normalizedPlate } });
-    if (!vehicle) throw new NotFoundException('Araç bulunamadı');
-    return vehicle;
+    return normalizeVehicleResponse(this.vehicleRepo, tenantId, undefined, normalizedPlate);
   }
 
   async createBulk(tenantId: string, text: string): Promise<VehicleBulkResult> {
@@ -205,16 +254,24 @@ export class VehiclesService {
       }
     }
 
+    const nextDefaultDriverId = await ensureTenantDriver(
+      this.driverRepo,
+      tenantId,
+      normalized.defaultDriverId,
+    );
+
     Object.assign(vehicle, {
       plateNumber: nextPlate,
       brand: normalized.brand,
       model: normalized.model,
+      defaultDriverId: nextDefaultDriverId,
       inspectionExpiry:
         normalized.inspectionExpiry === null && data.inspectionExpiry !== undefined
           ? null
           : normalized.inspectionExpiry || vehicle.inspectionExpiry,
     });
-    return this.vehicleRepo.save(vehicle);
+    await this.vehicleRepo.save(vehicle);
+    return normalizeVehicleResponse(this.vehicleRepo, tenantId, vehicle.id);
   }
 
   async remove(id: string, tenantId: string) {
