@@ -187,7 +187,6 @@ void getSuggestedPlateByDriver;
 void normalizePlate;
 void TRIPS_HELPER_TEXT_CLASS;
 void TRIPS_SUGGESTED_BADGE_CLASS;
-'},
 import { useRouter } from 'next/navigation';
 import { driversApi, tripsApi, vehiclesApi } from '@/lib/api';
 import { MERNIS_LOCATIONS, getProvinceByCode } from '@/lib/mernis-locations';
