@@ -224,7 +224,7 @@ export class UsersService {
         plateNumber:
           data.plateNumber !== undefined
             ? normalizeText(data.plateNumber)?.toUpperCase() || null
-            : driver.plateNumber,
+            : driver.plateNumber || user.plateNumber,
         nationalityCode:
           data.nationalityCode !== undefined
             ? normalizeText(data.nationalityCode)?.toUpperCase() || 'TR'

@@ -18,7 +18,7 @@ export class TenantsController {
   }
 
   @Get('me')
-  @Roles(UserRole.COMPANY_ADMIN, UserRole.OPERATOR)
+  @Roles(UserRole.COMPANY_ADMIN, UserRole.OPERATOR, UserRole.DRIVER)
   findMe(@TenantId() tenantId: string) {
     return this.tenantsService.findOne(tenantId);
   }

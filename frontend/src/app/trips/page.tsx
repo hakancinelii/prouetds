@@ -151,10 +151,10 @@ const handleDriverSelect = (
 ) => {
   const selectedDriver = getSuggestedDriver(nextDriverId, drivers);
   if (!selectedDriver) {
-    setForm({
-      ...currentForm,
+    setForm((prev) => ({
+      ...prev,
       selectedDriverId: '',
-    });
+    }));
     return;
   }
 
@@ -163,13 +163,13 @@ const handleDriverSelect = (
     (vehicle) => normalizePlate(vehicle.plateNumber) === suggestedPlate,
   );
 
-  setForm({
-    ...currentForm,
+  setForm((prev) => ({
+    ...prev,
     selectedDriverId: nextDriverId,
     vehiclePlate: matchedVehicle?.plateNumber
       ? normalizePlate(matchedVehicle.plateNumber)
       : suggestedPlate || currentForm.vehiclePlate,
-  });
+  }));
 };
 
 const getDriverLabel = (driver: any) =>
