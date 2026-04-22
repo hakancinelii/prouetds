@@ -3,6 +3,7 @@ import { TypeOrmModule } from '@nestjs/typeorm';
 import { TripsService } from './trips.service';
 import { TripsController } from './trips.controller';
 import {
+  Driver,
   Trip,
   TripGroup,
   TripPersonnel,
@@ -16,7 +17,7 @@ import { TenantsModule } from '../tenants/tenants.module';
 
 @Module({
   imports: [
-    TypeOrmModule.forFeature([Trip, TripGroup, TripPersonnel, Passenger, Tenant]),
+    TypeOrmModule.forFeature([Trip, TripGroup, TripPersonnel, Passenger, Tenant, Driver]),
     UetdsModule,
     ParserModule,
     OcrModule,
