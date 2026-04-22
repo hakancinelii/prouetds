@@ -31,6 +31,9 @@ export class Driver {
   @Column({ length: 50, nullable: true })
   phone: string;
 
+  @Column({ length: 20, nullable: true })
+  plateNumber: string;
+
   @Column({ length: 10, default: 'TR' })
   nationalityCode: string;
 

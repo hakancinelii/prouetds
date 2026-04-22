@@ -142,11 +142,15 @@ export class UsersService {
     await this.ensureEmailAvailable(email);
     await this.ensureDriverIdentityAvailable(tenantId, tcKimlikNo);
 
+    const normalizedPlateNumber =
+      normalizeText(data.plateNumber)?.toUpperCase() || null;
+
     const driver = await this.driversService.createDriverUserRecord(tenantId, {
       firstName,
       lastName,
       tcKimlikNo,
       phone: normalizeText(data.phone),
+      plateNumber: normalizedPlateNumber,
       nationalityCode: normalizeText(data.nationalityCode)?.toUpperCase() || 'TR',
       gender: normalizeText(data.gender),
       srcCertificate: normalizeText(data.srcCertificate),
@@ -162,7 +166,7 @@ export class UsersService {
         firstName,
         lastName,
         phone: normalizeText(data.phone),
-        plateNumber: normalizeText(data.plateNumber)?.toUpperCase() || null,
+        plateNumber: normalizedPlateNumber,
         role: UserRole.DRIVER,
         driverId: driver.id,
         isActive: data.isActive ?? true,
@@ -217,6 +221,10 @@ export class UsersService {
         lastName: nextLastName,
         tcKimlikNo: nextTc || driver.tcKimlikNo,
         phone: data.phone !== undefined ? normalizeText(data.phone) : user.phone,
+        plateNumber:
+          data.plateNumber !== undefined
+            ? normalizeText(data.plateNumber)?.toUpperCase() || null
+            : driver.plateNumber,
         nationalityCode:
           data.nationalityCode !== undefined
             ? normalizeText(data.nationalityCode)?.toUpperCase() || 'TR'
