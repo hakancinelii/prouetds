@@ -60,9 +60,97 @@ const sortDistrictsForTripFlow = (
 const DEFAULT_TRIP_DESCRIPTION = 'İstanbul içi Transfer';
 
 const AIRPORT_OPTIONS = [
-  { key: 'airport:ist', label: 'İstanbul Havalimanı', districtCode: '2048', place: 'İstanbul Havalimanı' },
-  { key: 'airport:saw', label: 'Sabiha Gökçen Havalimanı', districtCode: '1835', place: 'Sabiha Gökçen Havalimanı' },
+  {
+    value: 'airport:ist',
+    label: 'İstanbul Havalimanı',
+    districtCode: '2048',
+    place: 'İstanbul Havalimanı',
+  },
+  {
+    value: 'airport:saw',
+    label: 'Sabiha Gökçen Havalimanı',
+    districtCode: '1835',
+    place: 'Sabiha Gökçen Havalimanı',
+  },
 ];
+
+const AIRPORT_DISTRICT_OVERRIDES: Record<string, string> = {
+  '2048': 'Arnavutköy/İSTANBUL',
+  '1835': 'Pendik/İSTANBUL',
+};
+
+const getPlaceForOption = (districtCode: string, fallbackPlace: string) =>
+  AIRPORT_DISTRICT_OVERRIDES[districtCode] || fallbackPlace;
+
+const getAirportDisplayName = (districtCode: string) =>
+  AIRPORT_OPTIONS.find((option) => option.districtCode === districtCode)?.label || '';
+
+const getSelectionLabel = (districtCode: string, place: string) => {
+  const airportName = getAirportDisplayName(districtCode);
+  return airportName ? `${place} · ${airportName}` : place;
+};
+
+const getSelectionState = (
+  selected?: { districtCode?: string; place?: string },
+) => {
+  const districtCode = selected?.districtCode || '';
+  const place = districtCode
+    ? getPlaceForOption(districtCode, selected?.place || '')
+    : selected?.place || '';
+
+  return {
+    districtCode,
+    place,
+    selectionLabel: districtCode ? getSelectionLabel(districtCode, place) : place,
+  };
+};
+
+const getSelectionStateFromValue = (
+  value: string,
+  options: Array<{ value: string; districtCode: string; place: string }>,
+) => {
+  const selected = options.find((option) => option.value === value);
+  return getSelectionState(selected);
+};
+
+const getSelectionStateFromDistrictCode = (
+  districtCode: string,
+  options: Array<{ value: string; districtCode: string; place: string }>,
+) => {
+  const selected = options.find((option) => option.districtCode === districtCode);
+  return getSelectionState(selected);
+};
+
+const buildTripPlacePayload = (
+  selectionValue: string,
+  fallbackDistrictCode: string,
+  fallbackPlace: string,
+  options: Array<{ value: string; districtCode: string; place: string }>,
+) => {
+  const selectedByValue = options.find((option) => option.value === selectionValue);
+  const selected =
+    selectedByValue ||
+    options.find((option) => option.districtCode === fallbackDistrictCode) ||
+    undefined;
+  const districtCode = selected?.districtCode || fallbackDistrictCode;
+  const place = districtCode
+    ? getPlaceForOption(districtCode, selected?.place || fallbackPlace)
+    : fallbackPlace;
+
+  return {
+    districtCode,
+    place,
+  };
+};
+
+const getSelectionValue = (selectionValue: string, districtCode: string) => {
+  if (selectionValue) return selectionValue;
+  const airportSelection = AIRPORT_OPTIONS.find(
+    (option) => option.districtCode === districtCode,
+  )?.value;
+  if (airportSelection) return airportSelection;
+  return districtCode ? `district:${districtCode}` : '';
+};
 
 const getDistrictSelectOptions = (
   provinceCode: number,
@@ -234,29 +322,70 @@ export default function TripsPage() {
   const originDistrictOptions = getDistrictSelectOptions(Number(form.originIlCode), originDistricts);
   const destDistrictOptions = getDistrictSelectOptions(Number(form.destIlCode), destDistricts);
 
-  const getOptionByValue = (value: string, options: Array<{ value: string; districtCode: string; place: string }>) =>
-    options.find((option) => option.value === value);
+  const originSelection = getSelectionValue(form.originSelection, form.originIlceCode);
+  const destSelection = getSelectionValue(form.destSelection, form.destIlceCode);
 
-  const originSelection = form.originSelection || (form.originIlceCode ? `district:${form.originIlceCode}` : '');
-  const destSelection = form.destSelection || (form.destIlceCode ? `district:${form.destIlceCode}` : '');
+  const originSelectionState = getSelectionStateFromDistrictCode(
+    form.originIlceCode,
+    originDistrictOptions,
+  );
+  const destSelectionState = getSelectionStateFromDistrictCode(
+    form.destIlceCode,
+    destDistrictOptions,
+  );
 
   const suggestedDriver = getSuggestedDriver(form.selectedDriverId, drivers);
 
   const getTripSubmitPayload = () => {
-    const originOption = getOptionByValue(originSelection, originDistrictOptions);
-    const destOption = getOptionByValue(destSelection, destDistrictOptions);
+    const originPayload = buildTripPlacePayload(
+      originSelection,
+      form.originIlceCode,
+      form.originPlace,
+      originDistrictOptions,
+    );
+    const destPayload = buildTripPlacePayload(
+      destSelection,
+      form.destIlceCode,
+      form.destPlace,
+      destDistrictOptions,
+    );
 
     return {
       ...form,
       vehiclePlate: normalizePlate(form.vehiclePlate),
       selectedDriverId: form.selectedDriverId || undefined,
       originIlCode: Number(form.originIlCode),
-      originIlceCode: originOption?.districtCode ? Number(originOption.districtCode) : undefined,
-      originPlace: (originOption?.place || form.originPlace).trim(),
+      originIlceCode: originPayload.districtCode ? Number(originPayload.districtCode) : undefined,
+      originPlace: originPayload.place.trim(),
       destIlCode: Number(form.destIlCode),
-      destIlceCode: destOption?.districtCode ? Number(destOption.districtCode) : undefined,
-      destPlace: (destOption?.place || form.destPlace).trim(),
+      destIlceCode: destPayload.districtCode ? Number(destPayload.districtCode) : undefined,
+      destPlace: destPayload.place.trim(),
     };
+  };
+
+  const syncSelectionState = (
+    field: 'originSelection' | 'destSelection',
+    value: string,
+    options: Array<{ value: string; districtCode: string; place: string }>,
+  ) => {
+    const selectionState = getSelectionStateFromValue(value, options);
+
+    if (field === 'originSelection') {
+      setForm({
+        ...form,
+        originSelection: value,
+        originIlceCode: selectionState.districtCode,
+        originPlace: selectionState.place,
+      });
+      return;
+    }
+
+    setForm({
+      ...form,
+      destSelection: value,
+      destIlceCode: selectionState.districtCode,
+      destPlace: selectionState.place,
+    });
   };
 
   const handleVehicleChange = (nextPlate: string) => {
@@ -276,24 +405,7 @@ export default function TripsPage() {
     value: string,
     options: Array<{ value: string; districtCode: string; place: string }>,
   ) => {
-    const selected = getOptionByValue(value, options);
-
-    if (field === 'originSelection') {
-      setForm({
-        ...form,
-        originSelection: value,
-        originIlceCode: selected?.districtCode || '',
-        originPlace: selected?.place || '',
-      });
-      return;
-    }
-
-    setForm({
-      ...form,
-      destSelection: value,
-      destIlceCode: selected?.districtCode || '',
-      destPlace: selected?.place || '',
-    });
+    syncSelectionState(field, value, options);
   };
 
   const fetchTrips = async () => {
