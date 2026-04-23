@@ -330,7 +330,9 @@ export default function TripDetailPage() {
   const hasGroups = Boolean(trip?.groups?.length);
   const canSendDriverWhatsapp = user?.role === 'company_admin' && trip?.status === 'sent';
   const primaryDriver = trip?.personnel?.[0] || null;
-  const primaryDriverWhatsappPhone = normalizePhoneForWhatsApp(primaryDriver?.phone);
+  const primaryDriverWhatsappPhone = normalizePhoneForWhatsApp(
+    primaryDriver?.phone || primaryDriver?.driver?.phone,
+  );
   const hasDriverWhatsappPhone = Boolean(primaryDriverWhatsappPhone);
   const canOpenPassengerTools = hasGroups && selectedGroupId;
   const tripActionNote = 'Devlet ekranındaki sırayı yakalamak için grup → personel → yolcu mantığına gidiyoruz.';
