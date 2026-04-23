@@ -13,11 +13,13 @@ import {
   BadgeCheck,
 } from 'lucide-react';
 
+const DEFAULT_PHONE_PREFIX = '+90';
+
 const getEmptyDriverForm = () => ({
   firstName: '',
   lastName: '',
   tcKimlikNo: '',
-  phone: '',
+  phone: DEFAULT_PHONE_PREFIX,
   nationalityCode: 'TR',
   gender: 'E',
   srcCertificate: '',
@@ -74,7 +76,7 @@ export default function DriversPage() {
       firstName: driver.firstName || '',
       lastName: driver.lastName || '',
       tcKimlikNo: driver.tcKimlikNo || '',
-      phone: driver.phone || '',
+      phone: driver.phone || DEFAULT_PHONE_PREFIX,
       nationalityCode: driver.nationalityCode || 'TR',
       gender: driver.gender || 'E',
       srcCertificate: driver.srcCertificate || '',

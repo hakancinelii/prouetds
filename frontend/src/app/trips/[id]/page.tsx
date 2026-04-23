@@ -309,11 +309,15 @@ export default function TripDetailPage() {
     return 'Yolcular seçili grup içine gönderilir; UETDS debug logu backend tarafında aktif.';
   };
 
-  const normalizePhoneForWhatsApp = (value?: string | null) =>
-    String(value || '')
-      .replace(/[^0-9+]/g, '')
-      .replace(/^00/, '')
-      .replace(/^\+/, '');
+  const normalizePhoneForWhatsApp = (value?: string | null) => {
+    const raw = String(value || '').replace(/[^0-9+]/g, '');
+    if (!raw) return '';
+
+    if (raw.startsWith('+')) return raw;
+    if (raw.startsWith('90')) return `+${raw}`;
+    if (raw.startsWith('0')) return `+90${raw.slice(1)}`;
+    return `+90${raw}`;
+  };
 
   const buildDriverWhatsAppMessage = (tripData: any, driver: any) => {
     const route = [tripData?.originPlace, tripData?.destPlace].filter(Boolean).join(' → ');

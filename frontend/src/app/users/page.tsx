@@ -6,12 +6,14 @@ import { Loader2, Plus, ShieldCheck, Trash2, UserCog, Users, Edit } from 'lucide
 import { usersApi } from '@/lib/api';
 import { useAuthStore } from '@/lib/store';
 
+const DEFAULT_PHONE_PREFIX = '+90';
+
 const getEmptyForm = () => ({
   email: '',
   firstName: '',
   lastName: '',
   password: '',
-  phone: '',
+  phone: DEFAULT_PHONE_PREFIX,
   plateNumber: '',
   tcKimlikNo: '',
   nationalityCode: 'TR',
@@ -74,7 +76,7 @@ export default function UsersPage() {
       firstName: item.firstName || '',
       lastName: item.lastName || '',
       password: '',
-      phone: item.phone || '',
+      phone: item.phone || DEFAULT_PHONE_PREFIX,
       plateNumber: item.plateNumber || '',
       tcKimlikNo: item.driver?.tcKimlikNo || '',
       nationalityCode: item.driver?.nationalityCode || 'TR',
