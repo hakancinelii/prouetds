@@ -5,7 +5,6 @@ import { useRouter, usePathname } from 'next/navigation';
 import Link from 'next/link';
 import { useAuthStore } from '@/lib/store';
 import {
-  LayoutDashboard,
   Building2, // Üst kısma taşıdık
   Bus,
   Users,
@@ -22,7 +21,6 @@ import {
 } from 'lucide-react';
 
 const navigation = [
-  { name: 'Dashboard', href: '/dashboard', icon: LayoutDashboard },
   { name: 'Şirketler', href: '/tenants', icon: Building2, superAdminOnly: true },
   { name: 'Kullanıcılar', href: '/users', icon: Users, roles: ['super_admin', 'company_admin'] },
   { name: 'Seferler', href: '/trips', icon: Bus },

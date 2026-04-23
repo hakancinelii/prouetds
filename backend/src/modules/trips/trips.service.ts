@@ -59,17 +59,60 @@ const normalizeFullDateTime = (value?: string | null) => {
   };
 };
 
+const normalizePassengerName = (value?: string | null) =>
+  String(value || '')
+    .normalize('NFKC')
+    .replace(/[​-‍﻿]/g, '')
+    .trim()
+    .replace(/\s+/g, ' ');
+
+const normalizePassengerIdentity = (value?: string | null) =>
+  String(value || '')
+    .normalize('NFKC')
+    .replace(/[​-‍﻿]/g, '')
+    .replace(/\s+/g, '')
+    .replace(/[^0-9A-Za-z]/g, '')
+    .toUpperCase();
+
+const normalizePassengerNationality = (value?: string | null) =>
+  String(value || 'TR')
+    .normalize('NFKC')
+    .replace(/[​-‍﻿]/g, '')
+    .replace(/\s+/g, '')
+    .toUpperCase()
+    .slice(0, 10) || 'TR';
+
 const normalizeImportedName = (value?: string | null) =>
-  String(value || '').trim().replace(/\s+/g, ' ');
+  normalizePassengerName(value);
 
 const normalizeImportedIdentity = (value?: string | null) =>
-  String(value || '').trim();
+  normalizePassengerIdentity(value);
 
 const normalizeImportedGender = (value?: string | null) => {
   const normalized = String(value || '').trim().toUpperCase();
   if (normalized === 'K' || normalized === 'E') return normalized;
   return 'E';
 };
+
+const normalizePassengerRecord = (data: Partial<Passenger>) => ({
+  ...data,
+  firstName: normalizePassengerName(data.firstName),
+  lastName: normalizePassengerName(data.lastName),
+  tcPassportNo: normalizePassengerIdentity(data.tcPassportNo),
+  nationalityCode: normalizePassengerNationality(data.nationalityCode),
+  gender: normalizeImportedGender(data.gender),
+  phone: String(data.phone || '').trim() || null,
+  seatNumber: String(data.seatNumber || '').trim() || null,
+});
+
+const buildUetdsNationalityCode = (value?: string | null) =>
+  normalizePassengerNationality(value);
+
+const buildUetdsIdentityNo = (value?: string | null) =>
+  normalizePassengerIdentity(value);
+
+const buildUetdsName = (value?: string | null) =>
+  normalizePassengerName(value);
 
 void pickFirst;
 void normalizeDateInput;
@@ -875,7 +918,7 @@ export class TripsService {
     if (!group) throw new NotFoundException('Grup bulunamadı');
 
     const passenger = this.passengerRepo.create({
-      ...data,
+      ...normalizePassengerRecord(data),
       tripGroupId: group.id,
       tenantId,
     });
@@ -894,7 +937,7 @@ export class TripsService {
 
     const entities = passengers.map((p) =>
       this.passengerRepo.create({
-        ...p,
+        ...normalizePassengerRecord(p),
         tripGroupId: group.id,
         tenantId,
       }),
@@ -1023,11 +1066,11 @@ export class TripsService {
             seferRefNo,
             {
               turKodu: Number(person.personnelType ?? 0),
-              uyrukUlke: (person.nationalityCode || 'TR').trim().toUpperCase(),
-              tcKimlikPasaportNo: identityNo,
-              adi: person.firstName,
-              soyadi: person.lastName,
-              cinsiyet: (person.gender || 'E').trim().toUpperCase(),
+              uyrukUlke: buildUetdsNationalityCode(person.nationalityCode),
+              tcKimlikPasaportNo: buildUetdsIdentityNo(identityNo),
+              adi: buildUetdsName(person.firstName),
+              soyadi: buildUetdsName(person.lastName),
+              cinsiyet: normalizeImportedGender(person.gender),
               telefon: person.phone,
             },
             environment,
@@ -1064,11 +1107,11 @@ export class TripsService {
 
         const yolcuBilgileri = group.passengers.map((p) => ({
           grupId: Number(group.uetdsGrupRefNo),
-          uyrukUlke: (p.nationalityCode || 'TR').trim().toUpperCase(),
-          cinsiyet: (p.gender || 'E').trim().toUpperCase(),
-          tcKimlikPasaportNo: p.tcPassportNo?.trim(),
-          adi: p.firstName,
-          soyadi: p.lastName,
+          uyrukUlke: buildUetdsNationalityCode(p.nationalityCode),
+          cinsiyet: normalizeImportedGender(p.gender),
+          tcKimlikPasaportNo: buildUetdsIdentityNo(p.tcPassportNo),
+          adi: buildUetdsName(p.firstName),
+          soyadi: buildUetdsName(p.lastName),
           koltukNo: p.seatNumber,
           telefonNo: p.phone,
         }));
@@ -1382,7 +1425,7 @@ export class TripsService {
               firstName: normalizeImportedName(passenger.adi || 'Yolcu'),
               lastName: normalizeImportedName(passenger.soyadi || `${index + 1}`),
               tcPassportNo: normalizeImportedIdentity(passenger.tcKimlikPasaportNo || '000000'),
-              nationalityCode: normalizeImportedName(passenger.uyrukUlke || 'TR'),
+              nationalityCode: normalizePassengerNationality(passenger.uyrukUlke || 'TR'),
               gender: normalizeImportedGender(passenger.cinsiyet),
               seatNumber: normalizeImportedName(passenger.koltukNo || `${index + 1}`),
               source: PassengerSource.MANUAL,

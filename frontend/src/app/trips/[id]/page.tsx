@@ -4,6 +4,8 @@ import { useEffect, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { tripsApi, driversApi } from '@/lib/api';
 import { MERNIS_LOCATIONS, getProvinceByCode } from '@/lib/mernis-locations';
+import { UETDS_COUNTRY_OPTIONS } from '@/lib/uetds-country-codes';
+import { useAuthStore } from '@/lib/store';
 import toast from 'react-hot-toast';
 import {
   ArrowLeft,
@@ -25,6 +27,7 @@ import {
   ExternalLink,
   ShieldCheck,
   Pencil,
+  MessageCircle,
 } from 'lucide-react';
 
 const PRIORITY_ISTANBUL_DISTRICTS = [
@@ -126,6 +129,45 @@ const getPlaceFromDistrict = (
   return selected ? `${selected.name}/${province?.name || ''}` : '';
 };
 
+const normalizePassengerText = (value: string) =>
+  value
+    .normalize('NFKC')
+    .replace(/[​-‍﻿]/g, '')
+    .replace(/\s+/g, ' ')
+    .trim();
+
+const normalizePassengerIdentity = (value: string) =>
+  value
+    .normalize('NFKC')
+    .replace(/[​-‍﻿]/g, '')
+    .replace(/\s+/g, '')
+    .replace(/[^0-9A-Za-z]/g, '')
+    .toUpperCase();
+
+const normalizeNationalityCode = (value: string) =>
+  value
+    .normalize('NFKC')
+    .replace(/[​-‍﻿]/g, '')
+    .replace(/\s+/g, '')
+    .toUpperCase()
+    .slice(0, 10);
+
+const getPassengerFormPayload = (form: {
+  firstName: string;
+  lastName: string;
+  tcPassportNo: string;
+  nationalityCode: string;
+  gender: string;
+  phone: string;
+}) => ({
+  firstName: normalizePassengerText(form.firstName),
+  lastName: normalizePassengerText(form.lastName),
+  tcPassportNo: normalizePassengerIdentity(form.tcPassportNo),
+  nationalityCode: normalizeNationalityCode(form.nationalityCode || 'TR') || 'TR',
+  gender: form.gender.trim().toUpperCase(),
+  phone: form.phone.trim(),
+});
+
 const getTripFormPayload = (
   form: any,
   originOptions: Array<{ value: string; districtCode: string; place: string }>,
@@ -153,6 +195,7 @@ const getTripFormPayload = (
 export default function TripDetailPage() {
   const params = useParams();
   const router = useRouter();
+  const { user } = useAuthStore();
   const tripId = params.id as string;
 
   const [trip, setTrip] = useState<any>(null);
@@ -266,7 +309,29 @@ export default function TripDetailPage() {
     return 'Yolcular seçili grup içine gönderilir; UETDS debug logu backend tarafında aktif.';
   };
 
+  const normalizePhoneForWhatsApp = (value?: string | null) =>
+    String(value || '')
+      .replace(/[^0-9+]/g, '')
+      .replace(/^00/, '')
+      .replace(/^\+/, '');
+
+  const buildDriverWhatsAppMessage = (tripData: any, driver: any) => {
+    const route = [tripData?.originPlace, tripData?.destPlace].filter(Boolean).join(' → ');
+    return [
+      `Merhaba ${driver?.firstName || 'şoför'},`,
+      `${tripData?.firmTripNumber || tripData?.vehiclePlate || 'Sefer'} için UETDS gönderimi tamamlandı.`,
+      `Tarih/Saat: ${tripData?.departureDate || '-'} ${tripData?.departureTime || '-'} - ${tripData?.endDate || '-'} ${tripData?.endTime || '-'}`,
+      `Rota: ${route || '-'}`,
+      `Plaka: ${tripData?.vehiclePlate || '-'}`,
+      `UETDS Ref: ${tripData?.uetdsSeferRefNo || '-'}`,
+    ].join('\n');
+  };
+
   const hasGroups = Boolean(trip?.groups?.length);
+  const canSendDriverWhatsapp = user?.role === 'company_admin' && trip?.status === 'sent';
+  const primaryDriver = trip?.personnel?.[0] || null;
+  const primaryDriverWhatsappPhone = normalizePhoneForWhatsApp(primaryDriver?.phone);
+  const hasDriverWhatsappPhone = Boolean(primaryDriverWhatsappPhone);
   const canOpenPassengerTools = hasGroups && selectedGroupId;
   const tripActionNote = 'Devlet ekranındaki sırayı yakalamak için grup → personel → yolcu mantığına gidiyoruz.';
 
@@ -491,7 +556,14 @@ export default function TripDetailPage() {
           ? `UETDS'ye gönderildi! Ref: ${res.data.uetdsSeferRefNo} · ${passengerSummary}`
           : `UETDS'ye gönderildi! Ref: ${res.data.uetdsSeferRefNo}`,
       );
-      // Frontend deploy trigger for trip detail success summary (v2)
+      if (user?.role === 'company_admin' && primaryDriverWhatsappPhone) {
+        const message = buildDriverWhatsAppMessage(
+          { ...trip, ...res.data, status: 'sent', uetdsSeferRefNo: res.data.uetdsSeferRefNo || trip?.uetdsSeferRefNo },
+          primaryDriver,
+        );
+        const whatsappUrl = `https://wa.me/${primaryDriverWhatsappPhone}?text=${encodeURIComponent(message)}`;
+        window.open(whatsappUrl, '_blank', 'noopener,noreferrer');
+      }
       fetchTrip();
     } catch (err: any) {
       toast.error(
@@ -565,7 +637,7 @@ export default function TripDetailPage() {
     e.preventDefault();
     if (!selectedGroupId) return;
     try {
-      await tripsApi.addPassenger(selectedGroupId, passengerForm);
+      await tripsApi.addPassenger(selectedGroupId, getPassengerFormPayload(passengerForm));
       toast.success('Yolcu eklendi');
       setShowAddPassenger(false);
       setPassengerForm({
@@ -875,6 +947,24 @@ export default function TripDetailPage() {
               </div>
             </div>
             <div className="flex flex-wrap items-center gap-2 lg:justify-end">
+              {canSendDriverWhatsapp && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    if (!hasDriverWhatsappPhone) {
+                      toast.error('Şoför için WhatsApp telefon numarası bulunamadı');
+                      return;
+                    }
+                    const message = buildDriverWhatsAppMessage(trip, primaryDriver);
+                    const whatsappUrl = `https://wa.me/${primaryDriverWhatsappPhone}?text=${encodeURIComponent(message)}`;
+                    window.open(whatsappUrl, '_blank', 'noopener,noreferrer');
+                  }}
+                  className="btn-secondary flex items-center gap-2"
+                >
+                  <MessageCircle size={16} />
+                  Şoföre WhatsApp Gönder
+                </button>
+              )}
               <button
                 type="button"
                 onClick={handleOpenPdf}
@@ -893,6 +983,12 @@ export default function TripDetailPage() {
                 PDF İndir
               </button>
             </div>
+            {canSendDriverWhatsapp && !hasDriverWhatsappPhone && (
+              <p className="text-xs theme-text-soft lg:text-right">
+                Şoför telefon numarası olmadığı için WhatsApp hazır mesajı açılamaz.
+              </p>
+            )}
+          </div>
           </div>
         </div>
       )}
@@ -1137,9 +1233,11 @@ export default function TripDetailPage() {
                     aria-label="Yolcu adı"
                     value={passengerForm.firstName}
                     onChange={(e) =>
-                      setPassengerForm({ ...passengerForm, firstName: e.target.value })
+                      setPassengerForm({ ...passengerForm, firstName: normalizePassengerText(e.target.value) })
                     }
                     className="input-field"
+                    autoComplete="off"
+                    spellCheck={false}
                     required
                   />
                 </div>
@@ -1149,9 +1247,11 @@ export default function TripDetailPage() {
                     aria-label="Yolcu soyadı"
                     value={passengerForm.lastName}
                     onChange={(e) =>
-                      setPassengerForm({ ...passengerForm, lastName: e.target.value })
+                      setPassengerForm({ ...passengerForm, lastName: normalizePassengerText(e.target.value) })
                     }
                     className="input-field"
+                    autoComplete="off"
+                    spellCheck={false}
                     required
                   />
                 </div>
@@ -1164,26 +1264,37 @@ export default function TripDetailPage() {
                   aria-label="Yolcu TC kimlik veya pasaport numarası"
                   value={passengerForm.tcPassportNo}
                   onChange={(e) =>
-                    setPassengerForm({ ...passengerForm, tcPassportNo: e.target.value })
+                    setPassengerForm({ ...passengerForm, tcPassportNo: normalizePassengerIdentity(e.target.value) })
                   }
                   className="input-field"
+                  autoCapitalize="characters"
+                  autoComplete="off"
+                  autoCorrect="off"
+                  inputMode="text"
+                  spellCheck={false}
                   required
                 />
               </div>
               <div className="grid grid-cols-2 gap-3">
                 <div>
                   <label className="block text-xs text-slate-400 mb-1">Uyruk</label>
-                  <input
+                  <select
+                    aria-label="Yolcu uyruğu"
                     value={passengerForm.nationalityCode}
                     onChange={(e) =>
                       setPassengerForm({
                         ...passengerForm,
-                        nationalityCode: e.target.value.toUpperCase(),
+                        nationalityCode: normalizeNationalityCode(e.target.value),
                       })
                     }
                     className="input-field"
-                    placeholder="TR"
-                  />
+                  >
+                    {UETDS_COUNTRY_OPTIONS.map((country) => (
+                      <option key={country.code} value={country.code}>
+                        {country.code} — {country.name}
+                      </option>
+                    ))}
+                  </select>
                 </div>
                 <div>
                   <label className="block text-xs text-slate-400 mb-1">Cinsiyet</label>
@@ -1191,7 +1302,7 @@ export default function TripDetailPage() {
                     aria-label="Yolcu cinsiyeti"
                     value={passengerForm.gender}
                     onChange={(e) =>
-                      setPassengerForm({ ...passengerForm, gender: e.target.value })
+                      setPassengerForm({ ...passengerForm, gender: e.target.value.trim().toUpperCase() })
                     }
                     className="input-field"
                   >

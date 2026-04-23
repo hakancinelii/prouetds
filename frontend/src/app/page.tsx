@@ -175,7 +175,7 @@ export default function Home() {
       const res = await authApi.demoLogin();
       login(res.data.accessToken, res.data.refreshToken, res.data.user);
       toast.success('Demo ortama giriş yapıldı.');
-      router.push('/dashboard');
+      router.push('/trips');
     } catch (err: any) {
       toast.error(err.response?.data?.message || 'Demo giriş şu anda açılamadı.');
     } finally {

@@ -5,7 +5,6 @@ import { useEffect, useState } from 'react';
 
 const getDefaultTripDateTime = () => {
   const now = new Date();
-  const end = new Date(now.getTime() + 60 * 60 * 1000);
 
   const toLocalInputDate = (value: Date) => {
     const localDate = new Date(value.getTime() - value.getTimezoneOffset() * 60000);
@@ -20,8 +19,8 @@ const getDefaultTripDateTime = () => {
   return {
     departureDate: toLocalInputDate(now),
     departureTime: toLocalInputTime(now),
-    endDate: toLocalInputDate(end),
-    endTime: toLocalInputTime(end),
+    endDate: toLocalInputDate(now),
+    endTime: '23:59',
   };
 };
 

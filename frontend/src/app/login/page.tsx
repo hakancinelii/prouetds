@@ -25,7 +25,7 @@ export default function LoginPage() {
       const res = await authApi.login(email, password);
       login(res.data.accessToken, res.data.refreshToken, res.data.user);
       toast.success('Giriş başarılı!');
-      router.push('/dashboard');
+      router.push('/trips');
     } catch (err: any) {
       toast.error(
         err.response?.data?.message || 'Giriş başarısız. Bilgilerinizi kontrol edin.',
