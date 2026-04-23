@@ -43,7 +43,7 @@ const PRIORITY_ISTANBUL_DISTRICTS = [
 
 const sortDistrictsForTripFlow = (
   provinceCode: number,
-  districts: Array<{ code: number; name: string }>,
+  districts: ReadonlyArray<{ code: number; name: string }>,
 ) => {
   if (provinceCode !== 34) return districts;
 
@@ -104,7 +104,7 @@ const AIRPORT_OPTIONS = [
 const getDistrictSelectOptions = (
   provinceCode: number,
   provinceName: string,
-  districts: Array<{ code: number; name: string }>,
+  districts: ReadonlyArray<{ code: number; name: string }>,
 ) => {
   const baseOptions = districts.map((district) => ({
     value: `district:${district.code}`,
@@ -541,18 +541,18 @@ export default function TripDetailPage() {
   useEffect(() => {
     const originProvince = getProvinceByCode(Number(editTripForm.originIlCode));
     const destProvince = getProvinceByCode(Number(editTripForm.destIlCode));
-    setEditOriginDistricts(
-      sortDistrictsForTripFlow(
+    setEditOriginDistricts([
+      ...sortDistrictsForTripFlow(
         Number(editTripForm.originIlCode),
         originProvince?.districts || [],
       ),
-    );
-    setEditDestDistricts(
-      sortDistrictsForTripFlow(
+    ]);
+    setEditDestDistricts([
+      ...sortDistrictsForTripFlow(
         Number(editTripForm.destIlCode),
         destProvince?.districts || [],
       ),
-    );
+    ]);
   }, [editTripForm.originIlCode, editTripForm.destIlCode]);
 
   const parsePdfError = async (blob: Blob) => {
@@ -939,7 +939,7 @@ export default function TripDetailPage() {
         </div>
       </div>
 
-      <div className="route-box rounded-2xl p-5 space-y-5 border theme-panel-dark theme-surface-on-dark">
+      <div className="glass-card rounded-2xl p-5 space-y-5 route-box border theme-panel-dark theme-surface-on-dark">
         <div>
           <p className="route-box-label text-xs uppercase tracking-wider">Rota Özeti</p>
           <p className="route-box-value mt-2 text-sm">Kalkış ve varış noktalarını tek karttan görüntüleyin ve haritada açın.</p>
@@ -993,7 +993,7 @@ export default function TripDetailPage() {
                 <button
                   type="button"
                   onClick={() => openDriverWhatsApp(trip)}
-                  className="btn-secondary flex items-center gap-2"
+                  className="btn-danger flex items-center gap-2 bg-red-400/90 border border-red-300 text-white hover:bg-red-400 shadow-sm"
                 >
                   <MessageCircle size={16} />
                   Şoföre WhatsApp Gönder
@@ -1003,7 +1003,7 @@ export default function TripDetailPage() {
                 type="button"
                 onClick={handleOpenPdf}
                 disabled={pdfLoading}
-                className="btn-secondary flex items-center gap-2"
+                className="btn-danger flex items-center gap-2 bg-red-400/90 border border-red-300 text-white hover:bg-red-400 shadow-sm"
               >
                 {pdfLoading ? <Loader2 size={16} className="animate-spin" /> : <Eye size={16} />}
                 {pdfLoading ? 'Belge hazırlanıyor...' : 'PDF Görüntüle'}
@@ -1011,7 +1011,7 @@ export default function TripDetailPage() {
               <button
                 type="button"
                 onClick={handleDownloadPdf}
-                className="btn-secondary flex items-center gap-2"
+                className="btn-danger flex items-center gap-2 bg-red-400/90 border border-red-300 text-white hover:bg-red-400 shadow-sm"
               >
                 <FileDown size={16} />
                 PDF İndir
