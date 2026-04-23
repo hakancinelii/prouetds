@@ -989,7 +989,6 @@ export default function TripDetailPage() {
               </p>
             )}
           </div>
-          </div>
         </div>
       )}
 
