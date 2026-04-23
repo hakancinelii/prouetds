@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
-import { tripsApi, driversApi } from '@/lib/api';
+import api, { tripsApi, driversApi } from '@/lib/api';
 import { MERNIS_LOCATIONS, getProvinceByCode } from '@/lib/mernis-locations';
 import { UETDS_COUNTRY_OPTIONS } from '@/lib/uetds-country-codes';
 import { useAuthStore } from '@/lib/store';
@@ -319,7 +319,11 @@ export default function TripDetailPage() {
     return `+90${raw}`;
   };
 
-  const buildDriverWhatsAppMessage = (tripData: any, driver: any) => {
+  const buildDriverWhatsAppMessage = (
+    tripData: any,
+    driver: any,
+    pdfLink?: string,
+  ) => {
     const route = [tripData?.originPlace, tripData?.destPlace].filter(Boolean).join(' → ');
     return [
       `Merhaba ${driver?.firstName || 'şoför'},`,
@@ -328,8 +332,41 @@ export default function TripDetailPage() {
       `Rota: ${route || '-'}`,
       `Plaka: ${tripData?.vehiclePlate || '-'}`,
       `UETDS Ref: ${tripData?.uetdsSeferRefNo || '-'}`,
-    ].join('\n');
+      pdfLink ? `PDF: ${pdfLink}` : '',
+    ]
+      .filter(Boolean)
+      .join('\n');
   };
+
+  const buildPdfLink = (tripData: any) => {
+    if (typeof window === 'undefined') return '';
+
+    const baseUrl =
+      (api.defaults.baseURL || window.location.origin || '').replace(/\/$/, '');
+
+    return `${baseUrl}/api/trips/${tripData?.id || tripId}/pdf?download=1`;
+  };
+
+  const openDriverWhatsApp = (tripData: any) => {
+    if (!hasDriverWhatsappPhone) {
+      toast.error('Şoför için WhatsApp telefon numarası bulunamadı');
+      return;
+    }
+
+    const message = buildDriverWhatsAppMessage(
+      tripData,
+      primaryDriver,
+      buildPdfLink(tripData),
+    );
+    const whatsappUrl = `https://api.whatsapp.com/send/?phone=${primaryDriverWhatsappPhone}&text=${encodeURIComponent(message)}&type=phone_number&app_absent=0`;
+    window.open(whatsappUrl, '_blank', 'noopener,noreferrer');
+  };
+
+  const hasPdfShareLink = Boolean(trip?.id);
+
+  void hasPdfShareLink;
+  void openDriverWhatsApp;
+  void buildPdfLink;
 
   const hasGroups = Boolean(trip?.groups?.length);
   const canSendDriverWhatsapp = user?.role === 'company_admin' && trip?.status === 'sent';
@@ -338,6 +375,7 @@ export default function TripDetailPage() {
     primaryDriver?.phone || primaryDriver?.driver?.phone,
   );
   const hasDriverWhatsappPhone = Boolean(primaryDriverWhatsappPhone);
+
   const canOpenPassengerTools = hasGroups && selectedGroupId;
   const tripActionNote = 'Devlet ekranındaki sırayı yakalamak için grup → personel → yolcu mantığına gidiyoruz.';
 
@@ -563,12 +601,12 @@ export default function TripDetailPage() {
           : `UETDS'ye gönderildi! Ref: ${res.data.uetdsSeferRefNo}`,
       );
       if (user?.role === 'company_admin' && primaryDriverWhatsappPhone) {
-        const message = buildDriverWhatsAppMessage(
-          { ...trip, ...res.data, status: 'sent', uetdsSeferRefNo: res.data.uetdsSeferRefNo || trip?.uetdsSeferRefNo },
-          primaryDriver,
-        );
-        const whatsappUrl = `https://wa.me/${primaryDriverWhatsappPhone}?text=${encodeURIComponent(message)}`;
-        window.open(whatsappUrl, '_blank', 'noopener,noreferrer');
+        openDriverWhatsApp({
+          ...trip,
+          ...res.data,
+          status: 'sent',
+          uetdsSeferRefNo: res.data.uetdsSeferRefNo || trip?.uetdsSeferRefNo,
+        });
       }
       fetchTrip();
     } catch (err: any) {
@@ -956,15 +994,7 @@ export default function TripDetailPage() {
               {canSendDriverWhatsapp && (
                 <button
                   type="button"
-                  onClick={() => {
-                    if (!hasDriverWhatsappPhone) {
-                      toast.error('Şoför için WhatsApp telefon numarası bulunamadı');
-                      return;
-                    }
-                    const message = buildDriverWhatsAppMessage(trip, primaryDriver);
-                    const whatsappUrl = `https://wa.me/${primaryDriverWhatsappPhone}?text=${encodeURIComponent(message)}`;
-                    window.open(whatsappUrl, '_blank', 'noopener,noreferrer');
-                  }}
+                  onClick={() => openDriverWhatsApp(trip)}
                   className="btn-secondary flex items-center gap-2"
                 >
                   <MessageCircle size={16} />
