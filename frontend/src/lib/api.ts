@@ -136,6 +136,10 @@ export const tripsApi = {
       responseType: 'blob',
       params: options?.download ? { download: '1' } : undefined,
     }),
+  getPdfShareLink: (tripId: string, baseUrl: string) =>
+    api.get(`/api/trips/${tripId}/pdf-share-link`, {
+      params: { baseUrl },
+    }),
 };
 
 export const driversApi = {

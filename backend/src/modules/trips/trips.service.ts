@@ -3,10 +3,13 @@ import {
   Logger,
   NotFoundException,
   BadRequestException,
+  UnauthorizedException,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { PDFDocument, StandardFonts, rgb } from 'pdf-lib';
+import { JwtService } from '@nestjs/jwt';
+import { ConfigService } from '@nestjs/config';
 import {
   Driver,
   Trip,
@@ -670,7 +673,60 @@ export class TripsService {
     @InjectRepository(Driver) private driverRepo: Repository<Driver>,
     private uetdsService: UetdsService,
     private tenantsService: TenantsService,
+    private jwtService: JwtService,
+    private configService: ConfigService,
   ) {}
+
+  private getPdfShareSecret() {
+    return this.configService.get<string>('jwt.secret') || 'super-secret-key-change-in-production';
+  }
+
+  private buildPdfShareToken(tripId: string, tenantId: string) {
+    return this.jwtService.sign(
+      {
+        typ: 'trip-pdf-share',
+        tripId,
+        tenantId,
+      },
+      {
+        secret: this.getPdfShareSecret(),
+        expiresIn: '1h',
+      },
+    );
+  }
+
+  private verifyPdfShareToken(token: string, tripId: string) {
+    try {
+      const payload = this.jwtService.verify(token, {
+        secret: this.getPdfShareSecret(),
+      }) as { typ?: string; tripId?: string; tenantId?: string };
+
+      if (payload?.typ !== 'trip-pdf-share' || payload?.tripId !== tripId || !payload?.tenantId) {
+        throw new UnauthorizedException('Geçersiz PDF paylaşım bağlantısı');
+      }
+
+      return payload;
+    } catch {
+      throw new UnauthorizedException('PDF paylaşım bağlantısı geçersiz veya süresi dolmuş');
+    }
+  }
+
+  buildPdfShareUrl(tripId: string, tenantId: string, baseUrl: string) {
+    const token = this.buildPdfShareToken(tripId, tenantId);
+    return `${baseUrl.replace(/\/$/, '')}/api/trips/${tripId}/pdf/share?token=${encodeURIComponent(token)}`;
+  }
+
+  async getUetdsPdfByShareToken(tripId: string, token: string) {
+    const payload = this.verifyPdfShareToken(token, tripId);
+    return this.getUetdsPdf(tripId, payload.tenantId as string);
+  }
+
+  async getPdfShareLink(tripId: string, tenantId: string, baseUrl: string) {
+    await this.findOne(tripId, tenantId);
+    return {
+      pdfShareUrl: this.buildPdfShareUrl(tripId, tenantId, baseUrl),
+    };
+  }
 
   private async maybeAttachSuggestedDriver(
     tripId: string,

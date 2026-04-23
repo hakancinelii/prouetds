@@ -52,6 +52,16 @@ export class TripsController {
     return this.tripsService.findOne(id, tenantId);
   }
 
+  @Get(':id/pdf-share-link')
+  @Roles(UserRole.COMPANY_ADMIN, UserRole.OPERATOR, UserRole.DRIVER)
+  getPdfShareLink(
+    @Param('id') id: string,
+    @TenantId() tenantId: string,
+    @Query('baseUrl') baseUrl: string,
+  ) {
+    return this.tripsService.getPdfShareLink(id, tenantId, baseUrl);
+  }
+
   @Post()
   @Roles(UserRole.COMPANY_ADMIN, UserRole.OPERATOR)
   create(

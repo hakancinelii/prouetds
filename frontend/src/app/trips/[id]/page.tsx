@@ -338,35 +338,33 @@ export default function TripDetailPage() {
       .join('\n');
   };
 
-  const buildPdfLink = (tripData: any) => {
-    if (typeof window === 'undefined') return '';
+  const getApiBaseUrl = () =>
+    (api.defaults.baseURL || window.location.origin || '').replace(/\/$/, '');
 
-    const baseUrl =
-      (api.defaults.baseURL || window.location.origin || '').replace(/\/$/, '');
-
-    return `${baseUrl}/api/trips/${tripData?.id || tripId}/pdf?download=1`;
-  };
-
-  const openDriverWhatsApp = (tripData: any) => {
+  const openDriverWhatsApp = async (tripData: any) => {
     if (!hasDriverWhatsappPhone) {
       toast.error('Şoför için WhatsApp telefon numarası bulunamadı');
       return;
     }
 
-    const message = buildDriverWhatsAppMessage(
-      tripData,
-      primaryDriver,
-      buildPdfLink(tripData),
-    );
-    const whatsappUrl = `https://api.whatsapp.com/send/?phone=${primaryDriverWhatsappPhone}&text=${encodeURIComponent(message)}&type=phone_number&app_absent=0`;
-    window.open(whatsappUrl, '_blank', 'noopener,noreferrer');
+    try {
+      const baseUrl = getApiBaseUrl();
+      const shareRes = await tripsApi.getPdfShareLink(tripData?.id || tripId, baseUrl);
+      const pdfShareUrl = shareRes.data?.pdfShareUrl || '';
+      const message = buildDriverWhatsAppMessage(
+        tripData,
+        primaryDriver,
+        pdfShareUrl,
+      );
+      const whatsappUrl = `https://api.whatsapp.com/send/?phone=${primaryDriverWhatsappPhone}&text=${encodeURIComponent(message)}&type=phone_number&app_absent=0`;
+      window.open(whatsappUrl, '_blank', 'noopener,noreferrer');
+    } catch (err: any) {
+      toast.error(err.response?.data?.message || 'PDF paylaşım linki oluşturulamadı');
+    }
   };
 
-  const hasPdfShareLink = Boolean(trip?.id);
-
-  void hasPdfShareLink;
   void openDriverWhatsApp;
-  void buildPdfLink;
+  void getApiBaseUrl;
 
   const hasGroups = Boolean(trip?.groups?.length);
   const canSendDriverWhatsapp = user?.role === 'company_admin' && trip?.status === 'sent';
