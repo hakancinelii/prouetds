@@ -226,12 +226,13 @@ export class OcrService {
       result.lastName = surnameMatch[1].trim().split(/\s+/)[0];
     }
 
-    // Nationality
     const natMatch = text.match(
-      /(?:nationality|uyruk|uyruğu)[:\s]*([A-ZÇĞİÖŞÜa-zçğıöşü]+)/i,
+      /(?:nationality|uyruk|uyruğu)[:\s]*([A-ZÇĞİÖŞÜa-zçğıöşü\s]{2,40})/i,
     );
     if (natMatch) {
       result.nationalityCode = this.mapCountryCode(natMatch[1]);
+    } else {
+      result.nationalityCode = this.inferCountryCodeFromText(text);
     }
 
     // Gender
@@ -248,15 +249,57 @@ export class OcrService {
     return `${mrzDate.substring(4, 6)}/${mrzDate.substring(2, 4)}/${year}`;
   }
 
+  private inferCountryCodeFromText(text: string): string {
+    const normalized = text.toUpperCase().replace(/[^A-ZÇĞİÖŞÜ]+/g, ' ');
+    const entries: Array<[RegExp, string]> = [
+      [/SAUDI\s+ARABIA|SAUDI\s+ARABIAN|ARABIE\s+SAOUDITE/, 'SA'],
+      [/UNITED\s+ARAB\s+EMIRATES|UAE|EMIRATI/, 'AE'],
+      [/UNITED\s+STATES|USA|AMERICAN/, 'US'],
+      [/UNITED\s+KINGDOM|BRITISH|GREAT\s+BRITAIN/, 'GB'],
+      [/TURKEY|TURKIYE|TÜRKİYE|TURKISH|TÜRK/, 'TR'],
+      [/GERMANY|GERMAN|DEUTSCHLAND/, 'DE'],
+      [/FRANCE|FRENCH|FRANCAISE|FRANÇAISE/, 'FR'],
+      [/RUSSIA|RUSSIAN/, 'RU'],
+      [/NETHERLANDS|DUTCH/, 'NL'],
+      [/ITALY|ITALIAN/, 'IT'],
+      [/SPAIN|SPANISH/, 'ES'],
+      [/IRAN|IRANIAN/, 'IR'],
+      [/IRAQ|IRAQI/, 'IQ'],
+      [/GEORGIA|GEORGIAN/, 'GE'],
+      [/AZERBAIJAN|AZERI|AZERBAIJANI/, 'AZ'],
+      [/UKRAINE|UKRAINIAN/, 'UA'],
+      [/BULGARIA|BULGARIAN/, 'BG'],
+      [/ROMANIA|ROMANIAN/, 'RO'],
+      [/GREECE|GREEK/, 'GR'],
+      [/KAZAKHSTAN|KAZAKH/, 'KZ'],
+      [/UZBEKISTAN|UZBEK/, 'UZ'],
+      [/TURKMENISTAN|TURKMEN/, 'TM'],
+      [/SYRIA|SYRIAN/, 'SY'],
+      [/JORDAN|JORDANIAN/, 'JO'],
+      [/LEBANON|LEBANESE/, 'LB'],
+    ];
+
+    return entries.find(([pattern]) => pattern.test(normalized))?.[1] || '';
+  }
+
   private mapCountryCode(code: string): string {
     const map: Record<string, string> = {
-      TUR: 'TR', GBR: 'GB', USA: 'US', DEU: 'DE', FRA: 'FR',
-      ITA: 'IT', ESP: 'ES', RUS: 'RU', NLD: 'NL', SAU: 'SA',
-      ARE: 'AE', IRN: 'IR', IRQ: 'IQ', GEO: 'GE', AZE: 'AZ',
-      UKR: 'UA', BGR: 'BG', ROU: 'RO', GRC: 'GR', KAZ: 'KZ',
-      UZB: 'UZ', TKM: 'TM', SYR: 'SY', JOR: 'JO', LBN: 'LB',
+      TUR: 'TR', TURKIYE: 'TR', TÜRKİYE: 'TR', TURKISH: 'TR',
+      GBR: 'GB', BRITISH: 'GB', USA: 'US', AMERICAN: 'US',
+      DEU: 'DE', GERMANY: 'DE', GERMAN: 'DE', FRA: 'FR', FRANCE: 'FR', FRENCH: 'FR',
+      ITA: 'IT', ITALY: 'IT', ITALIAN: 'IT', ESP: 'ES', SPAIN: 'ES', SPANISH: 'ES',
+      RUS: 'RU', RUSSIA: 'RU', RUSSIAN: 'RU', NLD: 'NL', NETHERLANDS: 'NL', DUTCH: 'NL',
+      SAU: 'SA', SAUDI: 'SA', 'SAUDI ARABIA': 'SA', 'SAUDI ARABIAN': 'SA',
+      ARE: 'AE', UAE: 'AE', 'UNITED ARAB EMIRATES': 'AE', EMIRATI: 'AE',
+      IRN: 'IR', IRAN: 'IR', IRANIAN: 'IR', IRQ: 'IQ', IRAQ: 'IQ', IRAQI: 'IQ',
+      GEO: 'GE', GEORGIA: 'GE', GEORGIAN: 'GE', AZE: 'AZ', AZERBAIJAN: 'AZ', AZERI: 'AZ',
+      UKR: 'UA', UKRAINE: 'UA', UKRAINIAN: 'UA', BGR: 'BG', BULGARIA: 'BG', BULGARIAN: 'BG',
+      ROU: 'RO', ROMANIA: 'RO', ROMANIAN: 'RO', GRC: 'GR', GREECE: 'GR', GREEK: 'GR',
+      KAZ: 'KZ', KAZAKHSTAN: 'KZ', KAZAKH: 'KZ', UZB: 'UZ', UZBEKISTAN: 'UZ', UZBEK: 'UZ',
+      TKM: 'TM', TURKMENISTAN: 'TM', TURKMEN: 'TM', SYR: 'SY', SYRIA: 'SY', SYRIAN: 'SY',
+      JOR: 'JO', JORDAN: 'JO', JORDANIAN: 'JO', LBN: 'LB', LEBANON: 'LB', LEBANESE: 'LB',
     };
-    const upper = code.toUpperCase();
+    const upper = code.toUpperCase().replace(/[^A-ZÇĞİÖŞÜ]+/g, ' ').trim();
     return map[upper] || (upper.length === 2 ? upper : upper.substring(0, 2));
   }
 
