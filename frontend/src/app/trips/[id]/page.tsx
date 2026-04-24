@@ -125,6 +125,12 @@ const normalizePassengerText = (value: string) =>
     .replace(/\s+/g, ' ')
     .trim();
 
+const normalizePassengerTextInput = (value: string) =>
+  value
+    .normalize('NFKC')
+    .replace(/[​-‍﻿]/g, '')
+    .replace(/\s+/g, ' ');
+
 const normalizePassengerIdentity = (value: string) =>
   value
     .normalize('NFKC')
@@ -336,6 +342,8 @@ export default function TripDetailPage() {
       return;
     }
 
+    const whatsappWindow = window.open('', '_blank', 'noopener,noreferrer');
+
     try {
       const baseUrl = getApiBaseUrl();
       const shareRes = await tripsApi.getPdfShareLink(tripData?.id || tripId, baseUrl);
@@ -346,8 +354,13 @@ export default function TripDetailPage() {
         pdfShareUrl,
       );
       const whatsappUrl = `https://api.whatsapp.com/send/?phone=${primaryDriverWhatsappPhone}&text=${encodeURIComponent(message)}&type=phone_number&app_absent=0`;
-      window.open(whatsappUrl, '_blank', 'noopener,noreferrer');
+      if (whatsappWindow) {
+        whatsappWindow.location.href = whatsappUrl;
+      } else {
+        window.location.href = whatsappUrl;
+      }
     } catch (err: any) {
+      if (whatsappWindow) whatsappWindow.close();
       toast.error(err.response?.data?.message || 'PDF paylaşım linki oluşturulamadı');
     }
   };
@@ -1345,7 +1358,7 @@ export default function TripDetailPage() {
                     aria-label="Yolcu adı"
                     value={passengerForm.firstName}
                     onChange={(e) =>
-                      setPassengerForm({ ...passengerForm, firstName: normalizePassengerText(e.target.value) })
+                      setPassengerForm({ ...passengerForm, firstName: normalizePassengerTextInput(e.target.value) })
                     }
                     className="input-field"
                     autoComplete="off"
@@ -1359,7 +1372,7 @@ export default function TripDetailPage() {
                     aria-label="Yolcu soyadı"
                     value={passengerForm.lastName}
                     onChange={(e) =>
-                      setPassengerForm({ ...passengerForm, lastName: normalizePassengerText(e.target.value) })
+                      setPassengerForm({ ...passengerForm, lastName: normalizePassengerTextInput(e.target.value) })
                     }
                     className="input-field"
                     autoComplete="off"
