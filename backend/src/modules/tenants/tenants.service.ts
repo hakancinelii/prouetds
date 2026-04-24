@@ -847,39 +847,56 @@ export class TenantsService {
     return this.findOne(savedTenant.id);
   }
 
-  async update(id: string, data: Partial<Tenant>) {
+  async update(id: string, data: Partial<Tenant>, role?: UserRole) {
     const tenant = await this.tenantRepo.findOne({ where: { id } });
     if (!tenant) throw new NotFoundException('Firma bulunamadı');
 
+    const canUpdateUetdsCredentials =
+      !role || role === UserRole.SUPER_ADMIN || role === UserRole.COMPANY_ADMIN;
+    const safeData = canUpdateUetdsCredentials
+      ? data
+      : {
+          ...data,
+          uetdsUsername: undefined,
+          uetdsPasswordEncrypted: undefined,
+          unetNumber: undefined,
+          settings: data.settings
+            ? {
+                ...data.settings,
+                uetdsEnvironment: tenant.settings?.uetdsEnvironment,
+              }
+            : data.settings,
+        };
+
     const normalizedData: Partial<Tenant> = {
-      ...data,
+      ...safeData,
       subscriptionPlan:
-        data.subscriptionPlan !== undefined
-          ? normalizeTenantPackage(data.subscriptionPlan)
+        safeData.subscriptionPlan !== undefined
+          ? normalizeTenantPackage(safeData.subscriptionPlan)
           : tenant.subscriptionPlan,
       contactEmail:
-        data.contactEmail !== undefined ? normalizeEmail(data.contactEmail) : tenant.contactEmail,
+        safeData.contactEmail !== undefined ? normalizeEmail(safeData.contactEmail) : tenant.contactEmail,
       contactPhone:
-        data.contactPhone !== undefined ? normalizeText(data.contactPhone) : tenant.contactPhone,
-      taxNumber: data.taxNumber !== undefined ? normalizeText(data.taxNumber) : tenant.taxNumber,
+        safeData.contactPhone !== undefined ? normalizeText(safeData.contactPhone) : tenant.contactPhone,
+      taxNumber: safeData.taxNumber !== undefined ? normalizeText(safeData.taxNumber) : tenant.taxNumber,
       d2LicenseNumber:
-        data.d2LicenseNumber !== undefined
-          ? normalizeText(data.d2LicenseNumber)
+        safeData.d2LicenseNumber !== undefined
+          ? normalizeText(safeData.d2LicenseNumber)
           : tenant.d2LicenseNumber,
       unetNumber:
-        data.unetNumber !== undefined ? normalizeText(data.unetNumber) : tenant.unetNumber,
+        safeData.unetNumber !== undefined ? normalizeText(safeData.unetNumber) : tenant.unetNumber,
       uetdsUsername:
-        data.uetdsUsername !== undefined
-          ? normalizeText(data.uetdsUsername)
+        safeData.uetdsUsername !== undefined
+          ? normalizeText(safeData.uetdsUsername)
           : tenant.uetdsUsername,
       uetdsPasswordEncrypted:
-        data.uetdsPasswordEncrypted !== undefined
-          ? normalizeText(data.uetdsPasswordEncrypted)
+        safeData.uetdsPasswordEncrypted !== undefined
+          ? normalizeText(safeData.uetdsPasswordEncrypted)
           : tenant.uetdsPasswordEncrypted,
-      address: data.address !== undefined ? normalizeText(data.address) : tenant.address,
+      address: safeData.address !== undefined ? normalizeText(safeData.address) : tenant.address,
       settings:
-        data.settings !== undefined
-          ? mergeTenantSettings(tenant.settings, data.settings)
+        safeData.settings !== undefined
+          ? mergeTenantSettings(tenant.settings, safeData.settings)
           : tenant.settings,
     };
 

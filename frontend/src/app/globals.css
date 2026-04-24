@@ -1783,7 +1783,9 @@ html, body {
 }
 
 .route-box-label {
+  background: transparent;
   color: rgb(var(--muted-rgb));
+  box-shadow: none;
 }
 
 .route-box-value {

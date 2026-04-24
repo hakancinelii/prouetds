@@ -2,10 +2,13 @@
 
 import { useState, useEffect } from 'react';
 import { uetdsApi, tenantsApi } from '@/lib/api';
+import { useAuthStore } from '@/lib/store';
 import toast from 'react-hot-toast';
 import { Settings, Wifi, CheckCircle2, Loader2, Shield, Key, Save, Building2 } from 'lucide-react';
 
 export default function SettingsPage() {
+  const { user } = useAuthStore();
+  const canManageUetdsCredentials = user?.role === 'company_admin' || user?.role === 'super_admin';
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [testing, setTesting] = useState(false);
@@ -46,16 +49,21 @@ export default function SettingsPage() {
     e.preventDefault();
     setSaving(true);
     try {
-      const payload = {
-        companyName: formData.name,
-        taxNumber: formData.taxNumber,
-        uetdsUsername: formData.uetdsUsername,
-        uetdsPasswordEncrypted: formData.uetdsPasswordEncrypted,
-        unetNumber: formData.uetdsUnetNo,
-        settings: {
-          uetdsEnvironment: formData.uetdsEnvironment
-        }
-      };
+      const payload = canManageUetdsCredentials
+        ? {
+            companyName: formData.name,
+            taxNumber: formData.taxNumber,
+            uetdsUsername: formData.uetdsUsername,
+            uetdsPasswordEncrypted: formData.uetdsPasswordEncrypted,
+            unetNumber: formData.uetdsUnetNo,
+            settings: {
+              uetdsEnvironment: formData.uetdsEnvironment,
+            },
+          }
+        : {
+            companyName: formData.name,
+            taxNumber: formData.taxNumber,
+          };
       await tenantsApi.update('me', payload);
       toast.success('Ayarlar başarıyla kaydedildi');
     } catch (err: any) {
@@ -110,7 +118,7 @@ export default function SettingsPage() {
         <form onSubmit={handleSave} className="md:col-span-2 space-y-6">
           <div className="glass-card p-6 space-y-4">
             <h2 className="text-lg font-semibold flex items-center gap-2">
-              <Building2 size={18} className="text-blue-400" /> Şirket & UETDS Bilgileri
+              <Building2 size={18} className="text-blue-400" /> {canManageUetdsCredentials ? 'Şirket & UETDS Bilgileri' : 'Şirket Bilgileri'}
             </h2>
             
             <div className="grid grid-cols-1 gap-4">
@@ -127,19 +135,21 @@ export default function SettingsPage() {
                     placeholder="Şirket Ünvanı"
                   />
                 </div>
-                <div>
-                  <label htmlFor="settings-environment" className="label-muted">UETDS Ortamı</label>
-                  <select
-                    id="settings-environment"
-                    title="UETDS ortamı"
-                    value={formData.uetdsEnvironment}
-                    onChange={(e) => setFormData({ ...formData, uetdsEnvironment: e.target.value })}
-                    className="input-field"
-                  >
-                    <option value="test">Test Ortamı (SandBox)</option>
-                    <option value="production">Canlı Ortam (Production)</option>
-                  </select>
-                </div>
+                {canManageUetdsCredentials && (
+                  <div>
+                    <label htmlFor="settings-environment" className="label-muted">UETDS Ortamı</label>
+                    <select
+                      id="settings-environment"
+                      title="UETDS ortamı"
+                      value={formData.uetdsEnvironment}
+                      onChange={(e) => setFormData({ ...formData, uetdsEnvironment: e.target.value })}
+                      className="input-field"
+                    >
+                      <option value="test">Test Ortamı (SandBox)</option>
+                      <option value="production">Canlı Ortam (Production)</option>
+                    </select>
+                  </div>
+                )}
               </div>
               
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -155,46 +165,50 @@ export default function SettingsPage() {
                     placeholder="Vergi No"
                   />
                 </div>
-                <div>
-                  <label htmlFor="settings-unet" className="label-muted">UNET No</label>
-                  <input
-                    id="settings-unet"
-                    title="UNET numarası"
-                    type="text"
-                    value={formData.uetdsUnetNo}
-                    onChange={(e) => setFormData({ ...formData, uetdsUnetNo: e.target.value })}
-                    className="input-field"
-                    placeholder="Örn: 123456"
-                  />
-                </div>
+                {canManageUetdsCredentials && (
+                  <div>
+                    <label htmlFor="settings-unet" className="label-muted">UNET No</label>
+                    <input
+                      id="settings-unet"
+                      title="UNET numarası"
+                      type="text"
+                      value={formData.uetdsUnetNo}
+                      onChange={(e) => setFormData({ ...formData, uetdsUnetNo: e.target.value })}
+                      className="input-field"
+                      placeholder="Örn: 123456"
+                    />
+                  </div>
+                )}
               </div>
 
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <div>
-                  <label htmlFor="settings-username" className="label-muted">UETDS Kullanıcı Adı</label>
-                  <input
-                    id="settings-username"
-                    title="UETDS kullanıcı adı"
-                    type="text"
-                    value={formData.uetdsUsername}
-                    onChange={(e) => setFormData({ ...formData, uetdsUsername: e.target.value })}
-                    className="input-field"
-                    placeholder="TC No veya Kullanıcı Adı"
-                  />
+              {canManageUetdsCredentials && (
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <div>
+                    <label htmlFor="settings-username" className="label-muted">UETDS Kullanıcı Adı</label>
+                    <input
+                      id="settings-username"
+                      title="UETDS kullanıcı adı"
+                      type="text"
+                      value={formData.uetdsUsername}
+                      onChange={(e) => setFormData({ ...formData, uetdsUsername: e.target.value })}
+                      className="input-field"
+                      placeholder="TC No veya Kullanıcı Adı"
+                    />
+                  </div>
+                  <div>
+                    <label htmlFor="settings-password" className="label-muted">UETDS Şifre</label>
+                    <input
+                      id="settings-password"
+                      title="UETDS şifre"
+                      type="password"
+                      value={formData.uetdsPasswordEncrypted}
+                      onChange={(e) => setFormData({ ...formData, uetdsPasswordEncrypted: e.target.value })}
+                      className="input-field"
+                      placeholder="******"
+                    />
+                  </div>
                 </div>
-                <div>
-                  <label htmlFor="settings-password" className="label-muted">UETDS Şifre</label>
-                  <input
-                    id="settings-password"
-                    title="UETDS şifre"
-                    type="password"
-                    value={formData.uetdsPasswordEncrypted}
-                    onChange={(e) => setFormData({ ...formData, uetdsPasswordEncrypted: e.target.value })}
-                    className="input-field"
-                    placeholder="******"
-                  />
-                </div>
-              </div>
+              )}
             </div>
 
             <button type="submit" disabled={saving} className="btn-primary w-full flex items-center justify-center gap-2">
@@ -206,46 +220,50 @@ export default function SettingsPage() {
 
         {/* Connection Tests Sidebar */}
         <div className="space-y-6">
-          <div className="glass-card p-6">
-            <h2 className="text-lg font-semibold mb-2 flex items-center gap-2">
-              <Wifi size={18} className="text-cyan-400" /> Bağlantı Testi
-            </h2>
-            <p className="text-xs theme-text-soft mb-6 leading-relaxed">
-              Girilen bilgilerin UETDS servisiyle uyuşup uyuşmadığını kontrol edin.
-            </p>
-            <div className="space-y-3">
-              <button type="button" onClick={handleTestConnection} disabled={testing} className="w-full py-2 theme-control rounded-lg text-sm flex items-center justify-center gap-2 transition-all">
-                {testing ? <Loader2 size={16} className="animate-spin" /> : <Wifi size={16} />}
-                Bağlantıyı Test Et
-              </button>
-              <button type="button" onClick={handleValidateCredentials} disabled={testing} className="w-full py-2 theme-action-soft rounded-lg text-sm flex items-center justify-center gap-2 transition-all">
-                <Key size={16} /> Kimlik Doğrula
-              </button>
-            </div>
-
-            {testResult && (
-              <div className={`mt-4 p-4 rounded-xl ${testResult.success ? 'theme-success-panel' : 'theme-danger-panel'}`}>
-                <div className="flex items-center gap-2 mb-2">
-                  {testResult.success ? <CheckCircle2 size={14} className="text-emerald-500 dark:text-emerald-400" /> : <Shield size={14} className="text-red-500 dark:text-red-400" />}
-                  <span className={`text-xs font-semibold ${testResult.success ? 'text-emerald-600 dark:text-emerald-300' : 'text-red-600 dark:text-red-300'}`}>
-                    {testResult.success ? 'Başarılı' : 'Hata Mevcut'}
-                  </span>
+          {canManageUetdsCredentials && (
+            <>
+              <div className="glass-card p-6">
+                <h2 className="text-lg font-semibold mb-2 flex items-center gap-2">
+                  <Wifi size={18} className="text-cyan-400" /> Bağlantı Testi
+                </h2>
+                <p className="text-xs theme-text-soft mb-6 leading-relaxed">
+                  Girilen bilgilerin UETDS servisiyle uyuşup uyuşmadığını kontrol edin.
+                </p>
+                <div className="space-y-3">
+                  <button type="button" onClick={handleTestConnection} disabled={testing} className="w-full py-2 theme-control rounded-lg text-sm flex items-center justify-center gap-2 transition-all">
+                    {testing ? <Loader2 size={16} className="animate-spin" /> : <Wifi size={16} />}
+                    Bağlantıyı Test Et
+                  </button>
+                  <button type="button" onClick={handleValidateCredentials} disabled={testing} className="w-full py-2 theme-action-soft rounded-lg text-sm flex items-center justify-center gap-2 transition-all">
+                    <Key size={16} /> Kimlik Doğrula
+                  </button>
                 </div>
-                <pre className="text-[10px] leading-tight theme-text-soft overflow-auto max-h-32 p-2 theme-pre rounded-lg">
-                  {JSON.stringify(testResult.data || testResult.error, null, 2)}
-                </pre>
-              </div>
-            )}
-          </div>
 
-          <div className="glass-card p-6 theme-note">
-            <h3 className="text-sm font-semibold mb-2 text-sky-700 dark:text-sky-300 flex items-center gap-2">
-              <Shield size={14} /> Güvenlik Notu
-            </h3>
-            <p className="text-[11px] theme-text-soft leading-normal">
-              UETDS şifreleriniz veritabanında şifrelenmiş olarak tutulur. Gerçek zamanlı testler Turkiye.gov.tr servislerine doğrudan istek atar.
-            </p>
-          </div>
+                {testResult && (
+                  <div className={`mt-4 p-4 rounded-xl ${testResult.success ? 'theme-success-panel' : 'theme-danger-panel'}`}>
+                    <div className="flex items-center gap-2 mb-2">
+                      {testResult.success ? <CheckCircle2 size={14} className="text-emerald-500 dark:text-emerald-400" /> : <Shield size={14} className="text-red-500 dark:text-red-400" />}
+                      <span className={`text-xs font-semibold ${testResult.success ? 'text-emerald-600 dark:text-emerald-300' : 'text-red-600 dark:text-red-300'}`}>
+                        {testResult.success ? 'Başarılı' : 'Hata Mevcut'}
+                      </span>
+                    </div>
+                    <pre className="text-[10px] leading-tight theme-text-soft overflow-auto max-h-32 p-2 theme-pre rounded-lg">
+                      {JSON.stringify(testResult.data || testResult.error, null, 2)}
+                    </pre>
+                  </div>
+                )}
+              </div>
+
+              <div className="glass-card p-6 theme-note">
+                <h3 className="text-sm font-semibold mb-2 text-sky-700 dark:text-sky-300 flex items-center gap-2">
+                  <Shield size={14} /> Güvenlik Notu
+                </h3>
+                <p className="text-[11px] theme-text-soft leading-normal">
+                  UETDS şifreleriniz veritabanında şifrelenmiş olarak tutulur. Gerçek zamanlı testler Turkiye.gov.tr servislerine doğrudan istek atar.
+                </p>
+              </div>
+            </>
+          )}
         </div>
       </div>
     </div>

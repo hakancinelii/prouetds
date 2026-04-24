@@ -37,8 +37,12 @@ export class TenantsController {
 
   @Patch('me')
   @Roles(UserRole.SUPER_ADMIN, UserRole.COMPANY_ADMIN, UserRole.OPERATOR)
-  updateMe(@Body() data: any, @TenantId() tenantId: string) {
-    return this.tenantsService.update(tenantId, data);
+  updateMe(
+    @Body() data: any,
+    @TenantId() tenantId: string,
+    @CurrentUser('role') role: UserRole,
+  ) {
+    return this.tenantsService.update(tenantId, data, role);
   }
 
   @Patch(':id')
@@ -55,7 +59,7 @@ export class TenantsController {
     if (role !== UserRole.SUPER_ADMIN && normalizedId !== userTenantId) {
       throw new ForbiddenException('Sadece kendi şirket bilgilerinizi güncelleyebilirsiniz');
     }
-    return this.tenantsService.update(normalizedId, data);
+    return this.tenantsService.update(normalizedId, data, role);
   }
 
   @Post(':id/toggle-active')
