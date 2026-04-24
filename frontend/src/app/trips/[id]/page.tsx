@@ -82,7 +82,7 @@ const getEditTripForm = (trip: any) => ({
 
 const getTripEditabilityNote = (status: string) =>
   status === 'sent'
-    ? 'Bu sefer UETDS’ye gönderildiği için doğrudan düzenlenemez.'
+    ? 'Bu sefer UETDS’ye gönderildi; değişiklikler resmi UETDS güncelleme servisiyle senkronlanır.'
     : status === 'cancelled'
       ? 'İptal edilmiş seferlerde yalnızca geçmiş kayıt görüntülenir.'
       : 'Sefer bilgilerini bu ekranda güncelleyebilirsiniz.';
@@ -93,8 +93,6 @@ const getTripEditabilityTone = (status: string) =>
     : status === 'cancelled'
       ? 'theme-callout-neutral'
       : 'theme-callout-info';
-
-const DEFAULT_TRIP_DESCRIPTION = 'İstanbul içi Transfer';
 
 const AIRPORT_OPTIONS = [
   { value: 'airport:ist', label: 'İstanbul Havalimanı', districtCode: '2048', place: 'İstanbul Havalimanı' },
@@ -118,15 +116,6 @@ const getDistrictSelectOptions = (
   }
 
   return [...AIRPORT_OPTIONS, ...baseOptions];
-};
-
-const getPlaceFromDistrict = (
-  districtCode: string,
-  province: { name: string } | undefined,
-  districts: Array<{ code: number; name: string }>,
-) => {
-  const selected = districts.find((district) => String(district.code) === districtCode);
-  return selected ? `${selected.name}/${province?.name || ''}` : '';
 };
 
 const normalizePassengerText = (value: string) =>
@@ -214,7 +203,7 @@ export default function TripDetailPage() {
   const [editTripForm, setEditTripForm] = useState(() => getEditTripForm(null));
   const [editOriginDistricts, setEditOriginDistricts] = useState<Array<{ code: number; name: string }>>([]);
   const [editDestDistricts, setEditDestDistricts] = useState<Array<{ code: number; name: string }>>([]);
-  const canEditTrip = trip?.status !== 'sent' && trip?.status !== 'cancelled';
+  const canEditTrip = trip?.status !== 'cancelled';
   const tripEditabilityNote = getTripEditabilityNote(trip?.status || 'draft');
   const tripEditabilityTone = getTripEditabilityTone(trip?.status || 'draft');
   const editOriginProvince = getProvinceByCode(Number(editTripForm.originIlCode));
@@ -374,7 +363,6 @@ export default function TripDetailPage() {
   );
   const hasDriverWhatsappPhone = Boolean(primaryDriverWhatsappPhone);
 
-  const canOpenPassengerTools = hasGroups && selectedGroupId;
   const tripActionNote = 'Devlet ekranındaki sırayı yakalamak için grup → personel → yolcu mantığına gidiyoruz.';
 
   const getTripSectionTitle = () => 'Sefer Çalışma Alanı';
@@ -452,6 +440,7 @@ export default function TripDetailPage() {
 
   // Add passenger form
   const [showAddPassenger, setShowAddPassenger] = useState(false);
+  const [editingPassengerId, setEditingPassengerId] = useState<string | null>(null);
   const [showPdfViewer, setShowPdfViewer] = useState(false);
   const [pdfUrl, setPdfUrl] = useState<string | null>(null);
   const [pdfLoading, setPdfLoading] = useState(false);
@@ -510,7 +499,7 @@ export default function TripDetailPage() {
     setUploading(true);
     const toastId = toast.loading('Pasaport OCR ile taranıyor...');
     try {
-      const res = await tripsApi.parsePassport(selectedGroupId, file);
+      await tripsApi.parsePassport(selectedGroupId, file);
       toast.success('Yolcu OCR ile eklendi', { id: toastId });
       fetchTrip();
     } catch (err: any) {
@@ -675,24 +664,59 @@ export default function TripDetailPage() {
     }
   };
 
+  const resetPassengerForm = () => {
+    setPassengerForm({
+      firstName: '',
+      lastName: '',
+      tcPassportNo: '',
+      nationalityCode: 'TR',
+      gender: '',
+      phone: '',
+    });
+    setEditingPassengerId(null);
+  };
+
   const handleAddPassenger = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!selectedGroupId) return;
+    const payload = getPassengerFormPayload(passengerForm);
     try {
-      await tripsApi.addPassenger(selectedGroupId, getPassengerFormPayload(passengerForm));
-      toast.success('Yolcu eklendi');
+      if (editingPassengerId) {
+        await tripsApi.updatePassenger(editingPassengerId, payload);
+        toast.success(trip.status === 'sent' ? 'Yolcu UETDS’de güncellendi' : 'Yolcu güncellendi');
+      } else {
+        await tripsApi.addPassenger(selectedGroupId, payload);
+        toast.success(trip.status === 'sent' ? 'Yolcu UETDS’ye eklendi' : 'Yolcu eklendi');
+      }
       setShowAddPassenger(false);
-      setPassengerForm({
-        firstName: '',
-        lastName: '',
-        tcPassportNo: '',
-        nationalityCode: 'TR',
-        gender: '',
-        phone: '',
-      });
+      resetPassengerForm();
       fetchTrip();
     } catch (err: any) {
-      toast.error(err.response?.data?.message || 'Yolcu eklenemedi');
+      toast.error(err.response?.data?.details || err.response?.data?.message || 'Yolcu kaydedilemedi');
+    }
+  };
+
+  const openEditPassenger = (passenger: any) => {
+    setEditingPassengerId(passenger.id);
+    setPassengerForm({
+      firstName: passenger.firstName || '',
+      lastName: passenger.lastName || '',
+      tcPassportNo: passenger.tcPassportNo || '',
+      nationalityCode: passenger.nationalityCode || 'TR',
+      gender: passenger.gender || '',
+      phone: passenger.phone || '',
+    });
+    setShowAddPassenger(true);
+  };
+
+  const handleRemovePassenger = async (passenger: any) => {
+    if (!confirm(`${passenger.firstName} ${passenger.lastName} yolcusu silinsin mi?`)) return;
+    try {
+      await tripsApi.removePassenger(passenger.id, 'Yolcu listesi güncellemesi');
+      toast.success(trip.status === 'sent' ? 'Yolcu UETDS’den silindi' : 'Yolcu silindi');
+      fetchTrip();
+    } catch (err: any) {
+      toast.error(err.response?.data?.details || err.response?.data?.message || 'Yolcu silinemedi');
     }
   };
 
@@ -722,15 +746,29 @@ export default function TripDetailPage() {
     setEditTripForm(getEditTripForm(trip));
   };
 
+  const handleRemovePersonnel = async (person: any) => {
+    if (!confirm(`${person.firstName} ${person.lastName} personeli silinsin mi?`)) return;
+    try {
+      await tripsApi.removePersonnel(tripId, person.id, 'Personel listesi güncellemesi');
+      toast.success(trip.status === 'sent' ? 'Personel UETDS’den silindi' : 'Personel silindi');
+      fetchTrip();
+    } catch (err: any) {
+      toast.error(err.response?.data?.details || err.response?.data?.message || 'Personel silinemedi');
+    }
+  };
+
   const handleUpdateTrip = async (e: React.FormEvent) => {
     e.preventDefault();
     setSavingTrip(true);
     try {
-      await tripsApi.update(
-        tripId,
-        getTripFormPayload(editTripForm, editOriginDistrictOptions, editDestDistrictOptions),
-      );
-      toast.success('Sefer bilgileri güncellendi');
+      const payload = getTripFormPayload(editTripForm, editOriginDistrictOptions, editDestDistrictOptions);
+      if (trip.status === 'sent') {
+        await tripsApi.updateUetdsSync(tripId, payload);
+        toast.success('Sefer bilgileri UETDS’de güncellendi');
+      } else {
+        await tripsApi.update(tripId, payload);
+        toast.success('Sefer bilgileri güncellendi');
+      }
       setShowEditTrip(false);
       fetchTrip();
     } catch (err: any) {
@@ -772,7 +810,6 @@ export default function TripDetailPage() {
       (sum: number, g: any) => sum + (g.passengers?.length || 0),
       0,
     ) || 0;
-  const canSendToUetds = Boolean(trip?.personnel?.length) && Boolean(totalPassengers) && Boolean(hasGroups);
   const quickFlowChecklist = getQuickFlowChecklist(trip, totalPassengers);
 
   return (
@@ -1063,14 +1100,14 @@ export default function TripDetailPage() {
             <Users size={20} className="text-blue-400" />
             Personel / Şoförler ({trip.personnel?.length || 0})
           </h2>
-          {trip.status !== 'sent' && trip.status !== 'cancelled' && (
+          {trip.status !== 'cancelled' && (
             <button
               type="button"
               onClick={openPersonnelModal}
               className="btn-secondary text-sm flex items-center gap-1.5"
             >
               <Plus size={14} />
-              Personel Ekle
+              {trip.status === 'sent' ? 'UETDS Şoför Ekle' : 'Personel Ekle'}
             </button>
           )}
         </div>
@@ -1109,6 +1146,7 @@ export default function TripDetailPage() {
                 <th className="px-5 py-3">TC Kimlik</th>
                 <th className="px-5 py-3">Tip</th>
                 <th className="px-5 py-3">Telefon</th>
+                <th className="px-5 py-3 text-right">Aksiyon</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-700/30">
@@ -1127,11 +1165,24 @@ export default function TripDetailPage() {
                     <td className="px-5 py-3 text-sm theme-table-cell">
                       {p.phone || '-'}
                     </td>
+                    <td className="px-5 py-3 text-right">
+                      {trip.status !== 'cancelled' && (
+                        <button
+                          type="button"
+                          onClick={() => handleRemovePersonnel(p)}
+                          className="theme-icon-muted hover:text-red-400 transition"
+                          aria-label="Personeli sil"
+                          title="Personeli sil"
+                        >
+                          <Trash2 size={16} />
+                        </button>
+                      )}
+                    </td>
                   </tr>
                 ))
               ) : (
                 <tr>
-                  <td colSpan={4} className="px-5 py-8 text-center text-slate-500">
+                  <td colSpan={5} className="px-5 py-8 text-center text-slate-500">
                     Henüz personel eklenmemiş (Şoför eklemeden UETDS'ye gönderemezsiniz)
                   </td>
                 </tr>
@@ -1148,16 +1199,19 @@ export default function TripDetailPage() {
             <Users size={20} className="text-emerald-400" />
             Yolcular ({totalPassengers})
           </h2>
-          {trip.status !== 'sent' && trip.status !== 'cancelled' && (
+          {trip.status !== 'cancelled' && (
             <div className="flex gap-2">
               <button
                 type="button"
                 title="Manuel yolcu ekle"
-                onClick={() => setShowAddPassenger(true)}
+                onClick={() => {
+                  resetPassengerForm();
+                  setShowAddPassenger(true);
+                }}
                 className="btn-secondary text-sm flex items-center gap-1.5"
               >
                 <UserPlus size={14} />
-                Manuel Ekle
+                {trip.status === 'sent' ? 'UETDS Yolcu Ekle' : 'Manuel Ekle'}
               </button>
               <button
                 type="button"
@@ -1210,6 +1264,7 @@ export default function TripDetailPage() {
                 <th className="px-5 py-3">Uyruk</th>
                 <th className="px-5 py-3">Kaynak</th>
                 <th className="px-5 py-3">UETDS Ref</th>
+                <th className="px-5 py-3 text-right">Aksiyon</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-700/30">
@@ -1235,10 +1290,34 @@ export default function TripDetailPage() {
                     <td className="px-5 py-3 text-sm text-slate-400 font-mono">
                       {p.uetdsYolcuRefNo || '-'}
                     </td>
+                    <td className="px-5 py-3 text-right">
+                      {trip.status !== 'cancelled' && (
+                        <div className="flex justify-end gap-2">
+                          <button
+                            type="button"
+                            onClick={() => openEditPassenger(p)}
+                            className="theme-icon-muted hover:text-emerald-400 transition"
+                            aria-label="Yolcuyu düzenle"
+                            title="Yolcuyu düzenle"
+                          >
+                            <Pencil size={16} />
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => handleRemovePassenger(p)}
+                            className="theme-icon-muted hover:text-red-400 transition"
+                            aria-label="Yolcuyu sil"
+                            title="Yolcuyu sil"
+                          >
+                            <Trash2 size={16} />
+                          </button>
+                        </div>
+                      )}
+                    </td>
                   </tr>
                 )) || (
                   <tr>
-                    <td colSpan={6} className="px-5 py-8 text-center text-slate-500">
+                    <td colSpan={7} className="px-5 py-8 text-center text-slate-500">
                       {trip.groups?.length === 0
                         ? 'Önce bir yolcu grubu ekleyin'
                         : 'Bu grupta yolcu yok'}
@@ -1351,7 +1430,10 @@ export default function TripDetailPage() {
                 </button>
                 <button
                   type="button"
-                  onClick={() => setShowAddPassenger(false)}
+                  onClick={() => {
+                    setShowAddPassenger(false);
+                    resetPassengerForm();
+                  }}
                   className="btn-secondary"
                 >
                   İptal

@@ -218,6 +218,76 @@ export class TripsService {
     return normalized;
   }
 
+  private getUetdsCredentials(tenant: Tenant | null | undefined) {
+    if (!tenant?.uetdsUsername || !tenant?.uetdsPasswordEncrypted) {
+      throw new BadRequestException('UETDS kimlik bilgileri tanımlanmamış');
+    }
+
+    return {
+      username: tenant.uetdsUsername,
+      password: tenant.uetdsPasswordEncrypted,
+      environment: tenant.settings?.uetdsEnvironment || 'test',
+    };
+  }
+
+  private buildTripUetdsPayload(trip: Trip) {
+    return {
+      aracPlaka: trip.vehiclePlate,
+      hareketTarihi: new Date(trip.departureDate),
+      hareketSaati: trip.departureTime,
+      seferBitisTarihi: new Date(trip.endDate),
+      seferBitisSaati: trip.endTime,
+      seferAciklama: trip.description,
+      aracTelefonu: trip.vehiclePhone,
+      firmaSeferNo: trip.firmTripNumber,
+    };
+  }
+
+  private buildPersonnelUetdsPayload(person: TripPersonnel) {
+    const identityNo =
+      person.tcPassportNo?.trim() ||
+      person.driver?.tcKimlikNo?.trim() ||
+      person.driver?.id ||
+      '';
+
+    if (!identityNo) {
+      throw new BadRequestException('Personel TC Kimlik / Pasaport No eksik');
+    }
+
+    return {
+      turKodu: Number(person.personnelType ?? 0),
+      uyrukUlke: buildUetdsNationalityCode(person.nationalityCode),
+      tcKimlikPasaportNo: buildUetdsIdentityNo(identityNo),
+      adi: buildUetdsName(person.firstName),
+      soyadi: buildUetdsName(person.lastName),
+      cinsiyet: normalizeImportedGender(person.gender),
+      telefon: person.phone,
+    };
+  }
+
+  private buildPassengerUetdsPayload(passenger: Passenger, group: TripGroup) {
+    if (!group.uetdsGrupRefNo) {
+      throw new BadRequestException(`Grup referansı oluşmadı: ${group.groupName}`);
+    }
+
+    const payload = {
+      grupId: Number(group.uetdsGrupRefNo),
+      uyrukUlke: buildUetdsNationalityCode(passenger.nationalityCode),
+      cinsiyet: normalizeImportedGender(passenger.gender),
+      tcKimlikPasaportNo: buildUetdsIdentityNo(passenger.tcPassportNo),
+      adi: buildUetdsName(passenger.firstName),
+      soyadi: buildUetdsName(passenger.lastName),
+      koltukNo: passenger.seatNumber,
+      telefonNo: passenger.phone,
+    };
+
+    if (!payload.tcKimlikPasaportNo) {
+      throw new BadRequestException(`Yolcu TC Kimlik / Pasaport No eksik: ${payload.adi} ${payload.soyadi}`);
+    }
+
+    return payload;
+  }
+
   private buildGroupPayload(group: TripGroup) {
     const baslangicIl = this.sanitizeMernisCode(group.originIlCode);
     const baslangicIlce = this.sanitizeMernisCode(group.originIlceCode);
@@ -1202,10 +1272,15 @@ export class TripsService {
     const trip = await this.findOne(id, tenantId);
     if (trip.status === TripStatus.SENT) {
       throw new BadRequestException(
-        "UETDS'ye gönderilmiş sefer düzenlenemez. Önce iptal edin.",
+        "UETDS'ye gönderilmiş seferi güncellemek için resmi UETDS güncelleme akışını kullanın.",
       );
     }
 
+    return this.saveTripUpdate(trip, tripData);
+  }
+
+  private async saveTripUpdate(trip: Trip, data: Partial<Trip>) {
+    const tripData = { ...data };
     if (typeof tripData.vehiclePlate === 'string') {
       tripData.vehiclePlate = this.getTrimmedVehiclePlate(tripData.vehiclePlate);
     }
@@ -1224,7 +1299,7 @@ export class TripsService {
       }
     }
 
-    return this.findOne(id, tenantId);
+    return this.findOne(savedTrip.id, savedTrip.tenantId);
   }
 
   async addGroup(tripId: string, tenantId: string, data: Partial<TripGroup>) {
@@ -1356,16 +1431,7 @@ export class TripsService {
         password,
         tenantId,
         tripId,
-        {
-          aracPlaka: trip.vehiclePlate,
-          hareketTarihi: new Date(trip.departureDate),
-          hareketSaati: trip.departureTime,
-          seferBitisTarihi: new Date(trip.endDate),
-          seferBitisSaati: trip.endTime,
-          seferAciklama: trip.description,
-          aracTelefonu: trip.vehiclePhone,
-          firmaSeferNo: trip.firmTripNumber,
-        },
+        this.buildTripUetdsPayload(trip),
         environment,
       );
 
@@ -1429,15 +1495,7 @@ export class TripsService {
             tenantId,
             tripId,
             seferRefNo,
-            {
-              turKodu: Number(person.personnelType ?? 0),
-              uyrukUlke: buildUetdsNationalityCode(person.nationalityCode),
-              tcKimlikPasaportNo: buildUetdsIdentityNo(identityNo),
-              adi: buildUetdsName(person.firstName),
-              soyadi: buildUetdsName(person.lastName),
-              cinsiyet: normalizeImportedGender(person.gender),
-              telefon: person.phone,
-            },
+            this.buildPersonnelUetdsPayload(person),
             environment,
           );
 
@@ -1470,25 +1528,9 @@ export class TripsService {
           throw new Error(`Grup referansı oluşmadı: ${group.groupName}`);
         }
 
-        const yolcuBilgileri = group.passengers.map((p) => ({
-          grupId: Number(group.uetdsGrupRefNo),
-          uyrukUlke: buildUetdsNationalityCode(p.nationalityCode),
-          cinsiyet: normalizeImportedGender(p.gender),
-          tcKimlikPasaportNo: buildUetdsIdentityNo(p.tcPassportNo),
-          adi: buildUetdsName(p.firstName),
-          soyadi: buildUetdsName(p.lastName),
-          koltukNo: p.seatNumber,
-          telefonNo: p.phone,
-        }));
-
-        const missingPassengerIdentity = yolcuBilgileri.find(
-          (p) => !p.tcKimlikPasaportNo,
+        const yolcuBilgileri = group.passengers.map((p) =>
+          this.buildPassengerUetdsPayload(p, group),
         );
-        if (missingPassengerIdentity) {
-          throw new Error(
-            `Yolcu TC Kimlik / Pasaport No eksik: ${missingPassengerIdentity.adi} ${missingPassengerIdentity.soyadi}`,
-          );
-        }
 
         const yolcuResult = await this.uetdsService.yolcuEkleCoklu(
           username,
@@ -1596,6 +1638,234 @@ export class TripsService {
         details: errorMessage,
       });
     }
+  }
+
+  private ensureSentTripCanSync(trip: Trip) {
+    if (!trip.uetdsSeferRefNo || trip.status !== TripStatus.SENT) {
+      throw new BadRequestException("Bu işlem için seferin UETDS'ye gönderilmiş olması gerekir");
+    }
+  }
+
+  async updateSentTripOnUetds(tripId: string, tenantId: string, data: Partial<Trip>) {
+    const trip = await this.findOne(tripId, tenantId);
+    this.ensureSentTripCanSync(trip);
+
+    const tripData = this.normalizeTripFormData(
+      data as Partial<Trip> & { originPlace?: string; destPlace?: string },
+    );
+    this.validateVehiclePlate(tripData.vehiclePlate || '');
+    this.validateTripInput(tripData);
+
+    const tenant = await this.tenantRepo.findOne({ where: { id: tenantId } });
+    const credentials = this.getUetdsCredentials(tenant);
+    const previousPlate = trip.vehiclePlate;
+    const updatedTrip = await this.saveTripUpdate(trip, tripData);
+    const groupsForSend = await this.prepareGroupsBeforeSend(updatedTrip);
+
+    try {
+      if (normalizePlate(previousPlate) !== normalizePlate(updatedTrip.vehiclePlate)) {
+        await this.uetdsService.seferPlakaDegistir(
+          credentials.username,
+          credentials.password,
+          tenantId,
+          tripId,
+          updatedTrip.uetdsSeferRefNo,
+          updatedTrip.vehiclePlate,
+          credentials.environment,
+        );
+      }
+
+      const seferResult = await this.uetdsService.seferGuncelle(
+        credentials.username,
+        credentials.password,
+        tenantId,
+        tripId,
+        updatedTrip.uetdsSeferRefNo,
+        this.buildTripUetdsPayload(updatedTrip),
+        credentials.environment,
+      );
+
+      const groupResults: Array<{ groupId: string; result: any }> = [];
+      for (const group of groupsForSend) {
+        const grupResult = await this.uetdsService.seferGrupEkle(
+          credentials.username,
+          credentials.password,
+          tenantId,
+          tripId,
+          updatedTrip.uetdsSeferRefNo,
+          this.buildGroupPayload(group),
+          credentials.environment,
+        );
+        groupResults.push({ groupId: group.id, result: grupResult });
+      }
+
+      await this.tripRepo.update(tripId, { uetdsErrorMessage: '' });
+      return {
+        success: true,
+        trip: await this.findOne(tripId, tenantId),
+        uetds: seferResult,
+        groupResults,
+      };
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : String(error);
+      await this.tripRepo.update(tripId, { uetdsErrorMessage: errorMessage });
+      throw new BadRequestException({
+        message: 'UETDS sefer güncellemesi başarısız',
+        details: errorMessage,
+      });
+    }
+  }
+
+  async addPersonnelAndSyncUetds(
+    tripId: string,
+    tenantId: string,
+    data: Partial<TripPersonnel>,
+  ) {
+    const saved = await this.addPersonnel(tripId, tenantId, data);
+    const trip = await this.findOne(tripId, tenantId);
+    if (trip.status !== TripStatus.SENT || !trip.uetdsSeferRefNo) return saved;
+
+    const tenant = await this.tenantRepo.findOne({ where: { id: tenantId } });
+    const credentials = this.getUetdsCredentials(tenant);
+    await this.uetdsService.personelEkle(
+      credentials.username,
+      credentials.password,
+      tenantId,
+      tripId,
+      trip.uetdsSeferRefNo,
+      this.buildPersonnelUetdsPayload(saved),
+      credentials.environment,
+    );
+    return this.findOne(tripId, tenantId);
+  }
+
+  async removePersonnelAndSyncUetds(
+    personnelId: string,
+    tenantId: string,
+    reason = 'Personel güncellemesi',
+  ) {
+    const personnel = await this.personnelRepo.findOne({ where: { id: personnelId, tenantId } });
+    if (!personnel) throw new NotFoundException('Personel bulunamadı');
+    const trip = await this.findOne(personnel.tripId, tenantId);
+    const tenant = await this.tenantRepo.findOne({ where: { id: tenantId } });
+
+    if (trip.status === TripStatus.SENT && trip.uetdsSeferRefNo) {
+      const credentials = this.getUetdsCredentials(tenant);
+      await this.uetdsService.personelIptal(
+        credentials.username,
+        credentials.password,
+        tenantId,
+        trip.id,
+        trip.uetdsSeferRefNo,
+        buildUetdsIdentityNo(personnel.tcPassportNo),
+        reason,
+        credentials.environment,
+      );
+    }
+
+    await this.personnelRepo.delete(personnel.id);
+    return this.findOne(trip.id, tenantId);
+  }
+
+  async addPassengerAndSyncUetds(groupId: string, tenantId: string, data: Partial<Passenger>) {
+    const passenger = await this.addPassenger(groupId, tenantId, data);
+    const group = await this.groupRepo.findOne({ where: { id: groupId, tenantId }, relations: ['trip'] });
+    if (!group) throw new NotFoundException('Grup bulunamadı');
+    const trip = await this.findOne(group.tripId, tenantId);
+    if (trip.status !== TripStatus.SENT || !trip.uetdsSeferRefNo) return passenger;
+
+    const tenant = await this.tenantRepo.findOne({ where: { id: tenantId } });
+    const credentials = this.getUetdsCredentials(tenant);
+    const result = await this.uetdsService.yolcuEkleCoklu(
+      credentials.username,
+      credentials.password,
+      tenantId,
+      trip.id,
+      trip.uetdsSeferRefNo,
+      [this.buildPassengerUetdsPayload(passenger, group)],
+      credentials.environment,
+    );
+    const yolcuRef = result?.uetdsYolcuSonuc?.[0]?.uetdsBiletRefNo;
+    if (yolcuRef) {
+      await this.passengerRepo.update(passenger.id, { uetdsYolcuRefNo: yolcuRef });
+    }
+    return this.findOne(trip.id, tenantId);
+  }
+
+  async updatePassengerAndSyncUetds(passengerId: string, tenantId: string, data: Partial<Passenger>) {
+    const existing = await this.passengerRepo.findOne({ where: { id: passengerId, tenantId }, relations: ['tripGroup'] });
+    if (!existing) throw new NotFoundException('Yolcu bulunamadı');
+    const trip = await this.findOne(existing.tripGroup.tripId, tenantId);
+    const nextData = normalizePassengerRecord({ ...existing, ...data });
+
+    if (trip.status === TripStatus.SENT && trip.uetdsSeferRefNo) {
+      const tenant = await this.tenantRepo.findOne({ where: { id: tenantId } });
+      const credentials = this.getUetdsCredentials(tenant);
+      await this.uetdsService.yolcuIptal(
+        credentials.username,
+        credentials.password,
+        tenantId,
+        trip.id,
+        trip.uetdsSeferRefNo,
+        buildUetdsIdentityNo(existing.tcPassportNo),
+        existing.seatNumber || '',
+        'Yolcu bilgisi güncellemesi',
+        credentials.environment,
+      );
+    }
+
+    await this.passengerRepo.update(passengerId, { ...nextData, uetdsYolcuRefNo: undefined });
+    const updated = await this.passengerRepo.findOne({ where: { id: passengerId, tenantId }, relations: ['tripGroup'] });
+    if (!updated) throw new NotFoundException('Yolcu bulunamadı');
+
+    if (trip.status === TripStatus.SENT && trip.uetdsSeferRefNo) {
+      const tenant = await this.tenantRepo.findOne({ where: { id: tenantId } });
+      const credentials = this.getUetdsCredentials(tenant);
+      const result = await this.uetdsService.yolcuEkleCoklu(
+        credentials.username,
+        credentials.password,
+        tenantId,
+        trip.id,
+        trip.uetdsSeferRefNo,
+        [this.buildPassengerUetdsPayload(updated, updated.tripGroup)],
+        credentials.environment,
+      );
+      const yolcuRef = result?.uetdsYolcuSonuc?.[0]?.uetdsBiletRefNo;
+      if (yolcuRef) {
+        await this.passengerRepo.update(updated.id, { uetdsYolcuRefNo: yolcuRef });
+      }
+    }
+
+    return this.findOne(trip.id, tenantId);
+  }
+
+  async removePassengerAndSyncUetds(
+    passengerId: string,
+    tenantId: string,
+    reason = 'Yolcu güncellemesi',
+  ) {
+    const passenger = await this.passengerRepo.findOne({ where: { id: passengerId, tenantId }, relations: ['tripGroup'] });
+    if (!passenger) throw new NotFoundException('Yolcu bulunamadı');
+    const trip = await this.findOne(passenger.tripGroup.tripId, tenantId);
+
+    if (trip.status === TripStatus.SENT && trip.uetdsSeferRefNo) {
+      const tenant = await this.tenantRepo.findOne({ where: { id: tenantId } });
+      const credentials = this.getUetdsCredentials(tenant);
+      await this.uetdsService.yolcuIptal(
+        credentials.username,
+        credentials.password,
+        tenantId,
+        trip.id,
+        trip.uetdsSeferRefNo,
+        buildUetdsIdentityNo(passenger.tcPassportNo),
+        passenger.seatNumber || '',
+        reason,
+        credentials.environment,
+      );
+    }
+
+    await this.passengerRepo.delete(passenger.id);
+    return this.findOne(trip.id, tenantId);
   }
 
   async cancelOnUetds(tripId: string, tenantId: string, reason: string) {

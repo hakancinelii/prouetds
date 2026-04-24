@@ -291,7 +291,16 @@ export class UetdsService implements OnModuleInit {
     tenantId: string,
     tripId: string,
     uetdsSeferReferansNo: number,
-    seferInput: any,
+    seferInput: {
+      aracPlaka: string;
+      hareketTarihi: Date;
+      hareketSaati: string;
+      seferBitisTarihi: Date;
+      seferBitisSaati: string;
+      seferAciklama?: string;
+      aracTelefonu?: string;
+      firmaSeferNo?: string;
+    },
     environment?: string,
   ): Promise<any> {
     return this.executeSoapMethod(
@@ -299,7 +308,12 @@ export class UetdsService implements OnModuleInit {
       {
         wsuser: this.getWsUser(username, password),
         guncellenecekSeferReferansNo: uetdsSeferReferansNo,
-        ariziSeferBilgileriInput: seferInput,
+        ariziSeferBilgileriInput: {
+          ...seferInput,
+          aracPlaka: (seferInput.aracPlaka || '').trim().replace(/\s/g, ''),
+          hareketTarihi: this.formatDateForUetds(seferInput.hareketTarihi),
+          seferBitisTarihi: this.formatDateForUetds(seferInput.seferBitisTarihi),
+        },
       },
       tenantId,
       tripId,
@@ -338,6 +352,7 @@ export class UetdsService implements OnModuleInit {
     tripId: string,
     uetdsSeferReferansNo: number,
     newPlate: string,
+    environment?: string,
   ): Promise<any> {
     return this.executeSoapMethod(
       'seferPlakaDegistir',
@@ -348,6 +363,7 @@ export class UetdsService implements OnModuleInit {
       },
       tenantId,
       tripId,
+      environment,
     );
   }
 
@@ -426,6 +442,7 @@ export class UetdsService implements OnModuleInit {
     uetdsSeferReferansNo: number,
     tcPassportNo: string,
     reason?: string,
+    environment?: string,
   ): Promise<any> {
     return this.executeSoapMethod(
       'personelIptal',
@@ -439,6 +456,7 @@ export class UetdsService implements OnModuleInit {
       },
       tenantId,
       tripId,
+      environment,
     );
   }
 
@@ -624,6 +642,7 @@ export class UetdsService implements OnModuleInit {
     yolcuTcPassport: string,
     koltukNo: string,
     reason: string,
+    environment?: string,
   ): Promise<any> {
     return this.executeSoapMethod(
       'yolcuIptal',
@@ -638,6 +657,7 @@ export class UetdsService implements OnModuleInit {
       },
       tenantId,
       tripId,
+      environment,
     );
   }
 

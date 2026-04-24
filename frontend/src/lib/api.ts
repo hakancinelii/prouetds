@@ -108,12 +108,19 @@ export const tripsApi = {
     });
   },
   update: (id: string, data: any) => api.patch(`/api/trips/${id}`, data),
+  updateUetdsSync: (id: string, data: any) => api.patch(`/api/trips/${id}/uetds-sync`, data),
   addGroup: (tripId: string, data: any) =>
     api.post(`/api/trips/${tripId}/groups`, data),
   addPersonnel: (tripId: string, data: any) =>
     api.post(`/api/trips/${tripId}/personnel`, data),
+  removePersonnel: (tripId: string, personnelId: string, reason?: string) =>
+    api.post(`/api/trips/${tripId}/personnel/${personnelId}/remove`, { reason }),
   addPassenger: (groupId: string, data: any) =>
     api.post(`/api/trips/groups/${groupId}/passengers`, data),
+  updatePassenger: (passengerId: string, data: any) =>
+    api.patch(`/api/trips/passengers/${passengerId}`, data),
+  removePassenger: (passengerId: string, reason?: string) =>
+    api.post(`/api/trips/passengers/${passengerId}/remove`, { reason }),
   addPassengersBulk: (groupId: string, passengers: any[]) =>
     api.post(`/api/trips/groups/${groupId}/passengers/bulk`, { passengers }),
   parseText: (groupId: string, text: string) =>

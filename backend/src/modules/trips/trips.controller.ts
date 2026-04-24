@@ -110,6 +110,16 @@ export class TripsController {
     return this.tripsService.update(id, tenantId, data);
   }
 
+  @Patch(':id/uetds-sync')
+  @Roles(UserRole.COMPANY_ADMIN, UserRole.OPERATOR)
+  updateSentTripOnUetds(
+    @Param('id') id: string,
+    @TenantId() tenantId: string,
+    @Body() data: any,
+  ) {
+    return this.tripsService.updateSentTripOnUetds(id, tenantId, data);
+  }
+
   @Post(':id/groups')
   @Roles(UserRole.COMPANY_ADMIN, UserRole.OPERATOR)
   addGroup(
@@ -127,7 +137,17 @@ export class TripsController {
     @TenantId() tenantId: string,
     @Body() data: any,
   ) {
-    return this.tripsService.addPersonnel(id, tenantId, data);
+    return this.tripsService.addPersonnelAndSyncUetds(id, tenantId, data);
+  }
+
+  @Post(':id/personnel/:personnelId/remove')
+  @Roles(UserRole.COMPANY_ADMIN, UserRole.OPERATOR)
+  removePersonnel(
+    @Param('personnelId') personnelId: string,
+    @TenantId() tenantId: string,
+    @Body('reason') reason?: string,
+  ) {
+    return this.tripsService.removePersonnelAndSyncUetds(personnelId, tenantId, reason);
   }
 
   @Post('groups/:groupId/passengers')
@@ -136,7 +156,27 @@ export class TripsController {
     @TenantId() tenantId: string,
     @Body() data: any,
   ) {
-    return this.tripsService.addPassenger(groupId, tenantId, data);
+    return this.tripsService.addPassengerAndSyncUetds(groupId, tenantId, data);
+  }
+
+  @Patch('passengers/:passengerId')
+  @Roles(UserRole.COMPANY_ADMIN, UserRole.OPERATOR)
+  updatePassenger(
+    @Param('passengerId') passengerId: string,
+    @TenantId() tenantId: string,
+    @Body() data: any,
+  ) {
+    return this.tripsService.updatePassengerAndSyncUetds(passengerId, tenantId, data);
+  }
+
+  @Post('passengers/:passengerId/remove')
+  @Roles(UserRole.COMPANY_ADMIN, UserRole.OPERATOR)
+  removePassenger(
+    @Param('passengerId') passengerId: string,
+    @TenantId() tenantId: string,
+    @Body('reason') reason?: string,
+  ) {
+    return this.tripsService.removePassengerAndSyncUetds(passengerId, tenantId, reason);
   }
 
   @Post('groups/:groupId/passengers/bulk')
