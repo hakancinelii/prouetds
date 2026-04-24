@@ -18,12 +18,55 @@ import {
   TripPersonnel,
   Passenger,
   Tenant,
+  Vehicle,
+  PassengerSource,
 } from '../../database/entities';
+import type { OcrPassengerResult } from '../ocr/ocr.service';
 import { UetdsService } from '../uetds/uetds.service';
 import { TenantsService } from '../tenants/tenants.service';
 
 const DEMO_TRIP_NUMBER = 'DMO-2026-001';
 const IMPORT_TRIP_PREFIX = 'UETDS-IMPORT';
+const AI_TRIP_PREFIX = 'AI-SEFER';
+
+const ISTANBUL_DISTRICTS = [
+  { code: 2048, name: 'ARNAVUTKÖY', aliases: ['arnavutkoy', 'istanbul havalimani', 'istanbul havalimanı', 'ist airport', 'ist'] },
+  { code: 1835, name: 'PENDİK', aliases: ['pendik', 'sabiha', 'sabiha gokcen', 'sabiha gökçen', 'saw'] },
+  { code: 1663, name: 'ŞİŞLİ', aliases: ['sisli', 'şişli', 'mecidiyekoy', 'mecidiyeköy', 'nisantasi', 'nişantaşı'] },
+  { code: 1186, name: 'BEYOĞLU', aliases: ['beyoglu', 'beyoğlu', 'taksim', 'karakoy', 'karaköy'] },
+  { code: 1183, name: 'BEŞİKTAŞ', aliases: ['besiktas', 'beşiktaş', 'levent', 'etiler', 'ortakoy', 'ortaköy'] },
+  { code: 1327, name: 'FATİH', aliases: ['fatih', 'sultanahmet', 'eminonu', 'eminönü', 'aksaray'] },
+  { code: 1421, name: 'KADIKÖY', aliases: ['kadikoy', 'kadıköy'] },
+  { code: 1708, name: 'ÜSKÜDAR', aliases: ['uskudar', 'üsküdar'] },
+  { code: 1166, name: 'BAKIRKÖY', aliases: ['bakirkoy', 'bakırköy', 'atakoy', 'ataköy'] },
+  { code: 1604, name: 'SARIYER', aliases: ['sariyer', 'sarıyer', 'maslak'] },
+  { code: 2053, name: 'ESENYURT', aliases: ['esenyurt'] },
+  { code: 2003, name: 'AVCILAR', aliases: ['avcilar', 'avcılar'] },
+  { code: 2051, name: 'BEYLİKDÜZÜ', aliases: ['beylikduzu', 'beylikdüzü'] },
+  { code: 1739, name: 'ZEYTİNBURNU', aliases: ['zeytinburnu'] },
+];
+
+const normalizeSearchText = (value?: string | null) =>
+  String(value || '')
+    .normalize('NFKD')
+    .replace(/[̀-ͯ]/g, '')
+    .toLocaleLowerCase('tr-TR')
+    .replace(/ı/g, 'i')
+    .replace(/[^a-z0-9]+/g, ' ')
+    .trim();
+
+const normalizePlate = (value?: string | null) =>
+  String(value || '').trim().toUpperCase().replace(/\s+/g, '');
+
+const toLocalTripDate = (value: Date) => {
+  const localDate = new Date(value.getTime() - value.getTimezoneOffset() * 60000);
+  return localDate.toISOString().slice(0, 10);
+};
+
+const toLocalTripTime = (value: Date) => {
+  const localDate = new Date(value.getTime() - value.getTimezoneOffset() * 60000);
+  return localDate.toISOString().slice(11, 16);
+};
 
 const pickFirst = (payload: any, keys: string[]) => {
   for (const key of keys) {
@@ -125,6 +168,16 @@ void normalizeImportedName;
 void normalizeImportedIdentity;
 void normalizeImportedGender;
 void IMPORT_TRIP_PREFIX;
+
+type AutopilotPassport = {
+  originalname?: string;
+  buffer: Buffer;
+};
+
+type AutopilotInput = {
+  message?: string;
+  passports?: AutopilotPassport[];
+};
 
 @Injectable()
 export class TripsService {
@@ -671,6 +724,7 @@ export class TripsService {
     @InjectRepository(Passenger) private passengerRepo: Repository<Passenger>,
     @InjectRepository(Tenant) private tenantRepo: Repository<Tenant>,
     @InjectRepository(Driver) private driverRepo: Repository<Driver>,
+    @InjectRepository(Vehicle) private vehicleRepo: Repository<Vehicle>,
     private uetdsService: UetdsService,
     private tenantsService: TenantsService,
     private jwtService: JwtService,
@@ -727,6 +781,7 @@ export class TripsService {
       pdfShareUrl: this.buildPdfShareUrl(tripId, tenantId, baseUrl),
     };
   }
+
 
   private async maybeAttachSuggestedDriver(
     tripId: string,
@@ -843,6 +898,255 @@ export class TripsService {
 
     if (!trip) throw new NotFoundException('Sefer bulunamadı');
     return trip;
+  }
+
+  private inferAutopilotPlate(message: string, vehicles: Vehicle[]) {
+    const normalizedMessage = normalizeSearchText(message).replace(/\s+/g, '');
+    const plateMatch = message
+      .toUpperCase()
+      .match(/\b\d{2}\s*[A-ZÇĞİÖŞÜ]{1,3}\s*\d{2,4}\b/);
+
+    if (plateMatch) return normalizePlate(plateMatch[0]);
+
+    const matchedVehicle = vehicles.find((vehicle) =>
+      normalizedMessage.includes(normalizePlate(vehicle.plateNumber).toLocaleLowerCase('tr-TR')),
+    );
+
+    return normalizePlate(matchedVehicle?.plateNumber || vehicles[0]?.plateNumber || '');
+  }
+
+  private inferAutopilotDriver(
+    message: string,
+    vehiclePlate: string,
+    vehicles: Vehicle[],
+    drivers: Driver[],
+  ) {
+    const normalizedMessage = normalizeSearchText(message);
+    const byName = drivers.find((driver) => {
+      const fullName = normalizeSearchText(`${driver.firstName} ${driver.lastName}`);
+      return fullName && normalizedMessage.includes(fullName);
+    });
+    if (byName) return byName;
+
+    const normalizedPlate = normalizePlate(vehiclePlate);
+    const vehicleDefaultDriverId = vehicles.find(
+      (vehicle) => normalizePlate(vehicle.plateNumber) === normalizedPlate,
+    )?.defaultDriverId;
+    if (vehicleDefaultDriverId) {
+      const driver = drivers.find((item) => item.id === vehicleDefaultDriverId);
+      if (driver) return driver;
+    }
+
+    return (
+      drivers.find((driver) => normalizePlate(driver.plateNumber) === normalizedPlate) ||
+      drivers[0] ||
+      null
+    );
+  }
+
+  private inferAutopilotLocation(message: string, role: 'origin' | 'dest') {
+    const normalizedMessage = normalizeSearchText(message);
+    const matches = ISTANBUL_DISTRICTS.flatMap((district) =>
+      district.aliases
+        .map((alias) => ({ district, index: normalizedMessage.indexOf(normalizeSearchText(alias)) }))
+        .filter((match) => match.index >= 0),
+    ).sort((a, b) => a.index - b.index);
+
+    const selectedMatch = matches.length > 1
+      ? role === 'origin'
+        ? matches[0]
+        : matches[matches.length - 1]
+      : role === 'dest'
+        ? matches[0]
+        : null;
+    const matched = selectedMatch?.district;
+
+    if (matched) {
+      const airportPlace = matched.code === 2048
+        ? 'İstanbul Havalimanı'
+        : matched.code === 1835
+          ? 'Sabiha Gökçen Havalimanı'
+          : `${matched.name}/İSTANBUL`;
+      return {
+        ilCode: 34,
+        ilceCode: matched.code,
+        place: airportPlace,
+        label: matched.name,
+      };
+    }
+
+    const fallback = role === 'origin'
+      ? { code: 2048, name: 'ARNAVUTKÖY', place: 'İstanbul Havalimanı' }
+      : { code: 1663, name: 'ŞİŞLİ', place: 'ŞİŞLİ/İSTANBUL' };
+
+    return {
+      ilCode: 34,
+      ilceCode: fallback.code,
+      place: fallback.place,
+      label: fallback.name,
+    };
+  }
+
+  private buildAutopilotTripData(
+    message: string,
+    vehicles: Vehicle[],
+    drivers: Driver[],
+  ) {
+    const now = new Date();
+    const departureDate = toLocalTripDate(now);
+    const vehiclePlate = this.inferAutopilotPlate(message, vehicles);
+    const selectedDriver = this.inferAutopilotDriver(message, vehiclePlate, vehicles, drivers);
+    const origin = this.inferAutopilotLocation(message, 'origin');
+    const dest = this.inferAutopilotLocation(message, 'dest');
+
+    return {
+      trip: {
+        firmTripNumber: `${AI_TRIP_PREFIX}-${Date.now()}`,
+        vehiclePlate,
+        vehicleId: vehicles.find((vehicle) => normalizePlate(vehicle.plateNumber) === vehiclePlate)?.id,
+        selectedDriverId: selectedDriver?.id,
+        departureDate,
+        departureTime: toLocalTripTime(now),
+        endDate: departureDate,
+        endTime: '23:59',
+        description: message.trim() || 'AI Autopilot seferi',
+        originIlCode: origin.ilCode,
+        originIlceCode: origin.ilceCode,
+        originPlace: origin.place,
+        destIlCode: dest.ilCode,
+        destIlceCode: dest.ilceCode,
+        destPlace: dest.place,
+      },
+      decisions: [
+        `Hareket zamanı ${departureDate} ${toLocalTripTime(now)} olarak alındı.`,
+        `Bitiş zamanı ${departureDate} 23:59 olarak alındı.`,
+        `Kalkış ${origin.label}, varış ${dest.label} olarak eşleşti.`,
+        vehiclePlate ? `Araç plakası ${vehiclePlate} olarak seçildi.` : 'Araç plakası bulunamadı.',
+        selectedDriver
+          ? `Şoför ${selectedDriver.firstName} ${selectedDriver.lastName} olarak seçildi.`
+          : 'Şoför bulunamadı.',
+      ],
+      selectedDriver,
+    };
+  }
+
+  private buildAutopilotPassenger(
+    ocrResult: OcrPassengerResult,
+    fileName: string,
+    index: number,
+  ): Partial<Passenger> | null {
+    const identity = normalizePassengerIdentity(ocrResult.passportNo);
+    if (!identity) return null;
+
+    return {
+      firstName: normalizePassengerName(ocrResult.firstName) || 'Yolcu',
+      lastName: normalizePassengerName(ocrResult.lastName || `${index + 1}`) || `${index + 1}`,
+      tcPassportNo: identity,
+      nationalityCode: normalizePassengerNationality(ocrResult.nationalityCode),
+      gender: normalizeImportedGender(ocrResult.gender),
+      seatNumber: String(index + 1),
+      source: PassengerSource.OCR,
+      rawOcrData: {
+        fileName,
+        mrzDetected: ocrResult.mrzDetected,
+        confidence: ocrResult.confidence,
+        dateOfBirth: ocrResult.dateOfBirth,
+        expiryDate: ocrResult.expiryDate,
+      },
+    };
+  }
+
+  async createAutopilotTrip(
+    tenantId: string,
+    userId: string,
+    data: AutopilotInput,
+    ocrService: { processPassportImage(imageBuffer: Buffer): Promise<OcrPassengerResult> },
+  ) {
+    const message = String(data.message || '').trim();
+    const passports = data.passports || [];
+
+    if (!message && passports.length === 0) {
+      throw new BadRequestException('AI Autopilot için mesaj veya pasaport görseli yükleyin');
+    }
+
+    const [vehicles, drivers] = await Promise.all([
+      this.vehicleRepo.find({ where: { tenantId, isActive: true }, relations: ['defaultDriver'] }),
+      this.driverRepo.find({ where: { tenantId, isActive: true } }),
+    ]);
+
+    const inferred = this.buildAutopilotTripData(message, vehicles, drivers);
+    if (!inferred.trip.vehiclePlate) {
+      throw new BadRequestException('AI Autopilot araç plakası seçemedi');
+    }
+    if (!inferred.trip.selectedDriverId) {
+      throw new BadRequestException('AI Autopilot şoför seçemedi');
+    }
+
+    const passengers: Partial<Passenger>[] = [];
+    const passportResults: any[] = [];
+
+    for (const [index, passport] of passports.entries()) {
+      const ocrResult = await ocrService.processPassportImage(passport.buffer);
+      const passenger = this.buildAutopilotPassenger(
+        ocrResult,
+        passport.originalname || `pasaport-${index + 1}`,
+        index,
+      );
+      passportResults.push({
+        fileName: passport.originalname || `pasaport-${index + 1}`,
+        success: Boolean(passenger),
+        mrzDetected: ocrResult.mrzDetected,
+        confidence: ocrResult.confidence,
+        passenger,
+      });
+      if (passenger && !passengers.some((item) => item.tcPassportNo === passenger.tcPassportNo)) {
+        passengers.push(passenger);
+      }
+    }
+
+    if (passengers.length === 0) {
+      throw new BadRequestException('Pasaportlardan UETDS için geçerli yolcu okunamadı');
+    }
+
+    const trip = await this.create(tenantId, userId, inferred.trip as Partial<Trip>);
+    const defaultGroup = trip.groups?.[0];
+    if (!defaultGroup) {
+      throw new BadRequestException('AI Autopilot varsayılan yolcu grubu oluşturamadı');
+    }
+
+    const savedPassengers = await this.addPassengersBulk(defaultGroup.id, tenantId, passengers);
+
+    let uetdsResult: any = null;
+    try {
+      uetdsResult = await this.sendToUetds(trip.id, tenantId);
+    } catch (error) {
+      const message = error instanceof BadRequestException
+        ? error.getResponse()
+        : error instanceof Error
+          ? error.message
+          : String(error);
+      return {
+        success: false,
+        status: 'created-uetds-error',
+        tripId: trip.id,
+        trip: await this.findOne(trip.id, tenantId),
+        passengers: savedPassengers,
+        passportResults,
+        decisions: inferred.decisions,
+        uetdsError: message,
+      };
+    }
+
+    return {
+      success: true,
+      status: 'sent',
+      tripId: trip.id,
+      trip: await this.findOne(trip.id, tenantId),
+      passengers: savedPassengers,
+      passportResults,
+      decisions: inferred.decisions,
+      uetds: uetdsResult,
+    };
   }
 
   async create(tenantId: string, userId: string, data: Partial<Trip>) {

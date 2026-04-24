@@ -266,8 +266,6 @@ const TRIPS_HELPER_TEXT_CLASS = 'mt-1 text-[11px] text-slate-200 dark:text-slate
 const TRIPS_SUGGESTED_BADGE_CLASS = 'mt-2 rounded-xl theme-note px-3 py-2 text-xs text-slate-100 dark:text-slate-300';
 
 void getDriverLabel;
-void handleVehiclePlateSelect;
-void handleDriverSelect;
 void getSuggestedDriver;
 void getSuggestedDriverId;
 void getSuggestedPlateByDriver;
@@ -281,14 +279,15 @@ import toast from 'react-hot-toast';
 import {
   Plus,
   Search,
-  Filter,
   Bus,
-  Send,
   FileText,
   Eye,
   ChevronLeft,
   ChevronRight,
   Loader2,
+  BrainCircuit,
+  X,
+  UploadCloud,
 } from 'lucide-react';
 
 export default function TripsPage() {
@@ -301,6 +300,11 @@ export default function TripsPage() {
   const [statusFilter, setStatusFilter] = useState('');
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [showImportModal, setShowImportModal] = useState(false);
+  const [showAiPanel, setShowAiPanel] = useState(false);
+  const [aiMessage, setAiMessage] = useState('');
+  const [aiPassports, setAiPassports] = useState<File[]>([]);
+  const [aiRunning, setAiRunning] = useState(false);
+  const [aiResult, setAiResult] = useState<any>(null);
   const [importing, setImporting] = useState(false);
   const [importRefNo, setImportRefNo] = useState('');
   const [vehicles, setVehicles] = useState<any[]>([]);
@@ -388,16 +392,6 @@ export default function TripsPage() {
     });
   };
 
-  const handleVehicleChange = (nextPlate: string) => {
-    handleVehiclePlateSelect(nextPlate, vehicles, drivers, form, setForm);
-  };
-
-  const clearSuggestedDriver = () => {
-    setForm((prev) => ({ ...prev, selectedDriverId: '' }));
-  };
-
-  void clearSuggestedDriver;
-  void handleVehicleChange;
   void suggestedDriver;
 
   const handleDistrictSelection = (
@@ -471,6 +465,38 @@ export default function TripsPage() {
     }
   };
 
+  const handleAiPassportChange = (files: FileList | null) => {
+    if (!files) return;
+    setAiPassports(Array.from(files));
+    setAiResult(null);
+  };
+
+  const handleAiAutopilot = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!aiMessage.trim() && aiPassports.length === 0) {
+      toast.error('Mesaj yazın veya pasaport görseli yükleyin');
+      return;
+    }
+
+    setAiRunning(true);
+    setAiResult(null);
+    try {
+      const res = await tripsApi.createWithAiAutopilot(aiMessage, aiPassports);
+      setAiResult(res.data);
+      if (res.data.success) {
+        toast.success('AI Autopilot seferi oluşturdu ve UETDS’ye gönderdi');
+      } else {
+        toast.error('Sefer oluşturuldu ama UETDS gönderimi tamamlanamadı');
+      }
+      fetchTrips();
+    } catch (err: any) {
+      toast.error(err.response?.data?.message || 'AI Autopilot çalıştırılamadı');
+      setAiResult(err.response?.data || null);
+    } finally {
+      setAiRunning(false);
+    }
+  };
+
   const handleImportFromUetds = async (e: React.FormEvent) => {
     e.preventDefault();
     const uetdsSeferReferansNo = Number(importRefNo);
@@ -522,6 +548,167 @@ export default function TripsPage() {
 
   return (
     <div className="p-6 lg:p-8 space-y-6 animate-fade-in">
+      <button
+        type="button"
+        onClick={() => setShowAiPanel(true)}
+        className="fixed bottom-6 right-6 z-40 group flex h-16 w-16 items-center justify-center rounded-[1.35rem] border border-emerald-300/30 bg-[radial-gradient(circle_at_30%_20%,rgba(16,185,129,.92),rgba(15,23,42,.96)_58%)] text-white shadow-[0_18px_48px_rgba(2,6,23,.38)] transition hover:-translate-y-1 hover:shadow-[0_24px_60px_rgba(16,185,129,.34)] focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-emerald-300/50"
+        aria-label="AI Sefer Autopilot"
+        title="AI Sefer Autopilot"
+      >
+        <BrainCircuit size={30} strokeWidth={1.8} />
+        <span className="pointer-events-none absolute right-20 top-1/2 hidden -translate-y-1/2 whitespace-nowrap rounded-2xl border border-white/10 bg-slate-950 px-3 py-2 text-xs font-semibold text-emerald-100 shadow-2xl group-hover:block">
+          AI Sefer Autopilot
+        </span>
+      </button>
+
+      {showAiPanel && (
+        <div className="fixed inset-0 z-50 flex justify-end bg-slate-950/45 backdrop-blur-sm">
+          <aside className="h-full w-full max-w-xl overflow-y-auto border-l border-emerald-300/20 bg-slate-950 text-slate-100 shadow-2xl">
+            <div className="sticky top-0 z-10 border-b border-white/10 bg-slate-950/95 px-6 py-5 backdrop-blur">
+              <div className="flex items-start justify-between gap-4">
+                <div>
+                  <p className="text-xs font-semibold uppercase tracking-[0.28em] text-emerald-300">AI Autopilot</p>
+                  <h2 className="mt-2 text-2xl font-semibold tracking-tight text-white">Mesajdan UETDS seferi oluştur</h2>
+                  <p className="mt-2 text-sm text-slate-400">
+                    Hareket zamanı otomatik şimdiki saat, bitiş aynı gün 23:59 alınır; pasaportlardan yolcular okunur ve sefer UETDS’ye gönderilir.
+                  </p>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setShowAiPanel(false)}
+                  className="rounded-full p-2 text-slate-400 transition hover:bg-white/10 hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-300"
+                  aria-label="AI panelini kapat"
+                >
+                  <X size={20} />
+                </button>
+              </div>
+            </div>
+
+            <form onSubmit={handleAiAutopilot} className="space-y-5 px-6 py-6">
+              <div>
+                <label className="text-sm font-medium text-slate-200">Operasyon mesajı</label>
+                <textarea
+                  value={aiMessage}
+                  onChange={(e) => {
+                    setAiMessage(e.target.value);
+                    setAiResult(null);
+                  }}
+                  rows={6}
+                  className="mt-2 w-full resize-none rounded-3xl border border-white/10 bg-white/[0.04] px-4 py-3 text-sm text-white outline-none transition placeholder:text-slate-500 focus:border-emerald-300/60 focus:ring-4 focus:ring-emerald-300/10"
+                  placeholder="Örn: İstanbul Havalimanı’ndan Şişli Hilton’a transfer. Plaka 34ABC123. Şoför Mehmet. Pasaportlar ektedir."
+                />
+              </div>
+
+              <div>
+                <label className="text-sm font-medium text-slate-200">Pasaport görselleri</label>
+                <label className="mt-2 flex cursor-pointer flex-col items-center justify-center rounded-3xl border border-dashed border-emerald-300/35 bg-emerald-300/[0.04] px-4 py-8 text-center transition hover:bg-emerald-300/[0.08]">
+                  <UploadCloud size={28} className="text-emerald-300" />
+                  <span className="mt-3 text-sm font-medium text-slate-200">Görselleri seç veya kameradan yükle</span>
+                  <span className="mt-1 text-xs text-slate-500">JPEG, PNG, WEBP, HEIC · çoklu seçim desteklenir</span>
+                  <input
+                    type="file"
+                    accept="image/jpeg,image/png,image/webp,image/heic"
+                    multiple
+                    onChange={(e) => handleAiPassportChange(e.target.files)}
+                    className="sr-only"
+                  />
+                </label>
+                {aiPassports.length > 0 && (
+                  <div className="mt-3 rounded-2xl border border-white/10 bg-white/[0.035] p-3">
+                    <p className="text-xs font-semibold uppercase tracking-wider text-slate-400">Yüklenecek pasaportlar</p>
+                    <div className="mt-2 flex flex-wrap gap-2">
+                      {aiPassports.map((file) => (
+                        <span key={`${file.name}-${file.size}`} className="rounded-full bg-emerald-300/10 px-3 py-1 text-xs text-emerald-100">
+                          {file.name}
+                        </span>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              <button
+                type="submit"
+                disabled={aiRunning}
+                className="flex min-h-12 w-full items-center justify-center gap-2 rounded-2xl bg-emerald-300 px-4 py-3 text-sm font-bold text-slate-950 transition hover:bg-emerald-200 disabled:cursor-not-allowed disabled:opacity-60"
+              >
+                {aiRunning ? <Loader2 size={18} className="animate-spin" /> : <BrainCircuit size={18} />}
+                {aiRunning ? 'Autopilot seferi hazırlıyor' : 'Autopilot’u çalıştır ve UETDS’ye gönder'}
+              </button>
+            </form>
+
+            {aiResult && (
+              <div className="mx-6 mb-8 rounded-3xl border border-white/10 bg-white/[0.045] p-5">
+                <div className="flex items-center justify-between gap-3">
+                  <div>
+                    <p className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-400">Sonuç</p>
+                    <h3 className="mt-1 text-lg font-semibold text-white">
+                      {aiResult.success ? 'Sefer UETDS’ye gönderildi' : 'Sefer oluşturuldu, UETDS hata verdi'}
+                    </h3>
+                  </div>
+                  {aiResult.tripId && (
+                    <button
+                      type="button"
+                      onClick={() => router.push(`/trips/${aiResult.tripId}`)}
+                      className="rounded-full bg-white/10 px-4 py-2 text-xs font-semibold text-white transition hover:bg-white/15"
+                    >
+                      Detaya git
+                    </button>
+                  )}
+                </div>
+
+                {aiResult.uetds?.uetdsSeferRefNo && (
+                  <div className="mt-4 rounded-2xl bg-emerald-300/10 px-4 py-3 text-sm text-emerald-100">
+                    UETDS Referans No: <span className="font-semibold">{aiResult.uetds.uetdsSeferRefNo}</span>
+                  </div>
+                )}
+
+                {Array.isArray(aiResult.decisions) && aiResult.decisions.length > 0 && (
+                  <div className="mt-4 space-y-2">
+                    {aiResult.decisions.map((decision: string) => (
+                      <p key={decision} className="rounded-2xl bg-white/[0.035] px-3 py-2 text-xs text-slate-300">
+                        {decision}
+                      </p>
+                    ))}
+                  </div>
+                )}
+
+                {Array.isArray(aiResult.passportResults) && aiResult.passportResults.length > 0 && (
+                  <div className="mt-4">
+                    <p className="text-xs font-semibold uppercase tracking-wider text-slate-400">Pasaport OCR</p>
+                    <div className="mt-2 space-y-2">
+                      {aiResult.passportResults.map((item: any) => (
+                        <div key={item.fileName} className="rounded-2xl border border-white/10 px-3 py-2 text-xs text-slate-300">
+                          <div className="flex items-center justify-between gap-3">
+                            <span className="font-medium text-slate-100">{item.fileName}</span>
+                            <span className={item.success ? 'text-emerald-300' : 'text-rose-300'}>
+                              {item.success ? 'okundu' : 'okunamadı'}
+                            </span>
+                          </div>
+                          {item.passenger && (
+                            <p className="mt-1 text-slate-400">
+                              {item.passenger.firstName} {item.passenger.lastName} · {item.passenger.tcPassportNo} · {item.passenger.nationalityCode}
+                            </p>
+                          )}
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {aiResult.uetdsError && (
+                  <div className="mt-4 rounded-2xl border border-rose-300/20 bg-rose-500/10 px-4 py-3 text-xs text-rose-100">
+                    {typeof aiResult.uetdsError === 'string'
+                      ? aiResult.uetdsError
+                      : aiResult.uetdsError?.details || aiResult.uetdsError?.message || 'UETDS gönderimi başarısız'}
+                  </div>
+                )}
+              </div>
+            )}
+          </aside>
+        </div>
+      )}
+
       {/* Header */}
       <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
         <div>
@@ -1005,7 +1192,7 @@ export default function TripsPage() {
                     <label className="label-muted text-[11px]">Başlangıç Yeri (İlçe Adı / Havalimanı)</label>
                     <input
                       type="text"
-                      value={form.originPlace}
+                      value={originSelectionState.selectionLabel || form.originPlace}
                       onChange={(e) => setForm({ ...form, originPlace: e.target.value })}
                       className="input-field py-1.5"
                       placeholder="İlçe seçimiyle otomatik dolar; gerekirse terminal / havaalanı detayını yazın"
@@ -1067,7 +1254,7 @@ export default function TripsPage() {
                     <label className="label-muted text-[11px]">Bitiş Yeri (İlçe Adı / Havalimanı)</label>
                     <input
                       type="text"
-                      value={form.destPlace}
+                      value={destSelectionState.selectionLabel || form.destPlace}
                       onChange={(e) => setForm({ ...form, destPlace: e.target.value })}
                       className="input-field py-1.5"
                       placeholder="İlçe seçimiyle otomatik dolar; gerekirse terminal / havaalanı detayını yazın"

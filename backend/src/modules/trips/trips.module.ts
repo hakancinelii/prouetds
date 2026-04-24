@@ -12,6 +12,7 @@ import {
   TripPersonnel,
   Passenger,
   Tenant,
+  Vehicle,
 } from '../../database/entities';
 import { UetdsModule } from '../uetds/uetds.module';
 import { ParserModule } from '../parser/parser.module';
@@ -20,7 +21,7 @@ import { TenantsModule } from '../tenants/tenants.module';
 
 @Module({
   imports: [
-    TypeOrmModule.forFeature([Trip, TripGroup, TripPersonnel, Passenger, Tenant, Driver]),
+    TypeOrmModule.forFeature([Trip, TripGroup, TripPersonnel, Passenger, Tenant, Driver, Vehicle]),
     JwtModule.registerAsync({
       imports: [ConfigModule],
       useFactory: (configService: ConfigService) => ({

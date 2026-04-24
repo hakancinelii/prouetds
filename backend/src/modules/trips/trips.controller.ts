@@ -10,10 +10,11 @@ import {
   Res,
   UseInterceptors,
   UploadedFile,
+  UploadedFiles,
   BadRequestException,
 } from '@nestjs/common';
 import { AuthGuard } from '@nestjs/passport';
-import { FileInterceptor } from '@nestjs/platform-express';
+import { FileInterceptor, FilesInterceptor } from '@nestjs/platform-express';
 import type { Response } from 'express';
 import { TripsService } from './trips.service';
 import { CurrentUser, TenantId } from '../../common/decorators/user.decorator';
@@ -70,6 +71,33 @@ export class TripsController {
     @Body() data: any,
   ) {
     return this.tripsService.create(tenantId, userId, data);
+  }
+
+  @Post('ai-autopilot')
+  @Roles(UserRole.COMPANY_ADMIN, UserRole.OPERATOR)
+  @UseInterceptors(
+    FilesInterceptor('passports', 20, {
+      limits: { fileSize: 10 * 1024 * 1024 },
+      fileFilter: (req, file, cb) => {
+        if (!file.mimetype.match(/^image\/(jpeg|png|webp|heic)$/)) {
+          return cb(new BadRequestException('Sadece pasaport görseli yüklenebilir'), false);
+        }
+        cb(null, true);
+      },
+    }),
+  )
+  createWithAiAutopilot(
+    @TenantId() tenantId: string,
+    @CurrentUser('id') userId: string,
+    @Body('message') message: string,
+    @UploadedFiles() passports: any[] = [],
+  ) {
+    return this.tripsService.createAutopilotTrip(
+      tenantId,
+      userId,
+      { message, passports },
+      this.ocrService,
+    );
   }
 
   @Patch(':id')

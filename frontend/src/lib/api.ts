@@ -99,6 +99,14 @@ export const tripsApi = {
   list: (params?: any) => api.get('/api/trips', { params }),
   get: (id: string) => api.get(`/api/trips/${id}`),
   create: (data: any) => api.post('/api/trips', data),
+  createWithAiAutopilot: (message: string, passports: File[]) => {
+    const formData = new FormData();
+    formData.append('message', message);
+    passports.forEach((file) => formData.append('passports', file));
+    return api.post('/api/trips/ai-autopilot', formData, {
+      headers: { 'Content-Type': 'multipart/form-data' },
+    });
+  },
   update: (id: string, data: any) => api.patch(`/api/trips/${id}`, data),
   addGroup: (tripId: string, data: any) =>
     api.post(`/api/trips/${tripId}/groups`, data),
