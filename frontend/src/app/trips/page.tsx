@@ -37,7 +37,7 @@ const PRIORITY_ISTANBUL_DISTRICTS = [
 
 const sortDistrictsForTripFlow = (
   provinceCode: number,
-  districts: Array<{ code: number; name: string }>,
+  districts: ReadonlyArray<{ code: number; name: string }>,
 ) => {
   if (provinceCode !== 34) return districts;
 
@@ -154,7 +154,7 @@ const getSelectionValue = (selectionValue: string, districtCode: string) => {
 
 const getDistrictSelectOptions = (
   provinceCode: number,
-  districts: Array<{ code: number; name: string }>,
+  districts: ReadonlyArray<{ code: number; name: string }>,
 ) => {
   if (provinceCode !== 34) {
     return districts.map((district) => ({
@@ -340,6 +340,14 @@ export default function TripsPage() {
 
   const suggestedDriver = getSuggestedDriver(form.selectedDriverId, drivers);
 
+  const handleVehicleChange = (nextPlate: string) => {
+    handleVehiclePlateSelect(nextPlate, vehicles, drivers, form, setForm);
+  };
+
+  const clearSuggestedDriver = () => {
+    setForm((prev) => ({ ...prev, selectedDriverId: '' }));
+  };
+
   const getTripSubmitPayload = () => {
     const originPayload = buildTripPlacePayload(
       originSelection,
@@ -471,6 +479,13 @@ export default function TripsPage() {
     setAiResult(null);
   };
 
+  const getAiErrorMessage = (payload: any) => {
+    const message = payload?.message;
+    if (Array.isArray(message)) return message.join(', ');
+    if (typeof message === 'string') return message;
+    return payload?.details || 'AI Autopilot çalıştırılamadı';
+  };
+
   const handleAiAutopilot = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!aiMessage.trim() && aiPassports.length === 0) {
@@ -490,8 +505,9 @@ export default function TripsPage() {
       }
       fetchTrips();
     } catch (err: any) {
-      toast.error(err.response?.data?.message || 'AI Autopilot çalıştırılamadı');
-      setAiResult(err.response?.data || null);
+      const payload = err.response?.data || null;
+      toast.error(getAiErrorMessage(payload));
+      setAiResult(payload);
     } finally {
       setAiRunning(false);
     }
@@ -643,7 +659,11 @@ export default function TripsPage() {
                   <div>
                     <p className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-400">Sonuç</p>
                     <h3 className="mt-1 text-lg font-semibold text-white">
-                      {aiResult.success ? 'Sefer UETDS’ye gönderildi' : 'Sefer oluşturuldu, UETDS hata verdi'}
+                      {aiResult.success
+                        ? 'Sefer UETDS’ye gönderildi'
+                        : aiResult.tripId
+                          ? 'Sefer oluşturuldu, UETDS hata verdi'
+                          : getAiErrorMessage(aiResult)}
                     </h3>
                   </div>
                   {aiResult.tripId && (

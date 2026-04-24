@@ -147,8 +147,8 @@ const normalizePassengerRecord = (data: Partial<Passenger>) => ({
   tcPassportNo: normalizePassengerIdentity(data.tcPassportNo),
   nationalityCode: normalizePassengerNationality(data.nationalityCode),
   gender: normalizeImportedGender(data.gender),
-  phone: String(data.phone || '').trim() || null,
-  seatNumber: String(data.seatNumber || '').trim() || null,
+  phone: String(data.phone || '').trim() || undefined,
+  seatNumber: String(data.seatNumber || '').trim() || undefined,
 });
 
 const buildUetdsNationalityCode = (value?: string | null) =>
@@ -1105,7 +1105,12 @@ export class TripsService {
     }
 
     if (passengers.length === 0) {
-      throw new BadRequestException('Pasaportlardan UETDS için geçerli yolcu okunamadı');
+      throw new BadRequestException({
+        message: 'Pasaportlardan UETDS için geçerli yolcu okunamadı',
+        details:
+          'OCR servisi pasaport no/MRZ alanı çıkaramadı. Görselin MRZ satırları net görünecek şekilde kırpılmadan yüklenmesi gerekir.',
+        passportResults,
+      });
     }
 
     const trip = await this.create(tenantId, userId, inferred.trip as Partial<Trip>);

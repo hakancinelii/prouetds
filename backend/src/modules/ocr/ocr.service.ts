@@ -45,8 +45,14 @@ export class OcrService {
 
     if (provider === 'google-vision') {
       rawText = await this.googleVisionOcr(imageBuffer);
+    } else if (provider === 'tesseract') {
+      rawText = await this.tesseractOcr(imageBuffer);
     } else {
       rawText = await this.awsTextractOcr(imageBuffer);
+    }
+
+    if (!rawText.trim()) {
+      rawText = await this.tesseractOcr(imageBuffer);
     }
 
     this.logger.debug(`OCR raw text: ${rawText.substring(0, 200)}...`);
@@ -92,8 +98,18 @@ export class OcrService {
 
       return detections[0].description || '';
     } catch (error) {
-      this.logger.error(`Google Vision OCR failed: ${error.message}`);
-      // Fallback: return empty to try other methods
+      this.logger.error(`Google Vision OCR failed: ${this.getErrorMessage(error)}`);
+      return '';
+    }
+  }
+
+  private async tesseractOcr(imageBuffer: Buffer): Promise<string> {
+    try {
+      const { recognize } = require('tesseract.js');
+      const result = await recognize(imageBuffer, 'eng');
+      return result?.data?.text || '';
+    } catch (error) {
+      this.logger.error(`Tesseract OCR failed: ${this.getErrorMessage(error)}`);
       return '';
     }
   }
@@ -102,7 +118,7 @@ export class OcrService {
    * AWS Textract OCR (placeholder)
    */
   private async awsTextractOcr(imageBuffer: Buffer): Promise<string> {
-    // TODO: Implement AWS Textract integration
+    void imageBuffer;
     this.logger.warn('AWS Textract not yet implemented, returning empty');
     return '';
   }
@@ -164,7 +180,7 @@ export class OcrService {
         expiryDate: this.formatMrzDate(expiryDate),
       };
     } catch (error) {
-      this.logger.error(`MRZ parsing error: ${error.message}`);
+      this.logger.error(`MRZ parsing error: ${this.getErrorMessage(error)}`);
       return null;
     }
   }
@@ -242,6 +258,10 @@ export class OcrService {
     };
     const upper = code.toUpperCase();
     return map[upper] || (upper.length === 2 ? upper : upper.substring(0, 2));
+  }
+
+  private getErrorMessage(error: unknown): string {
+    return error instanceof Error ? error.message : String(error);
   }
 
   private capitalizeWords(str: string): string {
