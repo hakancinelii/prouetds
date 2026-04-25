@@ -6482,8 +6482,8 @@ body {
 
 /* Glass card */
 .glass-card {
-  background: color-mix(in srgb, rgb(var(--surface-rgb)) 72%, transparent);
-  border: 1px solid color-mix(in srgb, rgb(var(--border-rgb)) 36%, transparent);
+  background: rgb(var(--surface-rgb) / 0.72);
+  border: 1px solid rgb(var(--border-rgb) / 0.36);
   @apply backdrop-blur-xl rounded-2xl shadow-xl;
 }
 
@@ -6844,7 +6844,7 @@ body {
 }
 
 .theme-table-row:hover {
-  background: color-mix(in srgb, rgb(var(--surface-elevated-rgb)) 68%, transparent);
+  background: rgb(var(--surface-elevated-rgb) / 0.68);
 }
 
 .label-muted {
@@ -6944,32 +6944,32 @@ body {
 }
 
 .btn-secondary {
-  background: color-mix(in srgb, rgb(var(--secondary-bg)) 88%, transparent);
+  background: rgb(var(--secondary-bg) / 0.88);
   color: rgb(var(--secondary-fg));
-  border: 1px solid color-mix(in srgb, rgb(var(--border-rgb)) 46%, transparent);
+  border: 1px solid rgb(var(--border-rgb) / 0.46);
   @apply font-medium py-2.5 px-5 rounded-xl transition-all;
 }
 
 .btn-secondary:hover {
-  background: color-mix(in srgb, rgb(var(--secondary-hover)) 92%, transparent);
+  background: rgb(var(--secondary-hover) / 0.92);
 }
 
 .btn-danger {
-  background: color-mix(in srgb, rgb(var(--danger-bg)) 92%, transparent);
+  background: rgb(var(--danger-bg) / 0.92);
   color: rgb(var(--danger-fg));
-  border: 1px solid color-mix(in srgb, rgb(var(--danger-fg)) 24%, transparent);
+  border: 1px solid rgb(var(--danger-fg) / 0.24);
   @apply font-medium py-2.5 px-5 rounded-xl transition-all;
 }
 
 .btn-danger:hover {
-  background: color-mix(in srgb, rgb(var(--danger-hover)) 96%, transparent);
+  background: rgb(var(--danger-hover) / 0.96);
 }
 
 /* Input styling */
 .input-field {
   color: rgb(var(--foreground-rgb));
-  background: color-mix(in srgb, rgb(var(--surface-elevated-rgb)) 80%, transparent);
-  border: 1px solid color-mix(in srgb, rgb(var(--border-rgb)) 42%, transparent);
+  background: rgb(var(--surface-elevated-rgb) / 0.8);
+  border: 1px solid rgb(var(--border-rgb) / 0.42);
   @apply w-full rounded-xl px-4 py-2.5 text-sm placeholder:text-slate-500 focus:outline-none focus:ring-2 transition-all;
   box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.04);
 }
@@ -6985,11 +6985,11 @@ body {
 }
 
 .btn-secondary:hover {
-  background: color-mix(in srgb, rgb(var(--secondary-hover)) 92%, transparent);
+  background: rgb(var(--secondary-hover) / 0.92);
 }
 
 .btn-danger:hover {
-  background: color-mix(in srgb, rgb(var(--danger-hover)) 96%, transparent);
+  background: rgb(var(--danger-hover) / 0.96);
 }
 
 /* Animations */
@@ -7025,8 +7025,8 @@ body {
 
 @media (max-width: 768px) {
   .mobile-trip-card {
-    background: color-mix(in srgb, rgb(var(--surface-rgb)) 82%, transparent);
-    border: 1px solid color-mix(in srgb, rgb(var(--border-rgb)) 36%, transparent);
+    background: rgb(var(--surface-rgb) / 0.82);
+    border: 1px solid rgb(var(--border-rgb) / 0.36);
     @apply rounded-2xl p-4 shadow-lg backdrop-blur-sm;
   }
 }

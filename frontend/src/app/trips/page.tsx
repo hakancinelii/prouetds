@@ -659,13 +659,25 @@ export default function TripsPage() {
       return;
     }
 
+    const whatsappWindow = window.open('', '_blank', 'noopener,noreferrer');
+
     try {
       const shareRes = await tripsApi.getPdfShareLink(trip.id, getApiBaseUrl());
       const pdfShareUrl = shareRes.data?.pdfShareUrl || '';
       const message = buildDriverWhatsAppMessage(trip, primaryDriver, pdfShareUrl);
-      const whatsappUrl = `https://api.whatsapp.com/send/?phone=${phone}&text=${encodeURIComponent(message)}&type=phone_number&app_absent=0`;
-      window.open(whatsappUrl, '_blank', 'noopener,noreferrer');
+      const normalizedPhone = phone.replace(/^\+/, '');
+      const whatsappUrl = `https://wa.me/${normalizedPhone}?text=${encodeURIComponent(message)}`;
+
+      if (whatsappWindow) {
+        whatsappWindow.location.href = whatsappUrl;
+        return;
+      }
+
+      window.location.href = whatsappUrl;
     } catch (err: any) {
+      if (whatsappWindow) {
+        whatsappWindow.close();
+      }
       toast.error(err.response?.data?.message || 'PDF paylaşım linki oluşturulamadı');
     }
   };

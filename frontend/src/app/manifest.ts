@@ -6,7 +6,7 @@ export default function manifest(): MetadataRoute.Manifest {
     short_name: 'ProUETDS',
     description:
       'UETDS Tarifesiz (Arızi) Yolcu Taşımacılığı Bildirim ve Yönetim Platformu',
-    start_url: '/dashboard',
+    start_url: '/trips',
     display: 'standalone',
     background_color: '#f8f5ef',
     theme_color: '#f8f5ef',
@@ -16,13 +16,13 @@ export default function manifest(): MetadataRoute.Manifest {
         src: '/icon.png',
         sizes: '192x192',
         type: 'image/png',
-        purpose: 'any maskable',
+        purpose: 'maskable',
       },
       {
         src: '/icon.png',
         sizes: '512x512',
         type: 'image/png',
-        purpose: 'any maskable',
+        purpose: 'maskable',
       },
     ],
   };
