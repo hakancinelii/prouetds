@@ -37,7 +37,7 @@ const PRIORITY_ISTANBUL_DISTRICTS = [
 
 const sortDistrictsForTripFlow = (
   provinceCode: number,
-  districts: Array<{ code: number; name: string }>,
+  districts: ReadonlyArray<{ code: number; name: string }>,
 ) => {
   if (provinceCode !== 34) return districts;
 
@@ -107,7 +107,7 @@ const getSelectionState = (
 
 const getSelectionStateFromValue = (
   value: string,
-  options: Array<{ value: string; districtCode: string; place: string }>,
+  options: ReadonlyArray<{ value: string; districtCode: string; place: string }>,
 ) => {
   const selected = options.find((option) => option.value === value);
   return getSelectionState(selected);
@@ -115,7 +115,7 @@ const getSelectionStateFromValue = (
 
 const getSelectionStateFromDistrictCode = (
   districtCode: string,
-  options: Array<{ value: string; districtCode: string; place: string }>,
+  options: ReadonlyArray<{ value: string; districtCode: string; place: string }>,
 ) => {
   const selected = options.find((option) => option.districtCode === districtCode);
   return getSelectionState(selected);
@@ -125,7 +125,7 @@ const buildTripPlacePayload = (
   selectionValue: string,
   fallbackDistrictCode: string,
   fallbackPlace: string,
-  options: Array<{ value: string; districtCode: string; place: string }>,
+  options: ReadonlyArray<{ value: string; districtCode: string; place: string }>,
 ) => {
   const selectedByValue = options.find((option) => option.value === selectionValue);
   const selected =
@@ -154,7 +154,7 @@ const getSelectionValue = (selectionValue: string, districtCode: string) => {
 
 const getDistrictSelectOptions = (
   provinceCode: number,
-  districts: Array<{ code: number; name: string }>,
+  districts: ReadonlyArray<{ code: number; name: string }>,
 ) => {
   if (provinceCode !== 34) {
     return districts.map((district) => ({
@@ -312,6 +312,9 @@ export default function TripsPage() {
   const [importRefNo, setImportRefNo] = useState('');
   const [vehicles, setVehicles] = useState<any[]>([]);
   const [drivers, setDrivers] = useState<any[]>([]);
+  const [pdfUrl, setPdfUrl] = useState<string | null>(null);
+  const [pdfTrip, setPdfTrip] = useState<any>(null);
+  const [pdfLoadingTripId, setPdfLoadingTripId] = useState<string | null>(null);
 
   // Create form
   const [form, setForm] = useState(getDefaultCreateForm);
@@ -373,7 +376,7 @@ export default function TripsPage() {
   const syncSelectionState = (
     field: 'originSelection' | 'destSelection',
     value: string,
-    options: Array<{ value: string; districtCode: string; place: string }>,
+    options: ReadonlyArray<{ value: string; districtCode: string; place: string }>,
   ) => {
     const selectionState = getSelectionStateFromValue(value, options);
 
@@ -400,7 +403,7 @@ export default function TripsPage() {
   const handleDistrictSelection = (
     field: 'originSelection' | 'destSelection',
     value: string,
-    options: Array<{ value: string; districtCode: string; place: string }>,
+    options: ReadonlyArray<{ value: string; districtCode: string; place: string }>,
   ) => {
     syncSelectionState(field, value, options);
   };
@@ -465,6 +468,65 @@ export default function TripsPage() {
 
     return () => clearTimeout(timeout);
   }, [search]);
+
+  useEffect(() => {
+    return () => {
+      if (pdfUrl) {
+        window.URL.revokeObjectURL(pdfUrl);
+      }
+    };
+  }, [pdfUrl]);
+
+  const parsePdfError = async (blob: Blob) => {
+    try {
+      const text = await blob.text();
+      const json = JSON.parse(text);
+      return json.message || json.sonucMesaji || 'PDF alınamadı';
+    } catch {
+      return 'PDF alınamadı';
+    }
+  };
+
+  const replacePdfUrl = (nextUrl: string | null) => {
+    setPdfUrl((currentUrl) => {
+      if (currentUrl) {
+        window.URL.revokeObjectURL(currentUrl);
+      }
+      return nextUrl;
+    });
+  };
+
+  const handleOpenTripPdf = async (trip: any) => {
+    if (!trip?.uetdsSeferRefNo) {
+      toast.error('Bu sefer için UETDS PDF referansı yok');
+      return;
+    }
+
+    setPdfLoadingTripId(trip.id);
+    try {
+      const res = await tripsApi.getPdf(trip.id);
+      const contentType = res.headers['content-type'];
+      if (contentType && !contentType.includes('application/pdf')) {
+        throw new Error(await parsePdfError(res.data));
+      }
+      replacePdfUrl(window.URL.createObjectURL(res.data as Blob));
+      setPdfTrip(trip);
+    } catch (err: any) {
+      toast.error(err.message || 'PDF görüntülenemedi');
+    } finally {
+      setPdfLoadingTripId(null);
+    }
+  };
+
+  const handleClosePdfViewer = () => {
+    setPdfTrip(null);
+    replacePdfUrl(null);
+  };
+
+  const handleOpenPdfInNewTab = () => {
+    if (!pdfUrl) return;
+    window.open(pdfUrl, '_blank', 'noopener,noreferrer');
+  };
 
   const handleCreate = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -776,6 +838,46 @@ export default function TripsPage() {
         </div>
       )}
 
+      {pdfUrl && pdfTrip && (
+        <div className="fixed inset-0 z-50 theme-overlay-strong backdrop-blur-sm flex items-center justify-center p-4">
+          <div className="glass-card theme-modal w-full max-w-6xl h-[85vh] flex flex-col overflow-hidden">
+            <div className="flex items-center justify-between gap-3 px-4 py-3 theme-divider-bottom">
+              <div>
+                <p className="text-sm theme-heading">UETDS PDF Önizleme</p>
+                <p className="text-xs theme-text-soft">Sefer {pdfTrip.firmTripNumber || pdfTrip.vehiclePlate}</p>
+              </div>
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={handleOpenPdfInNewTab}
+                  className="btn-secondary flex items-center gap-2"
+                >
+                  <Eye size={16} />
+                  Yeni sekmede aç
+                </button>
+                <button
+                  type="button"
+                  onClick={handleClosePdfViewer}
+                  className="btn-danger flex items-center gap-2"
+                >
+                  <X size={16} />
+                  Kapat
+                </button>
+              </div>
+            </div>
+            <div className="px-4 py-2 theme-divider-bottom theme-panel-soft flex flex-wrap items-center justify-between gap-2 text-xs theme-text-soft">
+              <span>Sefer PDF'i yüklendi. Gerekirse yeni sekmede açabilirsiniz.</span>
+              <span className="font-mono theme-code">Ref: {pdfTrip.uetdsSeferRefNo || '—'}</span>
+            </div>
+            <iframe
+              src={pdfUrl}
+              title="UETDS PDF"
+              className="w-full flex-1 bg-white"
+            />
+          </div>
+        </div>
+      )}
+
       {/* Header */}
       <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
         <div>
@@ -912,11 +1014,12 @@ export default function TripsPage() {
                       )}
                       <button
                         type="button"
-                        onClick={() => router.push(`/trips/${trip.id}`)}
-                        className="flex min-h-11 items-center justify-center gap-2 rounded-2xl bg-emerald-500 px-4 py-2 text-xs font-semibold text-white shadow-sm transition hover:bg-emerald-400 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-300"
+                        onClick={() => handleOpenTripPdf(trip)}
+                        disabled={pdfLoadingTripId === trip.id}
+                        className="flex min-h-11 items-center justify-center gap-2 rounded-2xl bg-emerald-500 px-4 py-2 text-xs font-semibold text-white shadow-sm transition hover:bg-emerald-400 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-300 disabled:cursor-not-allowed disabled:opacity-60"
                       >
-                        <Eye size={16} />
-                        Sefer gör
+                        {pdfLoadingTripId === trip.id ? <Loader2 size={16} className="animate-spin" /> : <Eye size={16} />}
+                        {pdfLoadingTripId === trip.id ? 'PDF açılıyor' : 'Sefer gör'}
                       </button>
                     </div>
                   </div>
@@ -995,12 +1098,13 @@ export default function TripsPage() {
                               aria-label="Seferi görüntüle"
                               onClick={(e) => {
                                 e.stopPropagation();
-                                router.push(`/trips/${trip.id}`);
+                                handleOpenTripPdf(trip);
                               }}
-                              className="inline-flex items-center gap-1.5 rounded-xl bg-emerald-500 px-3 py-2 text-xs font-semibold text-white transition hover:bg-emerald-400 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-300"
+                              disabled={pdfLoadingTripId === trip.id}
+                              className="inline-flex items-center gap-1.5 rounded-xl bg-emerald-500 px-3 py-2 text-xs font-semibold text-white transition hover:bg-emerald-400 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-300 disabled:cursor-not-allowed disabled:opacity-60"
                             >
-                              <Eye size={14} />
-                              Sefer gör
+                              {pdfLoadingTripId === trip.id ? <Loader2 size={14} className="animate-spin" /> : <Eye size={14} />}
+                              {pdfLoadingTripId === trip.id ? 'Açılıyor' : 'Sefer gör'}
                             </button>
                           </div>
                         </td>
