@@ -665,15 +665,13 @@ export default function TripsPage() {
       const shareRes = await tripsApi.getPdfShareLink(trip.id, getApiBaseUrl());
       const pdfShareUrl = shareRes.data?.pdfShareUrl || '';
       const message = buildDriverWhatsAppMessage(trip, primaryDriver, pdfShareUrl);
-      const normalizedPhone = phone.replace(/^\+/, '');
-      const whatsappUrl = `https://wa.me/${normalizedPhone}?text=${encodeURIComponent(message)}`;
+      const whatsappUrl = `https://api.whatsapp.com/send/?phone=${phone}&text=${encodeURIComponent(message)}&type=phone_number&app_absent=0`;
 
       if (whatsappWindow) {
         whatsappWindow.location.href = whatsappUrl;
-        return;
+      } else {
+        window.location.href = whatsappUrl;
       }
-
-      window.location.href = whatsappUrl;
     } catch (err: any) {
       if (whatsappWindow) {
         whatsappWindow.close();
@@ -976,18 +974,23 @@ export default function TripsPage() {
                   ) || 0;
                 return (
                   <div key={trip.id} className="mobile-trip-card text-left">
-                    <div className="flex items-start justify-between gap-3">
-                      <div>
-                        <p className="text-sm font-semibold text-slate-900 dark:text-white">
-                          {trip.firmTripNumber || trip.id.slice(0, 8)}
-                        </p>
-                        <p className="mt-1 text-xs font-mono text-slate-500 dark:text-slate-400">
-                          {trip.vehiclePlate}
-                        </p>
+                    <button
+                      type="button"
+                      onClick={() => router.push(`/trips/${trip.id}`)}
+                      className="block w-full text-left"
+                    >
+                      <div className="flex items-start justify-between gap-3">
+                        <div>
+                          <p className="text-sm font-semibold text-slate-900 dark:text-white">
+                            {trip.firmTripNumber || trip.id.slice(0, 8)}
+                          </p>
+                          <p className="mt-1 text-xs font-mono text-slate-500 dark:text-slate-400">
+                            {trip.vehiclePlate}
+                          </p>
+                        </div>
+                        {getStatusBadge(trip.status)}
                       </div>
-                      {getStatusBadge(trip.status)}
-                    </div>
-                    <div className="mt-4 grid grid-cols-2 gap-3 text-xs">
+                      <div className="mt-4 grid grid-cols-2 gap-3 text-xs">
                       <div>
                         <p className="text-slate-500 dark:text-slate-400">Hareket</p>
                         <p className="mt-1 font-medium text-slate-700 dark:text-slate-100">{trip.departureDate} {trip.departureTime}</p>
@@ -1013,6 +1016,7 @@ export default function TripsPage() {
                         <p className="mt-1 font-medium font-mono text-slate-700 dark:text-slate-100">{trip.uetdsSeferRefNo || '-'}</p>
                       </div>
                     </div>
+                    </button>
                     <div className="mt-4 grid gap-2 sm:grid-cols-2">
                       {canSendDriverWhatsapp(trip) && (
                         <button
