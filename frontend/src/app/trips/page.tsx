@@ -37,7 +37,7 @@ const PRIORITY_ISTANBUL_DISTRICTS = [
 
 const sortDistrictsForTripFlow = (
   provinceCode: number,
-  districts: ReadonlyArray<{ code: number; name: string }>,
+  districts: Array<{ code: number; name: string }>,
 ) => {
   if (provinceCode !== 34) return districts;
 
@@ -154,7 +154,7 @@ const getSelectionValue = (selectionValue: string, districtCode: string) => {
 
 const getDistrictSelectOptions = (
   provinceCode: number,
-  districts: ReadonlyArray<{ code: number; name: string }>,
+  districts: Array<{ code: number; name: string }>,
 ) => {
   if (provinceCode !== 34) {
     return districts.map((district) => ({
@@ -273,8 +273,9 @@ void normalizePlate;
 void TRIPS_HELPER_TEXT_CLASS;
 void TRIPS_SUGGESTED_BADGE_CLASS;
 import { useRouter } from 'next/navigation';
-import { driversApi, tripsApi, vehiclesApi } from '@/lib/api';
+import api, { driversApi, tripsApi, vehiclesApi } from '@/lib/api';
 import { MERNIS_LOCATIONS, getProvinceByCode } from '@/lib/mernis-locations';
+import { useAuthStore } from '@/lib/store';
 import toast from 'react-hot-toast';
 import {
   Plus,
@@ -288,10 +289,12 @@ import {
   BrainCircuit,
   X,
   UploadCloud,
+  MessageCircle,
 } from 'lucide-react';
 
 export default function TripsPage() {
   const router = useRouter();
+  const { user } = useAuthStore();
   const [trips, setTrips] = useState<any[]>([]);
   const [total, setTotal] = useState(0);
   const [page, setPage] = useState(1);
@@ -339,14 +342,6 @@ export default function TripsPage() {
   );
 
   const suggestedDriver = getSuggestedDriver(form.selectedDriverId, drivers);
-
-  const handleVehicleChange = (nextPlate: string) => {
-    handleVehiclePlateSelect(nextPlate, vehicles, drivers, form, setForm);
-  };
-
-  const clearSuggestedDriver = () => {
-    setForm((prev) => ({ ...prev, selectedDriverId: '' }));
-  };
 
   const getTripSubmitPayload = () => {
     const originPayload = buildTripPlacePayload(
@@ -408,6 +403,17 @@ export default function TripsPage() {
     options: Array<{ value: string; districtCode: string; place: string }>,
   ) => {
     syncSelectionState(field, value, options);
+  };
+
+  const handleVehicleChange = (nextPlate: string) => {
+    handleVehiclePlateSelect(nextPlate, vehicles, drivers, form, setForm);
+  };
+
+  const clearSuggestedDriver = () => {
+    setForm((prev) => ({
+      ...prev,
+      selectedDriverId: '',
+    }));
   };
 
   const fetchTrips = async () => {
@@ -479,13 +485,6 @@ export default function TripsPage() {
     setAiResult(null);
   };
 
-  const getAiErrorMessage = (payload: any) => {
-    const message = payload?.message;
-    if (Array.isArray(message)) return message.join(', ');
-    if (typeof message === 'string') return message;
-    return payload?.details || 'AI Autopilot çalıştırılamadı';
-  };
-
   const handleAiAutopilot = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!aiMessage.trim() && aiPassports.length === 0) {
@@ -505,9 +504,8 @@ export default function TripsPage() {
       }
       fetchTrips();
     } catch (err: any) {
-      const payload = err.response?.data || null;
-      toast.error(getAiErrorMessage(payload));
-      setAiResult(payload);
+      toast.error(err.response?.data?.message || 'AI Autopilot çalıştırılamadı');
+      setAiResult(err.response?.data || null);
     } finally {
       setAiRunning(false);
     }
@@ -559,6 +557,59 @@ export default function TripsPage() {
       </span>
     );
   };
+
+  const normalizePhoneForWhatsApp = (value?: string | null) => {
+    const raw = String(value || '').replace(/[^0-9+]/g, '');
+    if (!raw) return '';
+
+    if (raw.startsWith('+')) return raw;
+    if (raw.startsWith('90')) return `+${raw}`;
+    if (raw.startsWith('0')) return `+90${raw.slice(1)}`;
+    return `+90${raw}`;
+  };
+
+  const getPrimaryDriver = (trip: any) => trip.personnel?.[0] || null;
+
+  const buildDriverWhatsAppMessage = (trip: any, driver: any, pdfLink?: string) => {
+    const route = [trip?.originPlace, trip?.destPlace].filter(Boolean).join(' → ');
+    return [
+      `Merhaba ${driver?.firstName || 'şoför'},`,
+      `${trip?.firmTripNumber || trip?.vehiclePlate || 'Sefer'} için UETDS gönderimi tamamlandı.`,
+      `Tarih/Saat: ${trip?.departureDate || '-'} ${trip?.departureTime || '-'} - ${trip?.endDate || '-'} ${trip?.endTime || '-'}`,
+      `Rota: ${route || '-'}`,
+      `Plaka: ${trip?.vehiclePlate || '-'}`,
+      `UETDS Ref: ${trip?.uetdsSeferRefNo || '-'}`,
+      pdfLink ? `PDF: ${pdfLink}` : '',
+    ]
+      .filter(Boolean)
+      .join('\n');
+  };
+
+  const getApiBaseUrl = () =>
+    (api.defaults.baseURL || window.location.origin || '').replace(/\/$/, '');
+
+  const openDriverWhatsApp = async (trip: any) => {
+    const primaryDriver = getPrimaryDriver(trip);
+    const phone = normalizePhoneForWhatsApp(primaryDriver?.phone || primaryDriver?.driver?.phone);
+
+    if (!phone) {
+      toast.error('Şoför için WhatsApp telefon numarası bulunamadı');
+      return;
+    }
+
+    try {
+      const shareRes = await tripsApi.getPdfShareLink(trip.id, getApiBaseUrl());
+      const pdfShareUrl = shareRes.data?.pdfShareUrl || '';
+      const message = buildDriverWhatsAppMessage(trip, primaryDriver, pdfShareUrl);
+      const whatsappUrl = `https://api.whatsapp.com/send/?phone=${phone}&text=${encodeURIComponent(message)}&type=phone_number&app_absent=0`;
+      window.open(whatsappUrl, '_blank', 'noopener,noreferrer');
+    } catch (err: any) {
+      toast.error(err.response?.data?.message || 'PDF paylaşım linki oluşturulamadı');
+    }
+  };
+
+  const canSendDriverWhatsapp = (trip: any) =>
+    user?.role === 'company_admin' && trip?.status === 'sent';
 
   const totalPages = Math.ceil(total / 15);
 
@@ -659,11 +710,7 @@ export default function TripsPage() {
                   <div>
                     <p className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-400">Sonuç</p>
                     <h3 className="mt-1 text-lg font-semibold text-white">
-                      {aiResult.success
-                        ? 'Sefer UETDS’ye gönderildi'
-                        : aiResult.tripId
-                          ? 'Sefer oluşturuldu, UETDS hata verdi'
-                          : getAiErrorMessage(aiResult)}
+                      {aiResult.success ? 'Sefer UETDS’ye gönderildi' : 'Sefer oluşturuldu, UETDS hata verdi'}
                     </h3>
                   </div>
                   {aiResult.tripId && (
@@ -814,12 +861,7 @@ export default function TripsPage() {
                     0,
                   ) || 0;
                 return (
-                  <button
-                    key={trip.id}
-                    type="button"
-                    onClick={() => router.push(`/trips/${trip.id}`)}
-                    className="mobile-trip-card text-left"
-                  >
+                  <div key={trip.id} className="mobile-trip-card text-left">
                     <div className="flex items-start justify-between gap-3">
                       <div>
                         <p className="text-sm font-semibold text-slate-900 dark:text-white">
@@ -857,11 +899,27 @@ export default function TripsPage() {
                         <p className="mt-1 font-medium font-mono text-slate-700 dark:text-slate-100">{trip.uetdsSeferRefNo || '-'}</p>
                       </div>
                     </div>
-                    <div className="mt-4 flex items-center justify-end gap-2 text-emerald-600 dark:text-emerald-300">
-                      <Eye size={16} />
-                      <span className="text-xs font-medium">Detaya git</span>
+                    <div className="mt-4 grid gap-2 sm:grid-cols-2">
+                      {canSendDriverWhatsapp(trip) && (
+                        <button
+                          type="button"
+                          onClick={() => openDriverWhatsApp(trip)}
+                          className="flex min-h-11 items-center justify-center gap-2 rounded-2xl border border-emerald-300/40 bg-emerald-500/10 px-4 py-2 text-xs font-semibold text-emerald-700 transition hover:bg-emerald-500/15 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-300 dark:text-emerald-200"
+                        >
+                          <MessageCircle size={16} />
+                          WhatsApp'tan gönder
+                        </button>
+                      )}
+                      <button
+                        type="button"
+                        onClick={() => router.push(`/trips/${trip.id}`)}
+                        className="flex min-h-11 items-center justify-center gap-2 rounded-2xl bg-emerald-500 px-4 py-2 text-xs font-semibold text-white shadow-sm transition hover:bg-emerald-400 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-300"
+                      >
+                        <Eye size={16} />
+                        Sefer gör
+                      </button>
                     </div>
-                  </button>
+                  </div>
                 );
               })}
             </div>
@@ -915,18 +973,36 @@ export default function TripsPage() {
                           {trip.uetdsSeferRefNo || '-'}
                         </td>
                         <td className="px-5 py-3.5">
-                          <button
-                            type="button"
-                            title="Sefer detayını aç"
-                            aria-label="Sefer detayını aç"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              router.push(`/trips/${trip.id}`);
-                            }}
-                            className="theme-icon-muted hover:text-emerald-400 transition"
-                          >
-                            <Eye size={16} />
-                          </button>
+                          <div className="flex items-center justify-end gap-2">
+                            {canSendDriverWhatsapp(trip) && (
+                              <button
+                                type="button"
+                                title="Şoföre WhatsApp'tan gönder"
+                                aria-label="Şoföre WhatsApp'tan gönder"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  openDriverWhatsApp(trip);
+                                }}
+                                className="inline-flex items-center gap-1.5 rounded-xl border border-emerald-300/35 bg-emerald-500/10 px-3 py-2 text-xs font-semibold text-emerald-700 transition hover:bg-emerald-500/15 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-300 dark:text-emerald-200"
+                              >
+                                <MessageCircle size={14} />
+                                WhatsApp
+                              </button>
+                            )}
+                            <button
+                              type="button"
+                              title="Seferi görüntüle"
+                              aria-label="Seferi görüntüle"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                router.push(`/trips/${trip.id}`);
+                              }}
+                              className="inline-flex items-center gap-1.5 rounded-xl bg-emerald-500 px-3 py-2 text-xs font-semibold text-white transition hover:bg-emerald-400 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-300"
+                            >
+                              <Eye size={14} />
+                              Sefer gör
+                            </button>
+                          </div>
                         </td>
                       </tr>
                     );

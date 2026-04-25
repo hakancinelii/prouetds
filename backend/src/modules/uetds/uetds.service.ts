@@ -40,7 +40,7 @@ export class UetdsService implements OnModuleInit {
       this.logger.log(`UETDS SOAP clients initialized (Test & Prod)`);
     } catch (error) {
       this.logger.error(
-        `Failed to initialize UETDS SOAP clients: ${error.message}`,
+        `Failed to initialize UETDS SOAP clients: ${this.getErrorMessage(error)}`,
       );
     }
   }
@@ -54,7 +54,7 @@ export class UetdsService implements OnModuleInit {
         wsdl_options: { timeout: this.timeout },
       });
     } catch (err) {
-      this.logger.error('SOAP Client init error: ' + err.message);
+      this.logger.error('SOAP Client init error: ' + this.getErrorMessage(err));
     }
   }
 
@@ -69,6 +69,26 @@ export class UetdsService implements OnModuleInit {
     return Object.fromEntries(
       Object.entries(value).filter(([, entry]) => entry !== undefined && entry !== null && entry !== ''),
     ) as T;
+  }
+
+  private getErrorMessage(error: unknown): string {
+    if (error instanceof Error) {
+      return error.message;
+    }
+
+    if (typeof error === 'string') {
+      return error;
+    }
+
+    return 'Unknown Error';
+  }
+
+  private getErrorResponseData(error: unknown): unknown {
+    if (typeof error !== 'object' || error === null || !('response' in error)) {
+      return undefined;
+    }
+
+    return (error as { response?: { data?: unknown } }).response?.data;
   }
 
   /**
@@ -149,12 +169,13 @@ export class UetdsService implements OnModuleInit {
 
         return result;
       } catch (error) {
-        lastError = error;
+        lastError = error instanceof Error ? error : new Error(this.getErrorMessage(error));
+        const responseData = this.getErrorResponseData(error);
         this.logger.error(
-          `UETDS call failed (attempt ${attempt}/${this.maxRetries}): ${error?.message || 'Unknown Error'}`,
+          `UETDS call failed (attempt ${attempt}/${this.maxRetries}): ${this.getErrorMessage(error)}`,
         );
-        if (error?.response?.data) {
-          this.logger.error(`UETDS raw error response: ${error.response.data}`);
+        if (responseData) {
+          this.logger.error(`UETDS raw error response: ${String(responseData)}`);
         }
 
         if (attempt < this.maxRetries) {
@@ -217,7 +238,7 @@ export class UetdsService implements OnModuleInit {
 
       await this.uetdsLogRepo.save(log);
     } catch (error) {
-      this.logger.error(`Failed to save UETDS log: ${error.message}`);
+      this.logger.error(`Failed to save UETDS log: ${this.getErrorMessage(error)}`);
     }
   }
 
@@ -291,16 +312,7 @@ export class UetdsService implements OnModuleInit {
     tenantId: string,
     tripId: string,
     uetdsSeferReferansNo: number,
-    seferInput: {
-      aracPlaka: string;
-      hareketTarihi: Date;
-      hareketSaati: string;
-      seferBitisTarihi: Date;
-      seferBitisSaati: string;
-      seferAciklama?: string;
-      aracTelefonu?: string;
-      firmaSeferNo?: string;
-    },
+    seferInput: any,
     environment?: string,
   ): Promise<any> {
     return this.executeSoapMethod(
@@ -308,12 +320,7 @@ export class UetdsService implements OnModuleInit {
       {
         wsuser: this.getWsUser(username, password),
         guncellenecekSeferReferansNo: uetdsSeferReferansNo,
-        ariziSeferBilgileriInput: {
-          ...seferInput,
-          aracPlaka: (seferInput.aracPlaka || '').trim().replace(/\s/g, ''),
-          hareketTarihi: this.formatDateForUetds(seferInput.hareketTarihi),
-          seferBitisTarihi: this.formatDateForUetds(seferInput.seferBitisTarihi),
-        },
+        ariziSeferBilgileriInput: seferInput,
       },
       tenantId,
       tripId,
@@ -352,7 +359,6 @@ export class UetdsService implements OnModuleInit {
     tripId: string,
     uetdsSeferReferansNo: number,
     newPlate: string,
-    environment?: string,
   ): Promise<any> {
     return this.executeSoapMethod(
       'seferPlakaDegistir',
@@ -363,7 +369,6 @@ export class UetdsService implements OnModuleInit {
       },
       tenantId,
       tripId,
-      environment,
     );
   }
 
@@ -442,7 +447,6 @@ export class UetdsService implements OnModuleInit {
     uetdsSeferReferansNo: number,
     tcPassportNo: string,
     reason?: string,
-    environment?: string,
   ): Promise<any> {
     return this.executeSoapMethod(
       'personelIptal',
@@ -456,7 +460,6 @@ export class UetdsService implements OnModuleInit {
       },
       tenantId,
       tripId,
-      environment,
     );
   }
 
@@ -642,7 +645,6 @@ export class UetdsService implements OnModuleInit {
     yolcuTcPassport: string,
     koltukNo: string,
     reason: string,
-    environment?: string,
   ): Promise<any> {
     return this.executeSoapMethod(
       'yolcuIptal',
@@ -657,7 +659,6 @@ export class UetdsService implements OnModuleInit {
       },
       tenantId,
       tripId,
-      environment,
     );
   }
 

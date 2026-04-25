@@ -1783,9 +1783,7 @@ html, body {
 }
 
 .route-box-label {
-  background: transparent;
   color: rgb(var(--muted-rgb));
-  box-shadow: none;
 }
 
 .route-box-value {
@@ -1984,15 +1982,14 @@ html, body {
 }
 
 .theme-mobile-scroll {
-  -webkit-overflow-scrolling: touch;
 }
 
 .theme-heading-balance {
-  text-wrap: balance;
+  overflow-wrap: break-word;
 }
 
 .theme-text-balance {
-  text-wrap: pretty;
+  overflow-wrap: break-word;
 }
 
 .theme-toggle-label {
@@ -2707,7 +2704,7 @@ html, body {
 }
 
 .theme-card-balance {
-  text-wrap: balance;
+  overflow-wrap: break-word;
 }
 
 .theme-mobile-menu-space {
@@ -3279,7 +3276,7 @@ html, body {
 }
 
 .theme-title-wrap {
-  text-wrap: balance;
+  overflow-wrap: break-word;
 }
 
 .theme-content-card {
@@ -3470,7 +3467,7 @@ html, body {
 }
 
 .theme-mobile-title-balance {
-  text-wrap: balance;
+  overflow-wrap: break-word;
 }
 
 .theme-padding-mobile {
@@ -4503,7 +4500,7 @@ html, body {
 .theme-mobile-heading-wrap h1,
 .theme-mobile-heading-wrap h2,
 .theme-mobile-heading-wrap h3 {
-  text-wrap: balance;
+  overflow-wrap: break-word;
 }
 
 .theme-card-meta-row {
