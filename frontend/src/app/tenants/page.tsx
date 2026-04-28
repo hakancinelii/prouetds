@@ -96,7 +96,7 @@ export default function TenantsPage() {
         address: tenant.address || '',
         subscriptionPlan: tenant.subscriptionPlan || 'A-10',
         isActive: tenant.isActive ?? true,
-        adminEmail: '', // Cannot change admin email via update easily without separate logic
+        adminEmail: '',
         adminPassword: '',
       });
     } else {
@@ -126,10 +126,15 @@ export default function TenantsPage() {
       if (editingTenant) {
         const { adminEmail, adminPassword, ...updateData } = formData;
         await tenantsApi.update(editingTenant.id, updateData);
-        if (adminPassword.trim()) {
-          await tenantsApi.updateAdminPassword(editingTenant.id, adminPassword.trim());
+        const nextAdminEmail = adminEmail.trim().toLowerCase();
+        const nextAdminPassword = adminPassword.trim();
+        if (nextAdminEmail || nextAdminPassword) {
+          await tenantsApi.updateAdminCredentials(editingTenant.id, {
+            email: nextAdminEmail || undefined,
+            password: nextAdminPassword || undefined,
+          });
         }
-        toast.success(adminPassword.trim() ? 'Şirket bilgileri ve panel giriş şifresi güncellendi' : 'Şirket bilgileri güncellendi');
+        toast.success(nextAdminEmail || nextAdminPassword ? 'Şirket bilgileri ve panel yönetici hesabı güncellendi' : 'Şirket bilgileri güncellendi');
       } else {
         await tenantsApi.create(formData);
         toast.success('Yeni şirket ve yönetici hesabı başarıyla oluşturuldu');
@@ -549,19 +554,19 @@ export default function TenantsPage() {
                     : 'Şirketin sisteme girebilmesi için bir admin hesabı otomatik oluşturulacaktır.'}
                 </p>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                  {!editingTenant && (
-                    <div className="space-y-2">
-                      <label className="text-[11px] font-black text-slate-400 uppercase tracking-widest ml-1">Admin E-posta</label>
-                      <input
-                        required
-                        type="email"
-                        placeholder="admin@sirket.com"
-                        className="w-full bg-slate-950 border border-slate-800 rounded-2xl px-4 py-3 text-sm text-white outline-none focus:border-cyan-500 transition-all"
-                        value={formData.adminEmail}
-                        onChange={(e) => setFormData({...formData, adminEmail: e.target.value})}
-                      />
-                    </div>
-                  )}
+                  <div className="space-y-2">
+                    <label className="text-[11px] font-black text-slate-400 uppercase tracking-widest ml-1">
+                      {editingTenant ? 'Panel Yönetici E-postası' : 'Admin E-posta'}
+                    </label>
+                    <input
+                      required={!editingTenant}
+                      type="email"
+                      placeholder={editingTenant ? 'Değişmeyecekse boş bırakın' : 'admin@sirket.com'}
+                      className="w-full bg-slate-950 border border-slate-800 rounded-2xl px-4 py-3 text-sm text-white outline-none focus:border-cyan-500 transition-all"
+                      value={formData.adminEmail}
+                      onChange={(e) => setFormData({...formData, adminEmail: e.target.value})}
+                    />
+                  </div>
                   <div className="space-y-2 md:col-span-1">
                     <label className="text-[11px] font-black text-slate-400 uppercase tracking-widest ml-1">
                       {editingTenant ? 'Panel Yönetici Giriş Şifresi' : 'Admin Giriş Şifresi'}

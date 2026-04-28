@@ -846,10 +846,14 @@ export class TenantsService {
     return this.findOne(savedTenant.id);
   }
 
-  async updateAdminPassword(id: string, password: string) {
-    const normalizedPassword = password?.trim();
-    if (!normalizedPassword) {
-      throw new BadRequestException('Panel giriş şifresi zorunludur');
+  async updateAdminCredentials(
+    id: string,
+    data: { email?: string | null; password?: string | null },
+  ) {
+    const normalizedEmail = normalizeEmail(data.email);
+    const normalizedPassword = data.password?.trim();
+    if (!normalizedEmail && !normalizedPassword) {
+      throw new BadRequestException('Panel yönetici e-postası veya şifresi gerekli');
     }
 
     const tenant = await this.tenantRepo.findOne({ where: { id } });
@@ -861,9 +865,20 @@ export class TenantsService {
     });
     if (!adminUser) throw new NotFoundException('Şirket yönetici hesabı bulunamadı');
 
-    adminUser.passwordHash = await bcrypt.hash(normalizedPassword, 12);
+    if (normalizedEmail && normalizedEmail !== adminUser.email) {
+      const existingUser = await this.userRepo.findOne({ where: { email: normalizedEmail } });
+      if (existingUser && existingUser.id !== adminUser.id) {
+        throw new ConflictException('Bu e-posta adresi zaten kullanılıyor');
+      }
+      adminUser.email = normalizedEmail;
+      tenant.contactEmail = tenant.contactEmail || normalizedEmail;
+    }
+    if (normalizedPassword) {
+      adminUser.passwordHash = await bcrypt.hash(normalizedPassword, 12);
+    }
     adminUser.isActive = true;
     await this.userRepo.save(adminUser);
+    await this.tenantRepo.save(tenant);
 
     return { ok: true, userId: adminUser.id, email: adminUser.email };
   }
