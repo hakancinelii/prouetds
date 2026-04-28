@@ -194,6 +194,8 @@ export const tenantsApi = {
   get: (id: string) => api.get(`/api/tenants/${id}`),
   create: (data: any) => api.post('/api/tenants', data),
   update: (id: string, data: any) => api.patch(`/api/tenants/${id}`, data),
+  updateAdminPassword: (id: string, password: string) =>
+    api.post(`/api/tenants/${id}/admin-password`, { password }),
   toggleActive: (id: string) => api.post(`/api/tenants/${id}/toggle-active`),
 };
 

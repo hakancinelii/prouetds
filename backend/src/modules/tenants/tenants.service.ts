@@ -847,6 +847,28 @@ export class TenantsService {
     return this.findOne(savedTenant.id);
   }
 
+  async updateAdminPassword(id: string, password: string) {
+    const normalizedPassword = password?.trim();
+    if (!normalizedPassword) {
+      throw new BadRequestException('Panel giriş şifresi zorunludur');
+    }
+
+    const tenant = await this.tenantRepo.findOne({ where: { id } });
+    if (!tenant) throw new NotFoundException('Firma bulunamadı');
+
+    const adminUser = await this.userRepo.findOne({
+      where: { tenantId: id, role: UserRole.COMPANY_ADMIN },
+      order: { createdAt: 'ASC' },
+    });
+    if (!adminUser) throw new NotFoundException('Şirket yönetici hesabı bulunamadı');
+
+    adminUser.passwordHash = await bcrypt.hash(normalizedPassword, 12);
+    adminUser.isActive = true;
+    await this.userRepo.save(adminUser);
+
+    return { ok: true, userId: adminUser.id, email: adminUser.email };
+  }
+
   async update(id: string, data: Partial<Tenant>, role?: UserRole) {
     const tenant = await this.tenantRepo.findOne({ where: { id } });
     if (!tenant) throw new NotFoundException('Firma bulunamadı');

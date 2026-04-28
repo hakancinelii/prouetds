@@ -62,6 +62,12 @@ export class TenantsController {
     return this.tenantsService.update(normalizedId, data, role);
   }
 
+  @Post(':id/admin-password')
+  @Roles(UserRole.SUPER_ADMIN)
+  updateAdminPassword(@Param('id') id: string, @Body() data: any) {
+    return this.tenantsService.updateAdminPassword(id, data.password);
+  }
+
   @Post(':id/toggle-active')
   @Roles(UserRole.SUPER_ADMIN)
   toggleActive(@Param('id') id: string) {

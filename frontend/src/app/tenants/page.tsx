@@ -124,10 +124,12 @@ export default function TenantsPage() {
     e.preventDefault();
     try {
       if (editingTenant) {
-        // Remove admin fields for update as backend might not expect them here
         const { adminEmail, adminPassword, ...updateData } = formData;
         await tenantsApi.update(editingTenant.id, updateData);
-        toast.success('Şirket bilgileri güncellendi');
+        if (adminPassword.trim()) {
+          await tenantsApi.updateAdminPassword(editingTenant.id, adminPassword.trim());
+        }
+        toast.success(adminPassword.trim() ? 'Şirket bilgileri ve panel giriş şifresi güncellendi' : 'Şirket bilgileri güncellendi');
       } else {
         await tenantsApi.create(formData);
         toast.success('Yeni şirket ve yönetici hesabı başarıyla oluşturuldu');
@@ -537,14 +539,17 @@ export default function TenantsPage() {
                 </div>
               </div>
 
-              {/* ADMIN ACCOUNT SUB-FORM - ONLY FOR NEW TENANTS */}
-              {!editingTenant && (
-                <div className="p-6 bg-slate-800/20 border border-slate-700/50 rounded-3xl space-y-6">
-                  <h3 className="text-sm font-black text-white flex items-center gap-3 uppercase tracking-[0.2em]">
-                    <Users size={20} className="text-cyan-400" /> Şirket Yönetici Hesabı
-                  </h3>
-                  <p className="text-xs text-slate-500 leading-relaxed italic">Şirketin sisteme girebilmesi için bir admin hesabı otomatik oluşturulacaktır.</p>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div className="p-6 bg-slate-800/20 border border-slate-700/50 rounded-3xl space-y-6">
+                <h3 className="text-sm font-black text-white flex items-center gap-3 uppercase tracking-[0.2em]">
+                  <Users size={20} className="text-cyan-400" /> Şirket Yönetici Hesabı
+                </h3>
+                <p className="text-xs text-slate-500 leading-relaxed italic">
+                  {editingTenant
+                    ? 'Mevcut şirket yöneticisinin panele giriş şifresini değiştirmek için yeni şifre girin. Boş bırakırsanız değişmez.'
+                    : 'Şirketin sisteme girebilmesi için bir admin hesabı otomatik oluşturulacaktır.'}
+                </p>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  {!editingTenant && (
                     <div className="space-y-2">
                       <label className="text-[11px] font-black text-slate-400 uppercase tracking-widest ml-1">Admin E-posta</label>
                       <input
@@ -556,20 +561,22 @@ export default function TenantsPage() {
                         onChange={(e) => setFormData({...formData, adminEmail: e.target.value})}
                       />
                     </div>
-                    <div className="space-y-2">
-                      <label className="text-[11px] font-black text-slate-400 uppercase tracking-widest ml-1">Admin Giriş Şifresi</label>
-                      <input
-                        required
-                        type="password"
-                        placeholder="••••••••"
-                        className="w-full bg-slate-950 border border-slate-800 rounded-2xl px-4 py-3 text-sm text-white outline-none focus:border-cyan-500 transition-all font-mono"
-                        value={formData.adminPassword}
-                        onChange={(e) => setFormData({...formData, adminPassword: e.target.value})}
-                      />
-                    </div>
+                  )}
+                  <div className="space-y-2 md:col-span-1">
+                    <label className="text-[11px] font-black text-slate-400 uppercase tracking-widest ml-1">
+                      {editingTenant ? 'Panel Yönetici Giriş Şifresi' : 'Admin Giriş Şifresi'}
+                    </label>
+                    <input
+                      required={!editingTenant}
+                      type="password"
+                      placeholder={editingTenant ? 'Değişmeyecekse boş bırakın' : '••••••••'}
+                      className="w-full bg-slate-950 border border-slate-800 rounded-2xl px-4 py-3 text-sm text-white outline-none focus:border-cyan-500 transition-all font-mono"
+                      value={formData.adminPassword}
+                      onChange={(e) => setFormData({...formData, adminPassword: e.target.value})}
+                    />
                   </div>
                 </div>
-              )}
+              </div>
 
               <div className="space-y-6">
                 <h3 className="text-xs font-black text-slate-500 uppercase tracking-[0.2em] border-l-4 border-slate-700 pl-3">İletişim ve Adres</h3>
