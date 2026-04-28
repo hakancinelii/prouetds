@@ -150,7 +150,14 @@ const publicPanels = [
   'Bildirim ve belge erişimi',
 ];
 
-const quickLinks = ['Ana Sayfa', 'Hakkımızda', 'Blog', 'İletişim', 'U-ETDS Giriş'];
+const quickLinks = [
+  { label: 'Ana Sayfa', href: '/' },
+  { label: 'Hakkımızda', href: '/#u-etds-sistemi' },
+  { label: 'Blog', href: '/' },
+  { label: 'İletişim', href: '/#iletisim' },
+  { label: 'U-ETDS Giriş', href: '/login' },
+  { label: 'Gizlilik Politikası', href: '/gizlilik-politikasi' },
+];
 const whatsappHref = 'https://wa.me/905545812034';
 const landingBadge = 'Türkiye’nin UETDS operasyon paneli';
 const landingTitle = 'UETDS verilerinizi Ulaştırma Bakanlığına daha hızlı, daha temiz ve daha az hatayla gönderin.';
@@ -295,7 +302,7 @@ export default function Home() {
           </div>
         </section>
 
-        <section className="mt-24 grid gap-10 lg:grid-cols-[0.9fr_1.1fr] lg:items-start">
+        <section id="u-etds-sistemi" className="mt-24 grid gap-10 lg:grid-cols-[0.9fr_1.1fr] lg:items-start">
           <div className="space-y-4">
             <p className="text-sm font-semibold uppercase tracking-[0.2em] text-emerald-600 dark:text-emerald-300">
               U-ETDS sistemi nedir?
@@ -562,7 +569,11 @@ export default function Home() {
                 <p className="text-sm font-semibold uppercase tracking-[0.18em] text-slate-500 dark:text-slate-400">Hızlı Erişim</p>
                 <ul className="mt-4 space-y-2 text-sm text-slate-700 dark:text-slate-300">
                   {quickLinks.map((item) => (
-                    <li key={item}>{item}</li>
+                    <li key={item.label}>
+                      <Link href={item.href} className="transition hover:text-emerald-600 dark:hover:text-emerald-300">
+                        {item.label}
+                      </Link>
+                    </li>
                   ))}
                 </ul>
               </div>
@@ -574,7 +585,7 @@ export default function Home() {
                   ))}
                 </ul>
               </div>
-              <div>
+              <div id="iletisim">
                 <p className="text-sm font-semibold uppercase tracking-[0.18em] text-slate-500 dark:text-slate-400">İletişim</p>
                 <p className="mt-4 text-sm text-slate-700 dark:text-slate-300">WhatsApp üzerinden hızlı iletişim kurun.</p>
                 <a
