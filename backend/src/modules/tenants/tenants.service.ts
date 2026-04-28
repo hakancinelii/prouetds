@@ -612,12 +612,14 @@ export class TenantsService {
 
     const driverTemplates = this.buildDemoDrivers(tenantId);
     const savedDrivers: Driver[] = [];
-    for (const template of driverTemplates) {
-      const driver =
-        (await this.driverRepo.findOne({
-          where: { tenantId, tcKimlikNo: template.tcKimlikNo },
-        })) || this.driverRepo.create({ tenantId, tcKimlikNo: template.tcKimlikNo });
-      Object.assign(driver, { ...template, tenantId, isActive: true });
+    for (const [index, template] of driverTemplates.entries()) {
+      const driver = drivers[index] || this.driverRepo.create({ tenantId });
+      Object.assign(driver, {
+        ...template,
+        tenantId,
+        tcKimlikNo: driver.tcKimlikNo || template.tcKimlikNo,
+        isActive: true,
+      });
       savedDrivers.push(await this.driverRepo.save(driver));
     }
 
