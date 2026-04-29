@@ -157,6 +157,7 @@ const quickLinks = [
   { label: 'İletişim', href: '/#iletisim' },
   { label: 'U-ETDS Giriş', href: '/login' },
   { label: 'Gizlilik Politikası', href: '/gizlilik-politikasi' },
+  { label: 'Hesap Silme', href: '/hesap-silme' },
 ];
 const whatsappHref = 'https://wa.me/905545812034';
 const landingBadge = 'Türkiye’nin UETDS operasyon paneli';

@@ -44,7 +44,7 @@ const sections = [
     title: '7. Kullanıcı hakları',
     body: [
       'Kullanıcılar, yürürlükteki mevzuat kapsamında kişisel verilerine erişme, yanlış veya eksik verilerin düzeltilmesini isteme, işleme şartları ortadan kalkmışsa silme veya anonimleştirme talep etme, işleme faaliyetleri hakkında bilgi isteme ve ilgili diğer haklarını kullanma hakkına sahiptir.',
-      'Bu haklara ilişkin talepler WhatsApp veya destek kanalları üzerinden ProUETDS ekibine iletilebilir.',
+      'Bu haklara ilişkin talepler WhatsApp veya destek kanalları üzerinden ProUETDS ekibine iletilebilir. Hesap ve veri silme talebi için /hesap-silme sayfasındaki adımlar izlenebilir.',
     ],
   },
   {
