@@ -715,7 +715,11 @@ export class TenantsService {
         await this.seedDemoTenantData(existingTenant, existingUser);
       }
 
-      await this.refreshDemoTenantSnapshot(existingTenant.id);
+      try {
+        await this.refreshDemoTenantSnapshot(existingTenant.id);
+      } catch (err) {
+        console.warn('Demo tenant refresh skipped:', err?.message || err);
+      }
 
       return {
         tenant: await this.decorateTenant(existingTenant),
