@@ -22,7 +22,7 @@ export default function App() {
         renderLoading={() => (
           <View style={styles.loadingShell}>
             <ActivityIndicator size="large" color="#10b981" />
-            <Text style={styles.loadingTitle}>ProUETDS yükleniyor</Text>
+            <Text style={styles.loadingTitle}>U-ETDS yükleniyor</Text>
             <Text style={styles.loadingText}>
               UETDS operasyon paneli hazırlanıyor.
             </Text>

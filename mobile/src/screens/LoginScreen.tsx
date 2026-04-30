@@ -59,7 +59,7 @@ export default function LoginScreen() {
           <View style={styles.logoContainer}>
             <ShieldCheck size={48} color={COLORS.primary} strokeWidth={2.5} />
           </View>
-          <Text style={styles.title}>Pro<Text style={{color: COLORS.primary}}>UETDS</Text></SaaS></Text>
+          <Text style={styles.title}>U<Text style={{color: COLORS.primary}}>-ETDS</Text></SaaS></Text>
           <Text style={styles.subtitle}>Şoför Yönetim Paneli</Text>
         </View>
 
@@ -109,7 +109,7 @@ export default function LoginScreen() {
 
         {/* Footer */}
         <View style={styles.footer}>
-          <Text style={styles.footerText}>ProUETDS v1.0.0 © 2026</Text>
+          <Text style={styles.footerText}>U-ETDS v1.0.0 © 2026</Text>
           <Text style={styles.footerSubText}>TC KDGM Güvenli Entegrasyon</Text>
         </View>
       </View>

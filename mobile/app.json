@@ -1,6 +1,6 @@
 {
   "expo": {
-    "name": "ProUETDS",
+    "name": "U-ETDS",
     "slug": "prouetds-mobile",
     "version": "1.0.0",
     "orientation": "portrait",
@@ -38,8 +38,9 @@
     ],
     "extra": {
       "eas": {
-        "projectId": "prouetds-mobile"
+        "projectId": "34d80044-adb5-4713-a5f9-85b840dec326"
       }
-    }
+    },
+    "owner": "hakancineli"
   }
 }
