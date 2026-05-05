@@ -1056,22 +1056,63 @@ export class TripsService {
     };
   }
 
+  private isNonNameLine(line: string): boolean {
+    // Date patterns: 05.05.2026, 2026-05-05, 05/05/2026
+    if (/^\d{2}[.\/-]\d{2}[.\/-]\d{4}$/.test(line)) return true;
+    if (/^\d{4}-\d{2}-\d{2}$/.test(line)) return true;
+    // Time patterns: 22:00, 09:30
+    if (/^\d{1,2}:\d{2}$/.test(line)) return true;
+    // Plate patterns: 34ABC123, 34 BDD 991
+    if (/^\d{2}\s*[A-ZÇĞİÖŞÜa-zçğıöşü]{1,3}\s*\d{2,4}$/i.test(line)) return true;
+    // Lines starting with PLAKA, şoför, driver keywords
+    if (/^(plaka|şoför|sofor|driver|araç|arac)\b/i.test(line)) return true;
+    // Lines that are just single short words (locations, keywords)
+    const words = line.split(/\s+/).filter(Boolean);
+    if (words.length < 2) return true;
+    // Lines containing only numbers
+    if (/^\d+$/.test(line.replace(/\s/g, ''))) return true;
+    // Known location keywords
+    if (/^(saw|ist|istanbul|ankara|izmir|fatih|sisli|şişli|taksim|pendik|kadıköy|kadikoy|arnavutköy|arnavutkoy)\b/i.test(line)) return true;
+    // Lines with Saw. / İst. prefix (origin/dest shorthand like "Saw. Fatih")
+    if (/^(saw|ist|hav)\.\s/i.test(line)) return true;
+    return false;
+  }
+
   private parsePassengersFromMessage(message: string): Partial<Passenger>[] {
     const lines = message.split(/\n/).map((line) => line.trim()).filter(Boolean);
     const passengers: Partial<Passenger>[] = [];
-    const namePattern = /^(?:Mr\.?|Mrs\.?|Ms\.?|Miss\.?)\s*(.+)$/i;
+    const titlePattern = /^(?:Mr\.?|Mrs\.?|Ms\.?|Miss\.?)\s*(.+)$/i;
 
     for (const line of lines) {
-      const match = line.match(namePattern);
-      if (!match) continue;
+      let fullName = '';
 
-      const fullName = normalizePassengerName(match[1]);
-      if (!fullName || fullName.length < 2) continue;
+      // First try: Mr./Mrs. prefix
+      const titleMatch = line.match(titlePattern);
+      if (titleMatch) {
+        fullName = normalizePassengerName(titleMatch[1]);
+      } else {
+        // Second try: plain name line (at least 2 words, all alphabetic/spaces)
+        if (this.isNonNameLine(line)) continue;
+        // Check if line is mostly alphabetic (allow Turkish chars, spaces, dots)
+        const cleaned = line.replace(/[.\-']/g, '');
+        if (!/^[A-Za-zÀ-ÿÇçĞğİıÖöŞşÜü\s]+$/.test(cleaned)) continue;
+        fullName = normalizePassengerName(line);
+      }
+
+      if (!fullName || fullName.length < 3) continue;
 
       const parts = fullName.split(/\s+/);
+      if (parts.length < 2) continue;
+
       const firstName = parts.slice(0, -1).join(' ') || parts[0] || 'Yolcu';
-      const lastName = parts.length > 1 ? parts[parts.length - 1] : `${passengers.length + 1}`;
+      const lastName = parts[parts.length - 1];
       const autoPassportNo = `MSG${Date.now()}${passengers.length + 1}`;
+
+      // Avoid duplicates
+      const isDuplicate = passengers.some(
+        (p) => p.firstName === normalizePassengerName(firstName) && p.lastName === normalizePassengerName(lastName),
+      );
+      if (isDuplicate) continue;
 
       passengers.push({
         firstName: normalizePassengerName(firstName),
