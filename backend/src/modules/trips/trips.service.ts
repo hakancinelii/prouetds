@@ -827,6 +827,87 @@ export class TripsService {
     );
   }
 
+  async getStats(tenantId: string, query: any = {}) {
+    const period = query.period === 'weekly' ? 7 : (query.period === 'monthly' ? 30 : 1);
+    
+    // Calculate the start date based on period
+    const startDate = new Date();
+    startDate.setDate(startDate.getDate() - period);
+    const startDateStr = startDate.toISOString().slice(0, 10);
+
+    const qb = this.tripRepo
+      .createQueryBuilder('trip')
+      .where('trip.tenantId = :tenantId', { tenantId })
+      .andWhere('trip.departureDate >= :startDate', { startDate: startDateStr })
+      .andWhere('trip.status != :cancelledStatus', { cancelledStatus: TripStatus.CANCELLED });
+
+    const trips = await qb.getMany();
+
+    // Calculate hourly distribution
+    const hourly: Record<string, number> = {};
+    for (let i = 0; i < 24; i++) {
+      const hourStr = i.toString().padStart(2, '0');
+      hourly[hourStr] = 0;
+    }
+
+    // Calculate daily distribution
+    const daily: Record<string, number> = {};
+
+    // Calculate route density
+    const routes: Record<string, number> = {};
+
+    for (const trip of trips) {
+      // Hourly
+      if (trip.departureTime) {
+        const hour = trip.departureTime.split(':')[0];
+        if (hour && hourly[hour] !== undefined) {
+          hourly[hour]++;
+        }
+      }
+
+      // Daily
+      if (trip.departureDate) {
+        if (!daily[trip.departureDate]) {
+          daily[trip.departureDate] = 0;
+        }
+        daily[trip.departureDate]++;
+      }
+
+      // Routes
+      const origin = trip.originPlace || 'Bilinmiyor';
+      const dest = trip.destPlace || 'Bilinmiyor';
+      const routeKey = `${origin} -> ${dest}`;
+      if (!routes[routeKey]) {
+        routes[routeKey] = 0;
+      }
+      routes[routeKey]++;
+    }
+
+    // Sort routes by density
+    const topRoutes = Object.entries(routes)
+      .map(([route, count]) => ({ route, count }))
+      .sort((a, b) => b.count - a.count)
+      .slice(0, 10);
+
+    // Format hourly array
+    const hourlyDistribution = Object.entries(hourly)
+      .map(([hour, count]) => ({ hour: `${hour}:00`, count }))
+      .sort((a, b) => a.hour.localeCompare(b.hour));
+
+    // Format daily array
+    const dailyDistribution = Object.entries(daily)
+      .map(([date, count]) => ({ date, count }))
+      .sort((a, b) => a.date.localeCompare(b.date));
+
+    return {
+      totalTrips: trips.length,
+      periodDays: period,
+      topRoutes,
+      hourlyDistribution,
+      dailyDistribution,
+    };
+  }
+
   async findAll(tenantId: string, query: any = {}) {
     const page = Number(query.page) > 0 ? Number(query.page) : 1;
     const limit = Number(query.limit) > 0 ? Number(query.limit) : 20;
