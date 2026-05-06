@@ -37,6 +37,11 @@ export class TripsController {
   findAll(@TenantId() tenantId: string, @Query() query: any) {
     return this.tripsService.findAll(tenantId, query);
   }
+  @Get('stats')
+  @Roles(UserRole.COMPANY_ADMIN, UserRole.OPERATOR)
+  getStats(@TenantId() tenantId: string, @Query() query: any) {
+    return this.tripsService.getStats(tenantId, query);
+  }
 
   @Get('driver/my-trips')
   @Roles(UserRole.DRIVER, UserRole.COMPANY_ADMIN, UserRole.OPERATOR)
@@ -110,16 +115,6 @@ export class TripsController {
     return this.tripsService.update(id, tenantId, data);
   }
 
-  @Patch(':id/uetds-sync')
-  @Roles(UserRole.COMPANY_ADMIN, UserRole.OPERATOR)
-  updateSentTripOnUetds(
-    @Param('id') id: string,
-    @TenantId() tenantId: string,
-    @Body() data: any,
-  ) {
-    return this.tripsService.updateSentTripOnUetds(id, tenantId, data);
-  }
-
   @Post(':id/groups')
   @Roles(UserRole.COMPANY_ADMIN, UserRole.OPERATOR)
   addGroup(
@@ -137,17 +132,7 @@ export class TripsController {
     @TenantId() tenantId: string,
     @Body() data: any,
   ) {
-    return this.tripsService.addPersonnelAndSyncUetds(id, tenantId, data);
-  }
-
-  @Post(':id/personnel/:personnelId/remove')
-  @Roles(UserRole.COMPANY_ADMIN, UserRole.OPERATOR)
-  removePersonnel(
-    @Param('personnelId') personnelId: string,
-    @TenantId() tenantId: string,
-    @Body('reason') reason?: string,
-  ) {
-    return this.tripsService.removePersonnelAndSyncUetds(personnelId, tenantId, reason);
+    return this.tripsService.addPersonnel(id, tenantId, data);
   }
 
   @Post('groups/:groupId/passengers')
@@ -156,27 +141,7 @@ export class TripsController {
     @TenantId() tenantId: string,
     @Body() data: any,
   ) {
-    return this.tripsService.addPassengerAndSyncUetds(groupId, tenantId, data);
-  }
-
-  @Patch('passengers/:passengerId')
-  @Roles(UserRole.COMPANY_ADMIN, UserRole.OPERATOR)
-  updatePassenger(
-    @Param('passengerId') passengerId: string,
-    @TenantId() tenantId: string,
-    @Body() data: any,
-  ) {
-    return this.tripsService.updatePassengerAndSyncUetds(passengerId, tenantId, data);
-  }
-
-  @Post('passengers/:passengerId/remove')
-  @Roles(UserRole.COMPANY_ADMIN, UserRole.OPERATOR)
-  removePassenger(
-    @Param('passengerId') passengerId: string,
-    @TenantId() tenantId: string,
-    @Body('reason') reason?: string,
-  ) {
-    return this.tripsService.removePassengerAndSyncUetds(passengerId, tenantId, reason);
+    return this.tripsService.addPassenger(groupId, tenantId, data);
   }
 
   @Post('groups/:groupId/passengers/bulk')
