@@ -37,7 +37,7 @@ const PRIORITY_ISTANBUL_DISTRICTS = [
 
 const sortDistrictsForTripFlow = (
   provinceCode: number,
-  districts: ReadonlyArray<{ code: number; name: string }>,
+  districts: Array<{ code: number; name: string }>,
 ) => {
   if (provinceCode !== 34) return districts;
 
@@ -107,7 +107,7 @@ const getSelectionState = (
 
 const getSelectionStateFromValue = (
   value: string,
-  options: ReadonlyArray<{ value: string; districtCode: string; place: string }>,
+  options: Array<{ value: string; districtCode: string; place: string }>,
 ) => {
   const selected = options.find((option) => option.value === value);
   return getSelectionState(selected);
@@ -115,7 +115,7 @@ const getSelectionStateFromValue = (
 
 const getSelectionStateFromDistrictCode = (
   districtCode: string,
-  options: ReadonlyArray<{ value: string; districtCode: string; place: string }>,
+  options: Array<{ value: string; districtCode: string; place: string }>,
 ) => {
   const selected = options.find((option) => option.districtCode === districtCode);
   return getSelectionState(selected);
@@ -125,7 +125,7 @@ const buildTripPlacePayload = (
   selectionValue: string,
   fallbackDistrictCode: string,
   fallbackPlace: string,
-  options: ReadonlyArray<{ value: string; districtCode: string; place: string }>,
+  options: Array<{ value: string; districtCode: string; place: string }>,
 ) => {
   const selectedByValue = options.find((option) => option.value === selectionValue);
   const selected =
@@ -154,7 +154,7 @@ const getSelectionValue = (selectionValue: string, districtCode: string) => {
 
 const getDistrictSelectOptions = (
   provinceCode: number,
-  districts: ReadonlyArray<{ code: number; name: string }>,
+  districts: Array<{ code: number; name: string }>,
 ) => {
   if (provinceCode !== 34) {
     return districts.map((district) => ({
@@ -262,8 +262,8 @@ const handleDriverSelect = (
 const getDriverLabel = (driver: any) =>
   driver ? `${driver.firstName} ${driver.lastName} · ${driver.tcKimlikNo}` : '';
 
-const TRIPS_HELPER_TEXT_CLASS = 'mt-1 text-[11px] text-slate-200 dark:text-slate-400';
-const TRIPS_SUGGESTED_BADGE_CLASS = 'mt-2 rounded-xl theme-note px-3 py-2 text-xs text-slate-100 dark:text-slate-300';
+const TRIPS_HELPER_TEXT_CLASS = 'mt-1 text-[11px] text-slate-500 dark:text-slate-400';
+const TRIPS_SUGGESTED_BADGE_CLASS = 'mt-2 rounded-xl theme-note px-3 py-2 text-xs text-slate-700 dark:text-slate-300';
 
 void getDriverLabel;
 void getSuggestedDriver;
@@ -302,19 +302,13 @@ export default function TripsPage() {
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState('');
   const [showCreateModal, setShowCreateModal] = useState(false);
-  const [showImportModal, setShowImportModal] = useState(false);
   const [showAiPanel, setShowAiPanel] = useState(false);
   const [aiMessage, setAiMessage] = useState('');
   const [aiPassports, setAiPassports] = useState<File[]>([]);
   const [aiRunning, setAiRunning] = useState(false);
   const [aiResult, setAiResult] = useState<any>(null);
-  const [importing, setImporting] = useState(false);
-  const [importRefNo, setImportRefNo] = useState('');
   const [vehicles, setVehicles] = useState<any[]>([]);
   const [drivers, setDrivers] = useState<any[]>([]);
-  const [pdfUrl, setPdfUrl] = useState<string | null>(null);
-  const [pdfTrip, setPdfTrip] = useState<any>(null);
-  const [pdfLoadingTripId, setPdfLoadingTripId] = useState<string | null>(null);
 
   // Create form
   const [form, setForm] = useState(getDefaultCreateForm);
@@ -376,7 +370,7 @@ export default function TripsPage() {
   const syncSelectionState = (
     field: 'originSelection' | 'destSelection',
     value: string,
-    options: ReadonlyArray<{ value: string; districtCode: string; place: string }>,
+    options: Array<{ value: string; districtCode: string; place: string }>,
   ) => {
     const selectionState = getSelectionStateFromValue(value, options);
 
@@ -403,7 +397,7 @@ export default function TripsPage() {
   const handleDistrictSelection = (
     field: 'originSelection' | 'destSelection',
     value: string,
-    options: ReadonlyArray<{ value: string; districtCode: string; place: string }>,
+    options: Array<{ value: string; districtCode: string; place: string }>,
   ) => {
     syncSelectionState(field, value, options);
   };
@@ -469,65 +463,6 @@ export default function TripsPage() {
     return () => clearTimeout(timeout);
   }, [search]);
 
-  useEffect(() => {
-    return () => {
-      if (pdfUrl) {
-        window.URL.revokeObjectURL(pdfUrl);
-      }
-    };
-  }, [pdfUrl]);
-
-  const parsePdfError = async (blob: Blob) => {
-    try {
-      const text = await blob.text();
-      const json = JSON.parse(text);
-      return json.message || json.sonucMesaji || 'PDF alınamadı';
-    } catch {
-      return 'PDF alınamadı';
-    }
-  };
-
-  const replacePdfUrl = (nextUrl: string | null) => {
-    setPdfUrl((currentUrl) => {
-      if (currentUrl) {
-        window.URL.revokeObjectURL(currentUrl);
-      }
-      return nextUrl;
-    });
-  };
-
-  const handleOpenTripPdf = async (trip: any) => {
-    if (!trip?.uetdsSeferRefNo) {
-      toast.error('Bu sefer için UETDS PDF referansı yok');
-      return;
-    }
-
-    setPdfLoadingTripId(trip.id);
-    try {
-      const res = await tripsApi.getPdf(trip.id);
-      const contentType = res.headers['content-type'];
-      if (contentType && !contentType.includes('application/pdf')) {
-        throw new Error(await parsePdfError(res.data));
-      }
-      replacePdfUrl(window.URL.createObjectURL(res.data as Blob));
-      setPdfTrip(trip);
-    } catch (err: any) {
-      toast.error(err.message || 'PDF görüntülenemedi');
-    } finally {
-      setPdfLoadingTripId(null);
-    }
-  };
-
-  const handleClosePdfViewer = () => {
-    setPdfTrip(null);
-    replacePdfUrl(null);
-  };
-
-  const handleOpenPdfInNewTab = () => {
-    if (!pdfUrl) return;
-    window.open(pdfUrl, '_blank', 'noopener,noreferrer');
-  };
-
   const handleCreate = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
@@ -570,29 +505,6 @@ export default function TripsPage() {
       setAiResult(err.response?.data || null);
     } finally {
       setAiRunning(false);
-    }
-  };
-
-  const handleImportFromUetds = async (e: React.FormEvent) => {
-    e.preventDefault();
-    const uetdsSeferReferansNo = Number(importRefNo);
-    if (!uetdsSeferReferansNo || Number.isNaN(uetdsSeferReferansNo)) {
-      toast.error('Geçerli UETDS sefer referans numarası girin');
-      return;
-    }
-
-    setImporting(true);
-    try {
-      const res = await tripsApi.importFromUetds(uetdsSeferReferansNo);
-      toast.success('Sefer UETDS üzerinden içe aktarıldı');
-      setShowImportModal(false);
-      setImportRefNo('');
-      fetchTrips();
-      router.push(`/trips/${res.data.id}`);
-    } catch (err: any) {
-      toast.error(err.response?.data?.message || 'UETDS seferi içe aktarılamadı');
-    } finally {
-      setImporting(false);
     }
   };
 
@@ -659,23 +571,13 @@ export default function TripsPage() {
       return;
     }
 
-    const whatsappWindow = window.open('', '_blank', 'noopener,noreferrer');
-
     try {
       const shareRes = await tripsApi.getPdfShareLink(trip.id, getApiBaseUrl());
       const pdfShareUrl = shareRes.data?.pdfShareUrl || '';
       const message = buildDriverWhatsAppMessage(trip, primaryDriver, pdfShareUrl);
       const whatsappUrl = `https://api.whatsapp.com/send/?phone=${phone}&text=${encodeURIComponent(message)}&type=phone_number&app_absent=0`;
-
-      if (whatsappWindow) {
-        whatsappWindow.location.href = whatsappUrl;
-      } else {
-        window.location.href = whatsappUrl;
-      }
+      window.open(whatsappUrl, '_blank', 'noopener,noreferrer');
     } catch (err: any) {
-      if (whatsappWindow) {
-        whatsappWindow.close();
-      }
       toast.error(err.response?.data?.message || 'PDF paylaşım linki oluşturulamadı');
     }
   };
@@ -701,21 +603,21 @@ export default function TripsPage() {
       </button>
 
       {showAiPanel && (
-        <div className="fixed inset-0 z-50 flex justify-end bg-slate-950/45 backdrop-blur-sm">
-          <aside className="h-full w-full max-w-xl overflow-y-auto border-l border-emerald-300/20 bg-slate-950 text-slate-100 shadow-2xl">
-            <div className="sticky top-0 z-10 border-b border-white/10 bg-slate-950/95 px-6 py-5 backdrop-blur">
+        <div className="fixed inset-0 z-50 flex justify-end bg-black/30 dark:bg-slate-950/45 backdrop-blur-sm">
+          <aside className="h-full w-full max-w-xl overflow-y-auto border-l border-slate-200 dark:border-emerald-300/20 bg-white dark:bg-slate-950 text-slate-900 dark:text-slate-100 shadow-2xl">
+            <div className="sticky top-0 z-10 border-b border-slate-200 dark:border-white/10 bg-white/95 dark:bg-slate-950/95 px-6 py-5 backdrop-blur">
               <div className="flex items-start justify-between gap-4">
                 <div>
-                  <p className="text-xs font-semibold uppercase tracking-[0.28em] text-emerald-300">AI Autopilot</p>
-                  <h2 className="mt-2 text-2xl font-semibold tracking-tight text-white">Mesajdan UETDS seferi oluştur</h2>
-                  <p className="mt-2 text-sm text-slate-400">
-                    Hareket zamanı otomatik şimdiki saat, bitiş aynı gün 23:59 alınır; pasaportlardan yolcular okunur ve sefer UETDS’ye gönderilir.
+                  <p className="text-xs font-semibold uppercase tracking-[0.28em] text-emerald-600 dark:text-emerald-300">AI Autopilot</p>
+                  <h2 className="mt-2 text-2xl font-semibold tracking-tight text-slate-900 dark:text-white">Mesajdan UETDS seferi oluştur</h2>
+                  <p className="mt-2 text-sm text-slate-500 dark:text-slate-400">
+                    Hareket zamanı otomatik şimdiki saat, bitiş aynı gün 23:59 alınır; pasaportlardan yolcular okunur ve sefer UETDS'ye gönderilir.
                   </p>
                 </div>
                 <button
                   type="button"
                   onClick={() => setShowAiPanel(false)}
-                  className="rounded-full p-2 text-slate-400 transition hover:bg-white/10 hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-300"
+                  className="rounded-full p-2 text-slate-400 dark:text-slate-400 transition hover:bg-slate-100 dark:hover:bg-white/10 hover:text-slate-700 dark:hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-300"
                   aria-label="AI panelini kapat"
                 >
                   <X size={20} />
@@ -725,7 +627,7 @@ export default function TripsPage() {
 
             <form onSubmit={handleAiAutopilot} className="space-y-5 px-6 py-6">
               <div>
-                <label className="text-sm font-medium text-slate-200">Operasyon mesajı</label>
+                <label className="text-sm font-medium text-slate-700 dark:text-slate-200">Operasyon mesajı</label>
                 <textarea
                   value={aiMessage}
                   onChange={(e) => {
@@ -733,17 +635,17 @@ export default function TripsPage() {
                     setAiResult(null);
                   }}
                   rows={6}
-                  className="mt-2 w-full resize-none rounded-3xl border border-white/10 bg-white/[0.04] px-4 py-3 text-sm text-white outline-none transition placeholder:text-slate-500 focus:border-emerald-300/60 focus:ring-4 focus:ring-emerald-300/10"
-                  placeholder="Örn: İstanbul Havalimanı’ndan Şişli Hilton’a transfer. Plaka 34ABC123. Şoför Mehmet. Pasaportlar ektedir."
+                  className="mt-2 w-full resize-none rounded-3xl border border-slate-200 dark:border-white/10 bg-slate-50 dark:bg-white/[0.04] px-4 py-3 text-sm text-slate-900 dark:text-white outline-none transition placeholder:text-slate-400 dark:placeholder:text-slate-500 focus:border-emerald-500 dark:focus:border-emerald-300/60 focus:ring-4 focus:ring-emerald-500/10 dark:focus:ring-emerald-300/10"
+                  placeholder="Örn: İstanbul Havalimanı'ndan Şişli Hilton'a transfer. Plaka 34ABC123. Şoför Mehmet. Pasaportlar ektedir."
                 />
               </div>
 
               <div>
-                <label className="text-sm font-medium text-slate-200">Pasaport görselleri</label>
-                <label className="mt-2 flex cursor-pointer flex-col items-center justify-center rounded-3xl border border-dashed border-emerald-300/35 bg-emerald-300/[0.04] px-4 py-8 text-center transition hover:bg-emerald-300/[0.08]">
-                  <UploadCloud size={28} className="text-emerald-300" />
-                  <span className="mt-3 text-sm font-medium text-slate-200">Görselleri seç veya kameradan yükle</span>
-                  <span className="mt-1 text-xs text-slate-500">JPEG, PNG, WEBP, HEIC · çoklu seçim desteklenir</span>
+                <label className="text-sm font-medium text-slate-700 dark:text-slate-200">Pasaport görselleri</label>
+                <label className="mt-2 flex cursor-pointer flex-col items-center justify-center rounded-3xl border border-dashed border-emerald-500/40 dark:border-emerald-300/35 bg-emerald-50 dark:bg-emerald-300/[0.04] px-4 py-8 text-center transition hover:bg-emerald-100 dark:hover:bg-emerald-300/[0.08]">
+                  <UploadCloud size={28} className="text-emerald-600 dark:text-emerald-300" />
+                  <span className="mt-3 text-sm font-medium text-slate-700 dark:text-slate-200">Görselleri seç veya kameradan yükle</span>
+                  <span className="mt-1 text-xs text-slate-400 dark:text-slate-500">JPEG, PNG, WEBP, HEIC · çoklu seçim desteklenir</span>
                   <input
                     type="file"
                     accept="image/jpeg,image/png,image/webp,image/heic"
@@ -753,11 +655,11 @@ export default function TripsPage() {
                   />
                 </label>
                 {aiPassports.length > 0 && (
-                  <div className="mt-3 rounded-2xl border border-white/10 bg-white/[0.035] p-3">
-                    <p className="text-xs font-semibold uppercase tracking-wider text-slate-400">Yüklenecek pasaportlar</p>
+                  <div className="mt-3 rounded-2xl border border-slate-200 dark:border-white/10 bg-slate-50 dark:bg-white/[0.035] p-3">
+                    <p className="text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400">Yüklenecek pasaportlar</p>
                     <div className="mt-2 flex flex-wrap gap-2">
                       {aiPassports.map((file) => (
-                        <span key={`${file.name}-${file.size}`} className="rounded-full bg-emerald-300/10 px-3 py-1 text-xs text-emerald-100">
+                        <span key={`${file.name}-${file.size}`} className="rounded-full bg-emerald-100 dark:bg-emerald-300/10 px-3 py-1 text-xs text-emerald-700 dark:text-emerald-100">
                           {file.name}
                         </span>
                       ))}
@@ -769,7 +671,7 @@ export default function TripsPage() {
               <button
                 type="submit"
                 disabled={aiRunning}
-                className="flex min-h-12 w-full items-center justify-center gap-2 rounded-2xl bg-emerald-300 px-4 py-3 text-sm font-bold text-slate-950 transition hover:bg-emerald-200 disabled:cursor-not-allowed disabled:opacity-60"
+                className="flex min-h-12 w-full items-center justify-center gap-2 rounded-2xl bg-emerald-500 dark:bg-emerald-300 px-4 py-3 text-sm font-bold text-white dark:text-slate-950 transition hover:bg-emerald-600 dark:hover:bg-emerald-200 disabled:cursor-not-allowed disabled:opacity-60"
               >
                 {aiRunning ? <Loader2 size={18} className="animate-spin" /> : <BrainCircuit size={18} />}
                 {aiRunning ? 'Autopilot seferi hazırlıyor' : 'Autopilot’u çalıştır ve UETDS’ye gönder'}
@@ -777,11 +679,11 @@ export default function TripsPage() {
             </form>
 
             {aiResult && (
-              <div className="mx-6 mb-8 rounded-3xl border border-white/10 bg-white/[0.045] p-5">
+              <div className="mx-6 mb-8 rounded-3xl border border-slate-200 dark:border-white/10 bg-slate-50 dark:bg-white/[0.045] p-5">
                 <div className="flex items-center justify-between gap-3">
                   <div>
-                    <p className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-400">Sonuç</p>
-                    <h3 className="mt-1 text-lg font-semibold text-white">
+                    <p className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-500 dark:text-slate-400">Sonuç</p>
+                    <h3 className="mt-1 text-lg font-semibold text-slate-900 dark:text-white">
                       {aiResult.success ? 'Sefer UETDS’ye gönderildi' : 'Sefer oluşturuldu, UETDS hata verdi'}
                     </h3>
                   </div>
@@ -789,7 +691,7 @@ export default function TripsPage() {
                     <button
                       type="button"
                       onClick={() => router.push(`/trips/${aiResult.tripId}`)}
-                      className="rounded-full bg-white/10 px-4 py-2 text-xs font-semibold text-white transition hover:bg-white/15"
+                      className="rounded-full bg-slate-100 dark:bg-white/10 px-4 py-2 text-xs font-semibold text-slate-700 dark:text-white transition hover:bg-slate-200 dark:hover:bg-white/15"
                     >
                       Detaya git
                     </button>
@@ -797,7 +699,7 @@ export default function TripsPage() {
                 </div>
 
                 {aiResult.uetds?.uetdsSeferRefNo && (
-                  <div className="mt-4 rounded-2xl bg-emerald-300/10 px-4 py-3 text-sm text-emerald-100">
+                  <div className="mt-4 rounded-2xl bg-emerald-50 dark:bg-emerald-300/10 px-4 py-3 text-sm text-emerald-700 dark:text-emerald-100">
                     UETDS Referans No: <span className="font-semibold">{aiResult.uetds.uetdsSeferRefNo}</span>
                   </div>
                 )}
@@ -805,7 +707,7 @@ export default function TripsPage() {
                 {Array.isArray(aiResult.decisions) && aiResult.decisions.length > 0 && (
                   <div className="mt-4 space-y-2">
                     {aiResult.decisions.map((decision: string) => (
-                      <p key={decision} className="rounded-2xl bg-white/[0.035] px-3 py-2 text-xs text-slate-300">
+                      <p key={decision} className="rounded-2xl bg-slate-100 dark:bg-white/[0.035] px-3 py-2 text-xs text-slate-600 dark:text-slate-300">
                         {decision}
                       </p>
                     ))}
@@ -814,18 +716,18 @@ export default function TripsPage() {
 
                 {Array.isArray(aiResult.passportResults) && aiResult.passportResults.length > 0 && (
                   <div className="mt-4">
-                    <p className="text-xs font-semibold uppercase tracking-wider text-slate-400">Pasaport OCR</p>
+                    <p className="text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400">Pasaport OCR</p>
                     <div className="mt-2 space-y-2">
                       {aiResult.passportResults.map((item: any) => (
-                        <div key={item.fileName} className="rounded-2xl border border-white/10 px-3 py-2 text-xs text-slate-300">
+                        <div key={item.fileName} className="rounded-2xl border border-slate-200 dark:border-white/10 px-3 py-2 text-xs text-slate-600 dark:text-slate-300">
                           <div className="flex items-center justify-between gap-3">
-                            <span className="font-medium text-slate-100">{item.fileName}</span>
-                            <span className={item.success ? 'text-emerald-300' : 'text-rose-300'}>
+                            <span className="font-medium text-slate-800 dark:text-slate-100">{item.fileName}</span>
+                            <span className={item.success ? 'text-emerald-600 dark:text-emerald-300' : 'text-rose-600 dark:text-rose-300'}>
                               {item.success ? 'okundu' : 'okunamadı'}
                             </span>
                           </div>
                           {item.passenger && (
-                            <p className="mt-1 text-slate-400">
+                            <p className="mt-1 text-slate-500 dark:text-slate-400">
                               {item.passenger.firstName} {item.passenger.lastName} · {item.passenger.tcPassportNo} · {item.passenger.nationalityCode}
                             </p>
                           )}
@@ -836,7 +738,7 @@ export default function TripsPage() {
                 )}
 
                 {aiResult.uetdsError && (
-                  <div className="mt-4 rounded-2xl border border-rose-300/20 bg-rose-500/10 px-4 py-3 text-xs text-rose-100">
+                  <div className="mt-4 rounded-2xl border border-rose-200 dark:border-rose-300/20 bg-rose-50 dark:bg-rose-500/10 px-4 py-3 text-xs text-rose-700 dark:text-rose-100">
                     {typeof aiResult.uetdsError === 'string'
                       ? aiResult.uetdsError
                       : aiResult.uetdsError?.details || aiResult.uetdsError?.message || 'UETDS gönderimi başarısız'}
@@ -845,46 +747,6 @@ export default function TripsPage() {
               </div>
             )}
           </aside>
-        </div>
-      )}
-
-      {pdfUrl && pdfTrip && (
-        <div className="fixed inset-0 z-50 theme-overlay-strong backdrop-blur-sm flex items-center justify-center p-4">
-          <div className="glass-card theme-modal w-full max-w-6xl h-[85vh] flex flex-col overflow-hidden">
-            <div className="flex items-center justify-between gap-3 px-4 py-3 theme-divider-bottom">
-              <div>
-                <p className="text-sm theme-heading">UETDS PDF Önizleme</p>
-                <p className="text-xs theme-text-soft">Sefer {pdfTrip.firmTripNumber || pdfTrip.vehiclePlate}</p>
-              </div>
-              <div className="flex items-center gap-2">
-                <button
-                  type="button"
-                  onClick={handleOpenPdfInNewTab}
-                  className="btn-secondary flex items-center gap-2"
-                >
-                  <Eye size={16} />
-                  Yeni sekmede aç
-                </button>
-                <button
-                  type="button"
-                  onClick={handleClosePdfViewer}
-                  className="btn-danger flex items-center gap-2"
-                >
-                  <X size={16} />
-                  Kapat
-                </button>
-              </div>
-            </div>
-            <div className="px-4 py-2 theme-divider-bottom theme-panel-soft flex flex-wrap items-center justify-between gap-2 text-xs theme-text-soft">
-              <span>Sefer PDF'i yüklendi. Gerekirse yeni sekmede açabilirsiniz.</span>
-              <span className="font-mono theme-code">Ref: {pdfTrip.uetdsSeferRefNo || '—'}</span>
-            </div>
-            <iframe
-              src={pdfUrl}
-              title="UETDS PDF"
-              className="w-full flex-1 bg-white"
-            />
-          </div>
         </div>
       )}
 
@@ -900,14 +762,6 @@ export default function TripsPage() {
           </p>
         </div>
         <div className="flex flex-wrap gap-3">
-          <button
-            type="button"
-            onClick={() => setShowImportModal(true)}
-            className="btn-secondary flex items-center gap-2"
-          >
-            <FileText size={18} />
-            UETDS'den İçe Aktar
-          </button>
           <button
             type="button"
             onClick={() => setShowCreateModal(true)}
@@ -974,23 +828,18 @@ export default function TripsPage() {
                   ) || 0;
                 return (
                   <div key={trip.id} className="mobile-trip-card text-left">
-                    <button
-                      type="button"
-                      onClick={() => router.push(`/trips/${trip.id}`)}
-                      className="block w-full text-left"
-                    >
-                      <div className="flex items-start justify-between gap-3">
-                        <div>
-                          <p className="text-sm font-semibold text-slate-900 dark:text-white">
-                            {trip.firmTripNumber || trip.id.slice(0, 8)}
-                          </p>
-                          <p className="mt-1 text-xs font-mono text-slate-500 dark:text-slate-400">
-                            {trip.vehiclePlate}
-                          </p>
-                        </div>
-                        {getStatusBadge(trip.status)}
+                    <div className="flex items-start justify-between gap-3">
+                      <div>
+                        <p className="text-sm font-semibold text-slate-900 dark:text-white">
+                          {trip.firmTripNumber || trip.id.slice(0, 8)}
+                        </p>
+                        <p className="mt-1 text-xs font-mono text-slate-500 dark:text-slate-400">
+                          {trip.vehiclePlate}
+                        </p>
                       </div>
-                      <div className="mt-4 grid grid-cols-2 gap-3 text-xs">
+                      {getStatusBadge(trip.status)}
+                    </div>
+                    <div className="mt-4 grid grid-cols-2 gap-3 text-xs">
                       <div>
                         <p className="text-slate-500 dark:text-slate-400">Hareket</p>
                         <p className="mt-1 font-medium text-slate-700 dark:text-slate-100">{trip.departureDate} {trip.departureTime}</p>
@@ -1016,7 +865,6 @@ export default function TripsPage() {
                         <p className="mt-1 font-medium font-mono text-slate-700 dark:text-slate-100">{trip.uetdsSeferRefNo || '-'}</p>
                       </div>
                     </div>
-                    </button>
                     <div className="mt-4 grid gap-2 sm:grid-cols-2">
                       {canSendDriverWhatsapp(trip) && (
                         <button
@@ -1030,12 +878,11 @@ export default function TripsPage() {
                       )}
                       <button
                         type="button"
-                        onClick={() => handleOpenTripPdf(trip)}
-                        disabled={pdfLoadingTripId === trip.id}
-                        className="flex min-h-11 items-center justify-center gap-2 rounded-2xl bg-emerald-500 px-4 py-2 text-xs font-semibold text-white shadow-sm transition hover:bg-emerald-400 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-300 disabled:cursor-not-allowed disabled:opacity-60"
+                        onClick={() => router.push(`/trips/${trip.id}`)}
+                        className="flex min-h-11 items-center justify-center gap-2 rounded-2xl bg-emerald-500 px-4 py-2 text-xs font-semibold text-white shadow-sm transition hover:bg-emerald-400 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-300"
                       >
-                        {pdfLoadingTripId === trip.id ? <Loader2 size={16} className="animate-spin" /> : <Eye size={16} />}
-                        {pdfLoadingTripId === trip.id ? 'PDF açılıyor' : 'Sefer gör'}
+                        <Eye size={16} />
+                        Sefer gör
                       </button>
                     </div>
                   </div>
@@ -1114,13 +961,12 @@ export default function TripsPage() {
                               aria-label="Seferi görüntüle"
                               onClick={(e) => {
                                 e.stopPropagation();
-                                handleOpenTripPdf(trip);
+                                router.push(`/trips/${trip.id}`);
                               }}
-                              disabled={pdfLoadingTripId === trip.id}
-                              className="inline-flex items-center gap-1.5 rounded-xl bg-emerald-500 px-3 py-2 text-xs font-semibold text-white transition hover:bg-emerald-400 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-300 disabled:cursor-not-allowed disabled:opacity-60"
+                              className="inline-flex items-center gap-1.5 rounded-xl bg-emerald-500 px-3 py-2 text-xs font-semibold text-white transition hover:bg-emerald-400 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-300"
                             >
-                              {pdfLoadingTripId === trip.id ? <Loader2 size={14} className="animate-spin" /> : <Eye size={14} />}
-                              {pdfLoadingTripId === trip.id ? 'Açılıyor' : 'Sefer gör'}
+                              <Eye size={14} />
+                              Sefer gör
                             </button>
                           </div>
                         </td>
@@ -1159,50 +1005,11 @@ export default function TripsPage() {
         )}
       </div>
 
-      {showImportModal && (
-        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-          <div className="glass-card theme-modal w-full max-w-md p-6 animate-slide-in">
-            <h2 className="text-xl theme-heading mb-4 flex items-center gap-2">
-              <FileText size={20} className="text-emerald-400" />
-              UETDS Seferini İçe Aktar
-            </h2>
-            <form onSubmit={handleImportFromUetds} className="space-y-4">
-              <div>
-                <label className="label-muted text-sm">UETDS Sefer Referans No</label>
-                <input
-                  type="number"
-                  value={importRefNo}
-                  onChange={(e) => setImportRefNo(e.target.value)}
-                  className="input-field"
-                  placeholder="Örn: 2604206112446680"
-                  required
-                />
-                <p className="mt-1 text-[11px] theme-text-soft">
-                  E-Devlet / UETDS üzerinden manuel girilmiş seferi referans numarasıyla arayüze aktarır.
-                </p>
-              </div>
-              <div className="flex gap-3 justify-end">
-                <button
-                  type="button"
-                  onClick={() => setShowImportModal(false)}
-                  className="btn-secondary"
-                >
-                  Vazgeç
-                </button>
-                <button type="submit" disabled={importing} className="btn-primary">
-                  {importing ? 'İçe aktarılıyor...' : 'İçe Aktar'}
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
-
       {/* Create Trip Modal */}
       {showCreateModal && (
         <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-start justify-center p-3 sm:p-4 overflow-y-auto">
           <div className="glass-card theme-modal w-full max-w-lg p-4 sm:p-6 animate-slide-in my-[calc(env(safe-area-inset-top)+0.75rem)] mb-[calc(env(safe-area-inset-bottom)+1rem)] max-h-[calc(100dvh-2rem-env(safe-area-inset-top)-env(safe-area-inset-bottom))] overflow-y-auto">
-            <h2 className="text-xl theme-heading text-white mb-5 flex items-center gap-2">
+            <h2 className="text-xl theme-heading mb-5 flex items-center gap-2">
               <Plus size={20} className="text-emerald-400" />
               Yeni Sefer Oluştur
             </h2>
@@ -1356,7 +1163,7 @@ export default function TripsPage() {
               </div>
               <div className="grid grid-cols-2 gap-4">
                 <div className="theme-form-shell p-3 rounded-lg space-y-3">
-                  <span className="text-xs font-semibold text-emerald-600 dark:text-emerald-300 uppercase tracking-wider">Kalkış Noktası</span>
+                  <span className="text-xs font-semibold text-emerald-700 dark:text-emerald-300 uppercase tracking-wider">Kalkış Noktası</span>
                   <div>
                     <label className="label-muted text-[11px]">İl Kodu (MERNIS)</label>
                     <select
@@ -1418,7 +1225,7 @@ export default function TripsPage() {
                 </div>
 
                 <div className="theme-form-shell p-3 rounded-lg space-y-3">
-                  <span className="text-xs font-semibold text-sky-700 dark:text-sky-300 uppercase tracking-wider">Varış Noktası</span>
+                  <span className="text-xs font-semibold text-sky-800 dark:text-sky-300 uppercase tracking-wider">Varış Noktası</span>
                   <div>
                     <label className="label-muted text-[11px]">İl Kodu (MERNIS)</label>
                     <select
