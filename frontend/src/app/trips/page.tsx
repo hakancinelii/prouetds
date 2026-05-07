@@ -1163,7 +1163,7 @@ export default function TripsPage() {
               </div>
               <div className="grid grid-cols-2 gap-4">
                 <div className="theme-form-shell p-3 rounded-lg space-y-3">
-                  <span className="text-xs font-semibold text-emerald-700 dark:text-emerald-300 uppercase tracking-wider">Kalkış Noktası</span>
+                  <span className="text-xs font-semibold theme-text-strong uppercase tracking-wider">Kalkış Noktası</span>
                   <div>
                     <label className="label-muted text-[11px]">İl Kodu (MERNIS)</label>
                     <select
@@ -1225,7 +1225,7 @@ export default function TripsPage() {
                 </div>
 
                 <div className="theme-form-shell p-3 rounded-lg space-y-3">
-                  <span className="text-xs font-semibold text-sky-800 dark:text-sky-300 uppercase tracking-wider">Varış Noktası</span>
+                  <span className="text-xs font-semibold theme-text-strong uppercase tracking-wider">Varış Noktası</span>
                   <div>
                     <label className="label-muted text-[11px]">İl Kodu (MERNIS)</label>
                     <select
