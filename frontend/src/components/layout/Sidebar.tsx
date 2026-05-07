@@ -21,9 +21,9 @@ import {
 } from 'lucide-react';
 
 const navigation = [
+  { name: 'Seferler', href: '/trips', icon: Bus },
   { name: 'Şirketler', href: '/tenants', icon: Building2, superAdminOnly: true },
   { name: 'Kullanıcılar', href: '/users', icon: Users, roles: ['super_admin', 'company_admin'] },
-  { name: 'Seferler', href: '/trips', icon: Bus },
   { name: 'Şoförler', href: '/drivers', icon: Users },
   { name: 'Araçlar', href: '/vehicles', icon: CarFront },
   { name: 'Loglar', href: '/logs', icon: FileText },
