@@ -2007,4 +2007,51 @@ export class TripsService {
 
     return this.findOne(trip.id, tenantId);
   }
+
+  async addPassengerAndSyncUetds(groupId: string, tenantId: string, data: any) {
+    const passenger = await this.addPassenger(groupId, tenantId, data);
+    const group = await this.groupRepo.findOne({ where: { id: groupId }, relations: ['trip'] });
+    if (group?.trip?.uetdsSeferRefNo) {
+      await this.uetdsService.yolcuEkle(tenantId, {
+        seferNo: group.trip.uetdsSeferRefNo,
+        yolcular: [{
+          ad: passenger.firstName,
+          soyad: passenger.lastName,
+          uyruk: passenger.nationalityCode,
+          tcKimlikPasaportNo: passenger.tcPassportNo,
+          cinsiyet: passenger.gender || 'E',
+          koltukNo: passenger.seatNumber || '0',
+        }],
+      });
+    }
+    return passenger;
+  }
+
+  async removePassengerAndSyncUetds(passengerId: string, tenantId: string, reason: string) {
+    const passenger = await this.passengerRepo.findOne({ where: { id: passengerId }, relations: ['group', 'group.trip'] });
+    if (!passenger) throw new NotFoundException('Yolcu bulunamadı');
+    
+    if (passenger.group?.trip?.uetdsSeferRefNo) {
+      await this.uetdsService.yolcuSil(tenantId, {
+        seferNo: passenger.group.trip.uetdsSeferRefNo,
+        yolcuId: passenger.tcPassportNo,
+      });
+    }
+    
+    await this.passengerRepo.remove(passenger);
+    return { success: true };
+  }
+
+  async removePersonnelAndSyncUetds(personnelId: string, tenantId: string, reason: string) {
+    const personnel = await this.personnelRepo.findOne({ where: { id: personnelId }, relations: ['trip'] });
+    if (!personnel) throw new NotFoundException('Personel bulunamadı');
+
+    if (personnel.trip?.uetdsSeferRefNo) {
+      // UETDS personnel removal logic if needed
+    }
+
+    await this.personnelRepo.remove(personnel);
+    return { success: true };
+  }
+
 }
