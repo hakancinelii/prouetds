@@ -2037,7 +2037,7 @@ export class TripsService {
     
     if (passenger.tripGroup?.trip?.uetdsSeferRefNo) {
       await this.uetdsService.yolcuSil(tenantId, {
-        seferNo: passenger.group.trip.uetdsSeferRefNo,
+        seferNo: passenger.tripGroup.trip.uetdsSeferRefNo,
         yolcuId: passenger.tcPassportNo,
       });
     }
