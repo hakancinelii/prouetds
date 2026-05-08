@@ -1,3 +1,4 @@
+import { User } from '../../database/entities/user.entity';
 import {
   Injectable,
   Logger,
