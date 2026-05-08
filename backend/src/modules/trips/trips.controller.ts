@@ -92,7 +92,7 @@ export class TripsController {
   ) {
     return this.tripsService.createAutopilotTrip(
       tenantId,
-      userId,
+      user,
       { message, passports },
       this.ocrService,
     );
