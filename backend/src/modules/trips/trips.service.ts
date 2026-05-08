@@ -45,6 +45,13 @@ const ISTANBUL_DISTRICTS = [
   { code: 2003, name: 'AVCILAR', aliases: ['avcilar', 'avcılar'] },
   { code: 2051, name: 'BEYLİKDÜZÜ', aliases: ['beylikduzu', 'beylikdüzü'] },
   { code: 1739, name: 'ZEYTİNBURNU', aliases: ['zeytinburnu'] },
+  { code: 1810, name: 'KAĞITHANE', aliases: ['kagithane', 'kağıthane'] },
+  { code: 1325, name: 'EYÜPSULTAN', aliases: ['eyup', 'eyüp', 'eyupsultan', 'eyüpsultan'] },
+  { code: 1150, name: 'BAĞCILAR', aliases: ['bagcilar', 'bağcılar'] },
+  { code: 1111, name: 'ÜMRANİYE', aliases: ['umraniye', 'ümraniye'] },
+  { code: 1508, name: 'MALTEPE', aliases: ['maltepe'] },
+  { code: 1449, name: 'KARTAL', aliases: ['kartal'] },
+  { code: 1103, name: 'ADALAR', aliases: ['adalar', 'buyukada', 'büyükada'] },
 ];
 
 const normalizeSearchText = (value?: string | null) =>
@@ -2080,6 +2087,33 @@ export class TripsService {
       // UETDS update passenger is complex, usually we just update the DB and sync on next action
     }
     return updated;
+  }
+
+
+  async updateSentTripOnUetds(id: string, tenantId: string, data: any) {
+    const trip = await this.findOne(id, tenantId);
+    if (!trip) throw new NotFoundException('Sefer bulunamadı');
+
+    // Update local DB
+    await this.update(id, tenantId, data);
+    const updatedTrip = await this.findOne(id, tenantId);
+
+    // If already sent to UETDS, update on UETDS too
+    if (updatedTrip.uetdsSeferRefNo) {
+      await this.uetdsService.seferGuncelle(tenantId, {
+        seferNo: updatedTrip.uetdsSeferRefNo,
+        plaka: updatedTrip.vehiclePlate,
+        baslangicTarihi: updatedTrip.departureDate,
+        baslangicSaati: updatedTrip.departureTime,
+        bitisTarihi: updatedTrip.endDate,
+        bitisSaati: updatedTrip.endTime,
+        aciklama: updatedTrip.description,
+        baslangicYer: updatedTrip.originPlace,
+        bitisYer: updatedTrip.destPlace,
+      });
+    }
+
+    return updatedTrip;
   }
 
 }
