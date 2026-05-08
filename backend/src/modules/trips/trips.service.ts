@@ -1005,9 +1005,6 @@ export class TripsService {
     for (const line of lines) {
       const cleanLine = line.replace(/^[0-9]+[\s.\-\)]+\s*/, '').trim();
       if (!cleanLine) continue;
-      // Strip numbering like 1-, 1), 1.
-      const cleanLine = line.replace(/^[0-9]+[\s.\-\)]+\s*/, '').trim();
-      if (!cleanLine) continue;
       const date = normalizeDateInput(line.trim());
       if (date) return date;
     }
@@ -1197,6 +1194,8 @@ export class TripsService {
     const titlePattern = /^(?:Mr\.?|Mrs\.?|Ms\.?|Miss\.?)\s*(.+)$/i;
 
     for (const line of lines) {
+      const cleanLine = line.replace(/^[0-9]+[\s.\-\)]+\s*/, '').trim();
+      if (!cleanLine) continue;
       let fullName = '';
 
       // First try: Mr./Mrs. prefix
