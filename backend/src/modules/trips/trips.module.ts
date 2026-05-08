@@ -11,7 +11,7 @@ import {
   TripGroup,
   TripPersonnel,
   Passenger,
-  Tenant,
+  Tenant, User,
   Vehicle,
 } from '../../database/entities';
 import { UetdsModule } from '../uetds/uetds.module';
