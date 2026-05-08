@@ -18,7 +18,7 @@ import {
   TripPersonnel,
   Passenger,
   Tenant,
-  Vehicle,
+  User, Vehicle,
   PassengerSource,
 } from '../../database/entities';
 import type { OcrPassengerResult } from '../ocr/ocr.service';
