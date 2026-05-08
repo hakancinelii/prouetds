@@ -34,8 +34,8 @@ export class TripsController {
   ) { }
 
   @Get()
-  findAll(@TenantId() tenantId: string, @Query() query: any) {
-    return this.tripsService.findAll(tenantId, query);
+  findAll(@TenantId() tenantId: string, @Query() query: any, @CurrentUser() user: any) {
+    return this.tripsService.findAll(tenantId, query, user);
   }
 
   @Get('driver/my-trips')
@@ -49,8 +49,8 @@ export class TripsController {
   }
 
   @Get(':id')
-  findOne(@Param('id') id: string, @TenantId() tenantId: string) {
-    return this.tripsService.findOne(id, tenantId);
+  findOne(@Param('id') id: string, @TenantId() tenantId: string, @CurrentUser() user: any) {
+    return this.tripsService.findOne(id, tenantId, user);
   }
 
   @Get(':id/pdf-share-link')
@@ -64,7 +64,7 @@ export class TripsController {
   }
 
   @Post()
-  @Roles(UserRole.COMPANY_ADMIN, UserRole.OPERATOR)
+  @Roles(UserRole.COMPANY_ADMIN, UserRole.OPERATOR, UserRole.DRIVER)
   create(
     @TenantId() tenantId: string,
     @CurrentUser('id') userId: string,
@@ -74,7 +74,7 @@ export class TripsController {
   }
 
   @Post('ai-autopilot')
-  @Roles(UserRole.COMPANY_ADMIN, UserRole.OPERATOR)
+  @Roles(UserRole.COMPANY_ADMIN, UserRole.OPERATOR, UserRole.DRIVER)
   @UseInterceptors(
     FilesInterceptor('passports', 20, {
       limits: { fileSize: 10 * 1024 * 1024 },
@@ -86,9 +86,7 @@ export class TripsController {
       },
     }),
   )
-  createWithAiAutopilot(
-    @TenantId() tenantId: string,
-    @CurrentUser('id') userId: string,
+  createWithAiAutopilot(@TenantId() tenantId: string, @CurrentUser() user: any,
     @Body('message') message: string,
     @UploadedFiles() passports: any[] = [],
   ) {
@@ -101,7 +99,7 @@ export class TripsController {
   }
 
   @Patch(':id')
-  @Roles(UserRole.COMPANY_ADMIN, UserRole.OPERATOR)
+  @Roles(UserRole.COMPANY_ADMIN, UserRole.OPERATOR, UserRole.DRIVER)
   update(
     @Param('id') id: string,
     @TenantId() tenantId: string,
@@ -111,7 +109,7 @@ export class TripsController {
   }
 
   @Patch(':id/uetds-sync')
-  @Roles(UserRole.COMPANY_ADMIN, UserRole.OPERATOR)
+  @Roles(UserRole.COMPANY_ADMIN, UserRole.OPERATOR, UserRole.DRIVER)
   updateSentTripOnUetds(
     @Param('id') id: string,
     @TenantId() tenantId: string,
@@ -121,7 +119,7 @@ export class TripsController {
   }
 
   @Post(':id/groups')
-  @Roles(UserRole.COMPANY_ADMIN, UserRole.OPERATOR)
+  @Roles(UserRole.COMPANY_ADMIN, UserRole.OPERATOR, UserRole.DRIVER)
   addGroup(
     @Param('id') id: string,
     @TenantId() tenantId: string,
@@ -131,7 +129,7 @@ export class TripsController {
   }
 
   @Post(':id/personnel')
-  @Roles(UserRole.COMPANY_ADMIN, UserRole.OPERATOR)
+  @Roles(UserRole.COMPANY_ADMIN, UserRole.OPERATOR, UserRole.DRIVER)
   addPersonnel(
     @Param('id') id: string,
     @TenantId() tenantId: string,
@@ -141,7 +139,7 @@ export class TripsController {
   }
 
   @Post(':id/personnel/:personnelId/remove')
-  @Roles(UserRole.COMPANY_ADMIN, UserRole.OPERATOR)
+  @Roles(UserRole.COMPANY_ADMIN, UserRole.OPERATOR, UserRole.DRIVER)
   removePersonnel(
     @Param('personnelId') personnelId: string,
     @TenantId() tenantId: string,
@@ -160,7 +158,7 @@ export class TripsController {
   }
 
   @Patch('passengers/:passengerId')
-  @Roles(UserRole.COMPANY_ADMIN, UserRole.OPERATOR)
+  @Roles(UserRole.COMPANY_ADMIN, UserRole.OPERATOR, UserRole.DRIVER)
   updatePassenger(
     @Param('passengerId') passengerId: string,
     @TenantId() tenantId: string,
@@ -170,7 +168,7 @@ export class TripsController {
   }
 
   @Post('passengers/:passengerId/remove')
-  @Roles(UserRole.COMPANY_ADMIN, UserRole.OPERATOR)
+  @Roles(UserRole.COMPANY_ADMIN, UserRole.OPERATOR, UserRole.DRIVER)
   removePassenger(
     @Param('passengerId') passengerId: string,
     @TenantId() tenantId: string,
@@ -300,7 +298,7 @@ export class TripsController {
   }
 
   @Post('import-from-uetds')
-  @Roles(UserRole.COMPANY_ADMIN, UserRole.OPERATOR)
+  @Roles(UserRole.COMPANY_ADMIN, UserRole.OPERATOR, UserRole.DRIVER)
   importFromUetds(
     @TenantId() tenantId: string,
     @CurrentUser('id') userId: string,
@@ -320,7 +318,7 @@ export class TripsController {
   }
 
   @Post(':id/cancel')
-  @Roles(UserRole.COMPANY_ADMIN, UserRole.OPERATOR)
+  @Roles(UserRole.COMPANY_ADMIN, UserRole.OPERATOR, UserRole.DRIVER)
   cancelOnUetds(
     @Param('id') id: string,
     @TenantId() tenantId: string,
