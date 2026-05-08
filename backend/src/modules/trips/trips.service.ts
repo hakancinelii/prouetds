@@ -1227,7 +1227,7 @@ export class TripsService {
 
   async createAutopilotTrip(
     tenantId: string,
-    userId: string,
+    user: any,
     data: AutopilotInput,
     ocrService: { processPassportImage(imageBuffer: Buffer): Promise<OcrPassengerResult> },
   ) {
