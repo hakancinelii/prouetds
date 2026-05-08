@@ -1003,6 +1003,9 @@ export class TripsService {
   private inferAutopilotDate(message: string) {
     const lines = message.split(/\n/);
     for (const line of lines) {
+      // Strip numbering like 1-, 1), 1.
+      const cleanLine = line.replace(/^[0-9]+[\s.\-\)]+\s*/, '').trim();
+      if (!cleanLine) continue;
       const date = normalizeDateInput(line.trim());
       if (date) return date;
     }
@@ -1188,22 +1191,23 @@ export class TripsService {
   private parsePassengersFromMessage(message: string): Partial<Passenger>[] {
     const lines = message.split(/\n/).map((line) => line.trim()).filter(Boolean);
     const passengers: Partial<Passenger>[] = [];
+    const inferredPassports = message.match(/\b[A-Z]{1,3}[0-9]{5,10}\b/g) || [];
     const titlePattern = /^(?:Mr\.?|Mrs\.?|Ms\.?|Miss\.?)\s*(.+)$/i;
 
     for (const line of lines) {
       let fullName = '';
 
       // First try: Mr./Mrs. prefix
-      const titleMatch = line.match(titlePattern);
+      const titleMatch = cleanLine.match(titlePattern);
       if (titleMatch) {
         fullName = normalizePassengerName(titleMatch[1]);
       } else {
         // Second try: plain name line (at least 2 words, all alphabetic/spaces)
-        if (this.isNonNameLine(line)) continue;
+        if (this.isNonNameLine(cleanLine)) continue;
         // Check if line is mostly alphabetic (allow Turkish chars, spaces, dots)
-        const cleaned = line.replace(/[.\-']/g, '');
+        const cleaned = cleanLine.replace(/[.\-']//g, '');
         if (!/^[A-Za-zÀ-ÿÇçĞğİıÖöŞşÜü\s]+$/.test(cleaned)) continue;
-        fullName = normalizePassengerName(line);
+        fullName = normalizePassengerName(cleanLine);
       }
 
       if (!fullName || fullName.length < 3) continue;
@@ -1213,7 +1217,7 @@ export class TripsService {
 
       const firstName = parts.slice(0, -1).join(' ') || parts[0] || 'Yolcu';
       const lastName = parts[parts.length - 1];
-      const autoPassportNo = `MSG${Date.now()}${passengers.length + 1}`;
+      const autoPassportNo = inferredPassports[passengers.length] || `MSG${Date.now()}${passengers.length + 1}`;
 
       // Avoid duplicates
       const isDuplicate = passengers.some(
