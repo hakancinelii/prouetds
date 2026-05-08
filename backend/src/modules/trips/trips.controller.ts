@@ -34,8 +34,8 @@ export class TripsController {
   ) { }
 
   @Get()
-  findAll(@TenantId() tenantId: string, @Query() query: any) {
-    return this.tripsService.findAll(tenantId, query);
+  findAll(@TenantId() tenantId: string, @Query() query: any, @CurrentUser() user: any) {
+    return this.tripsService.findAll(tenantId, query, user);
   }
   @Get('stats')
   @Roles(UserRole.COMPANY_ADMIN, UserRole.OPERATOR)
@@ -54,8 +54,8 @@ export class TripsController {
   }
 
   @Get(':id')
-  findOne(@Param('id') id: string, @TenantId() tenantId: string) {
-    return this.tripsService.findOne(id, tenantId);
+  findOne(@Param('id') id: string, @TenantId() tenantId: string, @CurrentUser() user: any) {
+    return this.tripsService.findOne(id, tenantId, user);
   }
 
   @Get(':id/pdf-share-link')
