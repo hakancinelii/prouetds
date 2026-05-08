@@ -997,6 +997,16 @@ export class TripsService {
     return trip;
   }
 
+  
+  private inferAutopilotDate(message: string) {
+    const lines = message.split(/\n/);
+    for (const line of lines) {
+      const date = normalizeDateInput(line.trim());
+      if (date) return date;
+    }
+    return toLocalTripDate(new Date());
+  }
+
   private inferAutopilotPlate(message: string, vehicles: Vehicle[]) {
     const normalizedMessage = normalizeSearchText(message).replace(/\s+/g, '');
     const plateMatch = message
@@ -1009,7 +1019,7 @@ export class TripsService {
       normalizedMessage.includes(normalizePlate(vehicle.plateNumber).toLocaleLowerCase('tr-TR')),
     );
 
-    return normalizePlate(matchedVehicle?.plateNumber || vehicles[0]?.plateNumber || '');
+    return matchedVehicle ? normalizePlate(matchedVehicle.plateNumber) : '';
   }
 
   private inferAutopilotDriver(
@@ -1035,9 +1045,7 @@ export class TripsService {
     }
 
     return (
-      drivers.find((driver) => normalizePlate(driver.plateNumber) === normalizedPlate) ||
-      drivers[0] ||
-      null
+      drivers.find((driver) => normalizePlate(driver.plateNumber) === normalizedPlate) || null
     );
   }
 
@@ -1090,7 +1098,7 @@ export class TripsService {
     drivers: Driver[],
   ) {
     const now = new Date();
-    const departureDate = toLocalTripDate(now);
+    const departureDate = this.inferAutopilotDate(message);
     const vehiclePlate = this.inferAutopilotPlate(message, vehicles);
     const selectedDriver = this.inferAutopilotDriver(message, vehiclePlate, vehicles, drivers);
     const origin = this.inferAutopilotLocation(message, 'origin');
