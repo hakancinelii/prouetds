@@ -1003,6 +1003,8 @@ export class TripsService {
   private inferAutopilotDate(message: string) {
     const lines = message.split(/\n/);
     for (const line of lines) {
+      const cleanLine = line.replace(/^[0-9]+[\s.\-\)]+\s*/, '').trim();
+      if (!cleanLine) continue;
       // Strip numbering like 1-, 1), 1.
       const cleanLine = line.replace(/^[0-9]+[\s.\-\)]+\s*/, '').trim();
       if (!cleanLine) continue;
