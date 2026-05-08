@@ -463,6 +463,20 @@ export default function TripsPage() {
     return () => clearTimeout(timeout);
   }, [search]);
 
+  
+  const openCreateModal = () => {
+    const initialForm = getDefaultCreateForm();
+    if (user?.driverId) {
+      initialForm.selectedDriverId = user.driverId;
+      const driver = drivers.find((d: any) => d.id === user.driverId);
+      if (driver?.plateNumber) {
+        initialForm.vehiclePlate = normalizePlate(driver.plateNumber);
+      }
+    }
+    setForm(initialForm);
+    setShowCreateModal(true);
+  };
+
   const handleCreate = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
@@ -764,7 +778,7 @@ export default function TripsPage() {
         <div className="flex flex-wrap gap-3">
           <button
             type="button"
-            onClick={() => setShowCreateModal(true)}
+            onClick={openCreateModal}
             className="btn-primary flex items-center gap-2"
           >
             <Plus size={18} />
