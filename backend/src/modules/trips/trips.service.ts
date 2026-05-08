@@ -1031,7 +1031,14 @@ export class TripsService {
     vehiclePlate: string,
     vehicles: Vehicle[],
     drivers: Driver[],
+    user: User,
   ) {
+    // 0. Priority: Logged in user if they are a driver
+    if (user.driverId) {
+      const currentUser = drivers.find(d => d.id === user.driverId);
+      if (currentUser) return currentUser;
+    }
+
     const normalizedMessage = normalizeSearchText(message);
     const byName = drivers.find((driver) => {
       const fullName = normalizeSearchText(`${driver.firstName} ${driver.lastName}`);
@@ -1100,11 +1107,12 @@ export class TripsService {
     message: string,
     vehicles: Vehicle[],
     drivers: Driver[],
+    user: User,
   ) {
     const now = new Date();
     const departureDate = this.inferAutopilotDate(message);
     const vehiclePlate = this.inferAutopilotPlate(message, vehicles);
-    const selectedDriver = this.inferAutopilotDriver(message, vehiclePlate, vehicles, drivers);
+    const selectedDriver = this.inferAutopilotDriver(message, vehiclePlate, vehicles, drivers, user);
     const origin = this.inferAutopilotLocation(message, 'origin');
     const dest = this.inferAutopilotLocation(message, 'dest');
 
@@ -1191,7 +1199,7 @@ export class TripsService {
     const lines = message.split(/\n/).map((line) => line.trim()).filter(Boolean);
     const passengers: Partial<Passenger>[] = [];
     const inferredPassports = message.match(/\b[A-Z]{1,3}[0-9]{5,10}\b/g) || [];
-    const titlePattern = /^(?:Mr\.?|Mrs\.?|Ms\.?|Miss\.?)\s*(.+)$/i;
+    const titlePattern = /\b(Mr|Mrs|Ms|Miss)\.?\s+/i;
 
     for (const line of lines) {
       const cleanLine = line.replace(/^[0-9]+[\s.\-\)]+\s*/, '').trim();
@@ -1201,7 +1209,7 @@ export class TripsService {
       // First try: Mr./Mrs. prefix
       const titleMatch = cleanLine.match(titlePattern);
       if (titleMatch) {
-        fullName = normalizePassengerName(titleMatch[1]);
+        fullName = normalizePassengerName(cleanLine.replace(titlePattern, ""));
       } else {
         // Second try: plain name line (at least 2 words, all alphabetic/spaces)
         if (this.isNonNameLine(cleanLine)) continue;
@@ -1264,7 +1272,7 @@ export class TripsService {
       this.driverRepo.find({ where: { tenantId, isActive: true } }),
     ]);
 
-    const inferred = this.buildAutopilotTripData(message, vehicles, drivers);
+    const inferred = this.buildAutopilotTripData(message, vehicles, drivers, user);
 
     // Ultimate fallback for Plate and Driver from logged-in user profile
     if (!inferred.trip.vehiclePlate) {
