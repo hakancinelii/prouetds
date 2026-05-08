@@ -728,6 +728,7 @@ export class TripsService {
     @InjectRepository(Tenant) private tenantRepo: Repository<Tenant>,
     @InjectRepository(Driver) private driverRepo: Repository<Driver>,
     @InjectRepository(Vehicle) private vehicleRepo: Repository<Vehicle>,
+    @InjectRepository(User) private userRepo: Repository<User>,
     private uetdsService: UetdsService,
     private tenantsService: TenantsService,
     private jwtService: JwtService,
@@ -1246,15 +1247,32 @@ export class TripsService {
       throw new BadRequestException('AI Autopilot için mesaj veya pasaport görseli yükleyin');
     }
 
+    
+    const fullUser = await this.userRepo.findOne({
+      where: { id: user.id },
+      relations: ['driver'],
+    });
+
     const [vehicles, drivers] = await Promise.all([
       this.vehicleRepo.find({ where: { tenantId, isActive: true }, relations: ['defaultDriver'] }),
       this.driverRepo.find({ where: { tenantId, isActive: true } }),
     ]);
 
     const inferred = this.buildAutopilotTripData(message, vehicles, drivers);
-    
-    if (!inferred.trip.vehiclePlate && user.driver?.vehicles?.[0]?.plateNumber) { inferred.trip.vehiclePlate = user.driver.vehicles[0].plateNumber; }
-    if (!inferred.trip.selectedDriverId && user.driverId) { inferred.trip.selectedDriverId = user.driverId; }
+
+    // Ultimate fallback for Plate and Driver from logged-in user profile
+    if (!inferred.trip.vehiclePlate) {
+      const defaultPlate = fullUser?.plateNumber || fullUser?.driver?.plateNumber;
+      if (defaultPlate) {
+        inferred.trip.vehiclePlate = defaultPlate;
+        inferred.decisions.push(`Araç plakası belirtilmediği için profilinizdeki ${defaultPlate} plakası kullanıldı.`);
+      }
+    }
+    if (!inferred.trip.selectedDriverId && fullUser?.driverId) {
+      inferred.trip.selectedDriverId = fullUser.driverId;
+      inferred.decisions.push(`Şoför belirtilmediği için kendi şoför profiliniz (${fullUser.firstName} ${fullUser.lastName}) kullanıldı.`);
+    }
+
 
     const passengers: Partial<Passenger>[] = [];
     const passportResults: any[] = [];
