@@ -21,7 +21,7 @@ import { TenantsModule } from '../tenants/tenants.module';
 
 @Module({
   imports: [
-    TypeOrmModule.forFeature([Trip, TripGroup, TripPersonnel, Passenger, Tenant, Driver, Vehicle]),
+    TypeOrmModule.forFeature([Trip, TripGroup, TripPersonnel, Passenger, Tenant, Driver, User, Vehicle]),
     JwtModule.registerAsync({
       imports: [ConfigModule],
       useFactory: (configService: ConfigService) => ({
