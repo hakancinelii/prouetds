@@ -1221,7 +1221,7 @@ export class TripsService {
         // Second try: plain name line (at least 2 words, all alphabetic/spaces)
         if (this.isNonNameLine(cleanLine)) continue;
         // Check if line is mostly alphabetic (allow Turkish chars, spaces, dots)
-        const cleaned = cleanLine.replace(/[.\-']//g, '');
+        const cleaned = cleanLine.replace(/[.\-']/g, '');
         if (!/^[A-Za-zÀ-ÿÇçĞğİıÖöŞşÜü\s]+$/.test(cleaned)) continue;
         fullName = normalizePassengerName(cleanLine);
       }
@@ -2114,6 +2114,33 @@ export class TripsService {
     }
 
     return updatedTrip;
+  }
+
+
+  async addPersonnelAndSyncUetds(tripId: string, tenantId: string, data: any) {
+    const trip = await this.findOne(tripId, tenantId);
+    if (!trip) throw new NotFoundException('Sefer bulunamadı');
+
+    const personnel = await this.personnelRepo.save({
+      ...data,
+      tripId,
+      tenantId,
+    });
+
+    if (trip.uetdsSeferRefNo) {
+      await this.uetdsService.personelEkle(tenantId, {
+        seferNo: trip.uetdsSeferRefNo,
+        turKodu: personnel.type === 'Şoför' ? 0 : 1,
+        uyrukUlke: personnel.nationality || 'TR',
+        tcKimlikPasaportNo: personnel.tcPassportNo,
+        cinsiyet: personnel.gender || 'E',
+        adi: personnel.firstName,
+        soyadi: personnel.lastName,
+        telefon: personnel.phone,
+      });
+    }
+
+    return personnel;
   }
 
 }
