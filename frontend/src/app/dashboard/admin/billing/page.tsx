@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { Building2, CarFront, CheckCircle2, ChevronDown, ChevronUp, CreditCard, CalendarDays, Loader2 } from 'lucide-react';
-import api from '@/api';
+import api from '@/lib/api';
 
 type PaymentStatus = 'PAID' | 'UNPAID';
 
