@@ -7,3 +7,5 @@ export { TripGroup } from './trip-group.entity';
 export { TripPersonnel } from './trip-personnel.entity';
 export { Passenger, PassengerSource } from './passenger.entity';
 export { UetdsLog, AuditLog } from './log.entity';
+
+export * from './subscription-payment.entity';
