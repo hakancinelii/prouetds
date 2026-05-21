@@ -29,6 +29,9 @@ export class SubscriptionPayment {
   @Column({ type: 'timestamp', nullable: true })
   paidAt: Date;
 
+  @Column({ type: 'text', nullable: true })
+  notes: string;
+
   @CreateDateColumn()
   createdAt: Date;
 
