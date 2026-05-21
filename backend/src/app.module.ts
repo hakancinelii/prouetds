@@ -18,6 +18,7 @@ import { ParserModule } from './modules/parser/parser.module';
 import { LogsModule } from './modules/logs/logs.module';
 import { CrmModule } from './modules/crm/crm.module';
 import { UsersModule } from './modules/users/users.module';
+import { BillingModule } from './modules/billing/billing.module';
 
 @Module({
   imports: [
@@ -46,6 +47,7 @@ import { UsersModule } from './modules/users/users.module';
     LogsModule,
     CrmModule,
     UsersModule,
+    BillingModule,
   ],
   providers: [
     {
