@@ -31,4 +31,16 @@ export class BillingController {
   }) {
     return this.billingService.togglePayment(body);
   }
+
+
+  @Post('note')
+  async saveNote(@Body() body: {
+    tenantId: string;
+    driverId?: string;
+    month: number;
+    year: number;
+    note: string;
+  }) {
+    return this.billingService.saveNote(body);
+  }
 }
