@@ -10,6 +10,7 @@ interface ExternalDriver {
   driverId: string;
   name: string;
   tcKimlikNo: string | null;
+  plateNumber: string | null;
   paymentStatus: PaymentStatus;
   paymentId: string | null;
   note: string;
@@ -263,7 +264,7 @@ export default function BillingPage()
                             </div>
                             <div>
                               <p className="font-semibold text-sm theme-text">{driver.name}</p>
-                              <p className="text-xs text-slate-500 mb-1">{driver.tcKimlikNo || 'TC Yok'}</p>
+                              <p className="text-xs text-slate-500 mb-1">{driver.tcKimlikNo || 'TC Yok'}{driver.plateNumber && <span className="ml-2 px-1.5 py-0.5 rounded-md bg-blue-500/10 text-blue-500 font-semibold text-[10px]">{driver.plateNumber}</span>}</p>
                               <NoteInput 
                                 initialNote={driver.note || ''} 
                                 tenantId={tenant.tenantId} 
