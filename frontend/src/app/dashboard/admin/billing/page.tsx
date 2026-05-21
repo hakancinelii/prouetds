@@ -253,7 +253,7 @@ export default function BillingPage()
                 {/* Sub-users / External Drivers (Collapsible) */}
                 {hasExternal && (
                   <div className={`transition-all duration-300 ease-in-out ${isExpanded ? 'max-h-[2000px] opacity-100' : 'max-h-0 opacity-0'} overflow-hidden bg-[rgb(var(--surface-elevated-rgb))]`}>
-                    <div className="p-4 sm:px-6 space-y-3 border-t theme-border">
+                    <div className="p-4 sm:px-6 space-y-3 border-t theme-border overflow-y-auto max-h-[380px] scrollbar-thin">
                       <h4 className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-2 ml-1">Dışarıdan Bağlı Alt Şoförler</h4>
                       {tenant.externalDrivers.map(driver => (
                         <div key={driver.driverId} className="flex items-center justify-between p-3 sm:p-4 bg-[rgb(var(--surface-rgb))] rounded-2xl border theme-border shadow-sm">
