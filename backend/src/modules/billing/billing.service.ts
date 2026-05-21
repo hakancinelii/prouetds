@@ -44,6 +44,7 @@ export class BillingService {
             driverId: driver.id,
             name: `${driver.firstName} ${driver.lastName}`,
             tcKimlikNo: driver.tcKimlikNo,
+            plateNumber: driver.plateNumber || null,
             paymentStatus: driverPayment ? driverPayment.status : 'UNPAID',
             paymentId: driverPayment ? driverPayment.id : null,
             note: driverPayment ? driverPayment.notes : '',
