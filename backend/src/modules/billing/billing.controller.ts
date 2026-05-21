@@ -1,16 +1,17 @@
 import { Controller, Get, Post, Body, Query, UseGuards } from '@nestjs/common';
+import { AuthGuard } from '@nestjs/passport';
 import { BillingService } from './billing.service';
-import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
-import { RolesGuard } from '../auth/guards/roles.guard';
-import { Roles } from '../auth/decorators/roles.decorator';
+import { Roles } from '../../common/decorators/roles.decorator';
+import { RolesGuard } from '../../common/guards/roles.guard';
+import { UserRole } from '../../database/entities';
 
-@Controller('billing')
-@UseGuards(JwtAuthGuard, RolesGuard)
-@Roles('super_admin')
+@Controller('api/billing')
+@UseGuards(AuthGuard('jwt'), RolesGuard)
 export class BillingController {
   constructor(private readonly billingService: BillingService) {}
 
   @Get()
+  @Roles(UserRole.SUPER_ADMIN)
   async getBillingStatus(
     @Query('month') month: string,
     @Query('year') year: string,
@@ -21,6 +22,7 @@ export class BillingController {
   }
 
   @Post('toggle')
+  @Roles(UserRole.SUPER_ADMIN)
   async togglePayment(@Body() body: {
     tenantId: string;
     driverId?: string;
