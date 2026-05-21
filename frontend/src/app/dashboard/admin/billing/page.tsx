@@ -12,6 +12,8 @@ interface ExternalDriver {
   tcKimlikNo: string | null;
   paymentStatus: PaymentStatus;
   paymentId: string | null;
+  note: string;
+  note: string;
 }
 
 interface TenantBilling {
@@ -22,7 +24,80 @@ interface TenantBilling {
   externalDrivers: ExternalDriver[];
 }
 
-export default function BillingPage() {
+
+interface NoteInputProps {
+  initialNote: string;
+  tenantId: string;
+  driverId?: string;
+  month: number;
+  year: number;
+  onSaveSuccess: () => void;
+}
+
+function NoteInput({ initialNote, tenantId, driverId, month, year, onSaveSuccess }: NoteInputProps) {
+  const [note, setNote] = useState(initialNote);
+  const [isEditing, setIsEditing] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
+
+  useEffect(() => {
+    setNote(initialNote);
+  }, [initialNote]);
+
+  const handleSave = async () => {
+    if (note === initialNote) {
+      setIsEditing(false);
+      return;
+    }
+    setIsSaving(true);
+    try {
+      await api.post('/admin/billing/note', {
+        tenantId,
+        driverId,
+        month: Number(month),
+        year: Number(year),
+        note
+      });
+      onSaveSuccess();
+      setIsEditing(false);
+    } catch (error) {
+      console.error('Failed to save note', error);
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  return (
+    <div className="flex items-center gap-2 max-w-full">
+      {isEditing ? (
+        <div className="flex items-center gap-1.5 w-full">
+          <input
+            type="text"
+            value={note}
+            onChange={(e) => setNote(e.target.value)}
+            onBlur={handleSave}
+            onKeyDown={(e) => e.key === 'Enter' && handleSave()}
+            placeholder="Not yazın..."
+            autoFocus
+            className="w-full text-[11px] bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg px-2 py-0.5 focus:ring-1 focus:ring-emerald-500 theme-text max-w-[200px]"
+          />
+          {isSaving && <Loader2 size={12} className="animate-spin text-slate-400" />}
+        </div>
+      ) : (
+        <div 
+          onClick={() => setIsEditing(true)}
+          className="group flex items-center gap-1.5 cursor-pointer max-w-full text-[11px] text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 transition-colors"
+        >
+          <span className="truncate max-w-[200px]">
+            {note ? '📝 ' + note : '➕ Not ekle'}
+          </span>
+        </div>
+      )}
+    </div>
+  );
+}
+
+export default function BillingPage()
+ {
   const [currentMonth, setCurrentMonth] = useState(new Date().getMonth() + 1);
   const [currentYear, setCurrentYear] = useState(new Date().getFullYear());
   const [data, setData] = useState<TenantBilling[]>([]);
@@ -140,6 +215,15 @@ export default function BillingPage() {
                         Ana Firma Aboneliği 
                         {hasExternal && <span className="px-1.5 py-0.5 rounded-md bg-indigo-500/10 text-indigo-500 font-semibold ml-2">{tenant.externalDrivers.length} Alt Şoför</span>}
                       </p>
+                      <div className="mt-1.5" onClick={(e) => e.stopPropagation()}>
+                        <NoteInput 
+                          initialNote={tenant.note || ''} 
+                          tenantId={tenant.tenantId} 
+                          month={currentMonth} 
+                          year={currentYear} 
+                          onSaveSuccess={fetchBillingData} 
+                        />
+                      </div>
                     </div>
                   </div>
 
@@ -179,7 +263,15 @@ export default function BillingPage() {
                             </div>
                             <div>
                               <p className="font-semibold text-sm theme-text">{driver.name}</p>
-                              <p className="text-xs text-slate-500">{driver.tcKimlikNo || 'TC Yok'}</p>
+                              <p className="text-xs text-slate-500 mb-1">{driver.tcKimlikNo || 'TC Yok'}</p>
+                              <NoteInput 
+                                initialNote={driver.note || ''} 
+                                tenantId={tenant.tenantId} 
+                                driverId={driver.driverId} 
+                                month={currentMonth} 
+                                year={currentYear} 
+                                onSaveSuccess={fetchBillingData} 
+                              />
                             </div>
                           </div>
                           
