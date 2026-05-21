@@ -24,7 +24,7 @@ import {
 const navigation = [
   { name: 'Seferler', href: '/trips', icon: Bus },
   { name: 'Şirketler', href: '/tenants', icon: Building2, superAdminOnly: true },
-  { name: 'Abonelikler', href: '/admin/billing', icon: CreditCard, superAdminOnly: true },
+  { name: 'Abonelikler', href: '/dashboard/admin/billing', icon: CreditCard, superAdminOnly: true },
   { name: 'Kullanıcılar', href: '/users', icon: Users, roles: ['super_admin', 'company_admin'] },
   { name: 'Şoförler', href: '/drivers', icon: Users },
   { name: 'Araçlar', href: '/vehicles', icon: CarFront },
