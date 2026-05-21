@@ -46,6 +46,7 @@ export class BillingService {
             tcKimlikNo: driver.tcKimlikNo,
             paymentStatus: driverPayment ? driverPayment.status : 'UNPAID',
             paymentId: driverPayment ? driverPayment.id : null,
+            note: driverPayment ? driverPayment.notes : '',
           };
         });
 
@@ -54,6 +55,7 @@ export class BillingService {
         companyName: tenant.companyName,
         paymentStatus: mainPayment ? mainPayment.status : 'UNPAID',
         paymentId: mainPayment ? mainPayment.id : null,
+        note: mainPayment ? mainPayment.notes : '',
         externalDrivers,
       };
     });
@@ -93,6 +95,43 @@ export class BillingService {
     } else {
       payment.status = data.status;
       payment.paidAt = data.status === 'PAID' ? new Date() : null;
+    }
+
+    return this.paymentRepository.save(payment);
+  }
+
+
+  async saveNote(data: {
+    tenantId: string;
+    driverId?: string;
+    month: number;
+    year: number;
+    note: string;
+  }) {
+    const type = data.driverId ? 'EXTERNAL_DRIVER' : 'TENANT_MAIN';
+
+    let payment = await this.paymentRepository.findOne({
+      where: {
+        tenantId: data.tenantId,
+        driverId: data.driverId || null,
+        periodMonth: data.month,
+        periodYear: data.year,
+        type,
+      },
+    });
+
+    if (!payment) {
+      payment = this.paymentRepository.create({
+        tenantId: data.tenantId,
+        driverId: data.driverId || null,
+        periodMonth: data.month,
+        periodYear: data.year,
+        type,
+        status: 'UNPAID',
+        notes: data.note,
+      });
+    } else {
+      payment.notes = data.note;
     }
 
     return this.paymentRepository.save(payment);
