@@ -1189,7 +1189,7 @@ export class TripsService {
     // Plate patterns: 34ABC123, 34 BDD 991
     if (/^\d{2}\s*[A-ZÇĞİÖŞÜa-zçğıöşü]{1,3}\s*\d{2,4}$/i.test(line)) return true;
     // Lines starting with PLAKA, şoför, driver keywords
-    if (/^(plaka|şoför|sofor|driver|araç|arac)\b/i.test(line)) return true;
+    if (/^(plaka|şoför|sofor|driver|araç|arac|toplam|uçuş|ucus|rezervasyon|alış|alis|bırakış|birakis|iletişim|iletisim|not|ödeme|odeme|acil|ücret|ucret|fiyat|işin|isin|telefon|tel|mail|e-mail)/i.test(line)) return true;
     // Lines that are just single short words (locations, keywords)
     const words = line.split(/\s+/).filter(Boolean);
     if (words.length < 2) return true;
