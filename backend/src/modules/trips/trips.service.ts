@@ -1215,6 +1215,78 @@ export class TripsService {
     return false;
   }
 
+  private async parsePassengersWithGemini(message: string): Promise<Partial<Passenger>[]> {
+    try {
+      const apiKey = this.configService.get<string>('GEMINI_API_KEY');
+      if (!apiKey) throw new Error('GEMINI_API_KEY not set');
+
+      const prompt = `Sen bir ulaşım rezervasyon sistemi için yolcu ismi ayıklayıcısısın.
+Aşağıdaki rezervasyon mesajından YALNIZCA gerçek insan yolcu isimlerini çıkar.
+Şunları ÇIKARMA: konum, adres, otel adı, havalimanı, ilçe, semt, araç plakası, telefon, tarih, uçuş numarası, ödeme bilgisi, şoför adı, toplam kişi sayısı.
+Sadece yolcu olarak seyahat eden gerçek kişilerin isimlerini JSON dizisi olarak döndür.
+Eğer gerçek yolcu ismi bulamazsan boş dizi döndür: []
+
+Mesaj:
+"""
+${message}
+"""
+
+Yalnızca geçerli JSON döndür. Örnek: [{"firstName":"Andrew","lastName":"Tabaczynski"},{"firstName":"Misha","lastName":"Daha"}]`;
+
+      const endpoints = [
+        { v: 'v1beta', m: 'gemini-2.0-flash' },
+        { v: 'v1beta', m: 'gemini-1.5-flash' },
+        { v: 'v1', m: 'gemini-1.5-flash-latest' },
+      ];
+
+      let responseText: string | null = null;
+      for (const ep of endpoints) {
+        try {
+          const res = await fetch(
+            `https://generativelanguage.googleapis.com/${ep.v}/models/${ep.m}:generateContent?key=${apiKey}`,
+            {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ contents: [{ parts: [{ text: prompt }] }] }),
+            },
+          );
+          if (res.ok) {
+            const resData = await res.json() as any;
+            responseText = resData.candidates?.[0]?.content?.parts?.[0]?.text || null;
+            if (responseText) break;
+          }
+        } catch (_) { /* try next endpoint */ }
+      }
+
+      if (!responseText) throw new Error('All Gemini endpoints failed');
+
+      const jsonMatch = responseText.match(/\[\s*[\s\S]*?\]/);
+      if (!jsonMatch) throw new Error('No JSON array in Gemini response');
+
+      const parsed: { firstName: string; lastName: string }[] = JSON.parse(jsonMatch[0]);
+      this.logger.log(`[Gemini] Parsed ${parsed.length} passengers from message`);
+
+      const result: Partial<Passenger>[] = [];
+      for (let i = 0; i < parsed.length; i++) {
+        const p = parsed[i];
+        if (!p.firstName || !p.lastName) continue;
+        result.push({
+          firstName: normalizePassengerName(p.firstName),
+          lastName: normalizePassengerName(p.lastName),
+          tcPassportNo: `MSG${Date.now()}${i + 1}`,
+          nationalityCode: 'TR',
+          gender: 'E',
+          seatNumber: String(i + 1),
+          source: PassengerSource.MANUAL,
+        });
+      }
+      return result;
+    } catch (err: any) {
+      this.logger.warn(`[Gemini] Passenger parse failed, falling back to regex: ${err.message}`);
+      return this.parsePassengersFromMessage(message);
+    }
+  }
+
   private parsePassengersFromMessage(message: string): Partial<Passenger>[] {
     const lines = message.split(/\n/).map((line) => line.trim()).filter(Boolean);
     const passengers: Partial<Passenger>[] = [];
@@ -1330,15 +1402,15 @@ export class TripsService {
       }
     }
 
-    // If no passengers from passports, try parsing names from message text
+    // If no passengers from passports, use Gemini AI to parse names from message text
     if (passengers.length === 0 && message) {
-      const messagePassengers = this.parsePassengersFromMessage(message);
+      const messagePassengers = await this.parsePassengersWithGemini(message);
       for (const msgPassenger of messagePassengers) {
         passengers.push(msgPassenger);
       }
       if (messagePassengers.length > 0) {
         inferred.decisions.push(
-          `Mesaj metninden ${messagePassengers.length} yolcu ismi okundu (Mr./Mrs. formatı).`,
+          `Gemini AI ile mesaj metninden ${messagePassengers.length} yolcu ismi okundu.`,
         );
       }
     }
