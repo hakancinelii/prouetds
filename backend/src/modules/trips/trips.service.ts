@@ -1215,7 +1215,7 @@ export class TripsService {
     return false;
   }
 
-  private async parsePassengersWithGemini(message: string): Promise<Partial<Passenger>[]> {
+    private async parsePassengersWithGemini(message: string): Promise<Partial<Passenger>[]> {
     try {
       const apiKey = this.configService.get<string>('GEMINI_API_KEY');
       if (!apiKey) throw new Error('GEMINI_API_KEY not set');
@@ -1224,6 +1224,7 @@ export class TripsService {
 Aşağıdaki rezervasyon mesajından YALNIZCA gerçek insan yolcu isimlerini çıkar.
 Şunları ÇIKARMA: konum, adres, otel adı, havalimanı, ilçe, semt, araç plakası, telefon, tarih, uçuş numarası, ödeme bilgisi, şoför adı, toplam kişi sayısı.
 Sadece yolcu olarak seyahat eden gerçek kişilerin isimlerini JSON dizisi olarak döndür.
+Her yolcunun cinsiyetini isminden tahmin ederek (Erkek için "E", Kadın için "K") "gender" alanına ekle.
 Eğer gerçek yolcu ismi bulamazsan boş dizi döndür: []
 
 Mesaj:
@@ -1231,7 +1232,8 @@ Mesaj:
 ${message}
 """
 
-Yalnızca geçerli JSON döndür. Örnek: [{"firstName":"Andrew","lastName":"Tabaczynski"},{"firstName":"Misha","lastName":"Daha"}]`;
+DİKKAT: Yanıtın sadece ham (raw) JSON olmalıdır. Markdown (```json) kullanma! 
+Örnek Yanıt: [{"firstName":"Ahmet","lastName":"Yılmaz","gender":"E"},{"firstName":"Ayşe","lastName":"Kaya","gender":"K"}]`;
 
       const endpoints = [
         { v: 'v1beta', m: 'gemini-2.0-flash' },
@@ -1239,7 +1241,8 @@ Yalnızca geçerli JSON döndür. Örnek: [{"firstName":"Andrew","lastName":"Tab
         { v: 'v1', m: 'gemini-1.5-flash-latest' },
       ];
 
-      let responseText: string | null = null;
+      let responseText = null;
+      let lastError = '';
       for (const ep of endpoints) {
         try {
           const res = await fetch(
@@ -1251,43 +1254,56 @@ Yalnızca geçerli JSON döndür. Örnek: [{"firstName":"Andrew","lastName":"Tab
             },
           );
           if (res.ok) {
-            const resData = await res.json() as any;
+            const resData = await res.json();
             responseText = resData.candidates?.[0]?.content?.parts?.[0]?.text || null;
             if (responseText) break;
+          } else {
+            const errText = await res.text();
+            lastError = `HTTP ${res.status} ${errText}`;
+            this.logger.error(`[Gemini API Error] ${ep.m}: ${lastError}`);
           }
-        } catch (_) { /* try next endpoint */ }
+        } catch (err) {
+          lastError = err.message;
+          this.logger.error(`[Gemini Network Error] ${ep.m}: ${err.message}`);
+        }
       }
 
-      if (!responseText) throw new Error('All Gemini endpoints failed');
+      if (!responseText) throw new Error(`All Gemini endpoints failed. Last error: ${lastError}`);
 
-      const jsonMatch = responseText.match(/\[\s*[\s\S]*?\]/);
-      if (!jsonMatch) throw new Error('No JSON array in Gemini response');
+      let cleanJson = responseText.replace(/```json/gi, '').replace(/```/g, '').trim();
+      const jsonMatch = cleanJson.match(/\[[\s\S]*\]/);
+      if (!jsonMatch) throw new Error('No JSON array in Gemini response: ' + responseText);
 
-      const parsed: { firstName: string; lastName: string }[] = JSON.parse(jsonMatch[0]);
-      this.logger.log(`[Gemini] Parsed ${parsed.length} passengers from message`);
+      const parsed = JSON.parse(jsonMatch[0]);
+      this.logger.log(`[Gemini] Parsed ${parsed.length} passengers`);
 
-      const result: Partial<Passenger>[] = [];
+      const result = [];
       for (let i = 0; i < parsed.length; i++) {
         const p = parsed[i];
         if (!p.firstName || !p.lastName) continue;
+        
+        const predictedGender = (p.gender === 'K' || p.gender === 'k') ? 'K' : 'E';
+        const safeFirstName = normalizePassengerName(p.firstName).substring(0, 100);
+        const safeLastName = normalizePassengerName(p.lastName).substring(0, 100);
+
         result.push({
-          firstName: normalizePassengerName(p.firstName),
-          lastName: normalizePassengerName(p.lastName),
+          firstName: safeFirstName,
+          lastName: safeLastName,
           tcPassportNo: `MSG${Date.now()}${i + 1}`,
           nationalityCode: 'TR',
-          gender: 'E',
+          gender: predictedGender,
           seatNumber: String(i + 1),
           source: PassengerSource.MANUAL,
         });
       }
       return result;
-    } catch (err: any) {
+    } catch (err) {
       this.logger.warn(`[Gemini] Passenger parse failed, falling back to regex: ${err.message}`);
       return this.parsePassengersFromMessage(message);
     }
   }
 
-  private parsePassengersFromMessage(message: string): Partial<Passenger>[] {
+private parsePassengersFromMessage(message: string): Partial<Passenger>[] {
     const lines = message.split(/\n/).map((line) => line.trim()).filter(Boolean);
     const passengers: Partial<Passenger>[] = [];
     const inferredPassports = message.match(/\b[A-Z]{1,3}[0-9]{5,10}\b/g) || [];
