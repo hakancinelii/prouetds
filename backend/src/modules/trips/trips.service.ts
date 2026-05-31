@@ -1313,9 +1313,13 @@ DİKKAT: Yanıtın sadece ham (raw) JSON olmalıdır. Markdown veya kod bloğu k
         });
       }
       return result;
-    } catch (err) {
+    } catch (err: any) {
       this.logger.warn(`[Gemini] Passenger parse failed, falling back to regex: ${err.message}`);
-      return this.parsePassengersFromMessage(message);
+      const fallbackResult = this.parsePassengersFromMessage(message);
+      if (fallbackResult.length === 0) {
+        throw new BadRequestException(`Yapay Zeka (Gemini) Hatası: ${err.message} -- Yapay zeka çalışamadığı için eski sisteme düşüldü, onda da Mr/Mrs bulunamadı.`);
+      }
+      return fallbackResult;
     }
   }
 
