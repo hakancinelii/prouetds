@@ -1237,8 +1237,8 @@ DİKKAT: Yanıtın sadece ham (raw) JSON olmalıdır. Markdown veya kod bloğu k
 
       const endpoints = [
         { v: 'v1beta', m: 'gemini-2.0-flash' },
-        { v: 'v1beta', m: 'gemini-1.5-flash-002' },
-        { v: 'v1beta', m: 'gemini-1.5-flash-8b' }
+        { v: 'v1beta', m: 'gemini-2.0-flash-lite' },
+        { v: 'v1beta', m: 'gemini-2.0-flash-exp' },
       ];
 
       let responseText = null;
