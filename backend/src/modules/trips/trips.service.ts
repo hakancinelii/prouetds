@@ -1215,7 +1215,7 @@ export class TripsService {
     return false;
   }
 
-    private async parsePassengersWithGemini(message: string): Promise<Partial<Passenger>[]> {
+      private async parsePassengersWithGemini(message: string): Promise<Partial<Passenger>[]> {
     try {
       const apiKey = this.configService.get<string>('GEMINI_API_KEY');
       if (!apiKey) throw new Error('GEMINI_API_KEY not set');
@@ -1232,7 +1232,7 @@ Mesaj:
 ${message}
 """
 
-DİKKAT: Yanıtın sadece ham (raw) JSON olmalıdır. Markdown (```json) kullanma! 
+DİKKAT: Yanıtın sadece ham (raw) JSON olmalıdır. Markdown veya kod bloğu kullanma!
 Örnek Yanıt: [{"firstName":"Ahmet","lastName":"Yılmaz","gender":"E"},{"firstName":"Ayşe","lastName":"Kaya","gender":"K"}]`;
 
       const endpoints = [
@@ -1270,7 +1270,7 @@ DİKKAT: Yanıtın sadece ham (raw) JSON olmalıdır. Markdown (```json) kullanm
 
       if (!responseText) throw new Error(`All Gemini endpoints failed. Last error: ${lastError}`);
 
-      let cleanJson = responseText.replace(/```json/gi, '').replace(/```/g, '').trim();
+      let cleanJson = responseText.replace(/[\`]{3}json/gi, '').replace(/[\`]{3}/g, '').trim();
       const jsonMatch = cleanJson.match(/\[[\s\S]*\]/);
       if (!jsonMatch) throw new Error('No JSON array in Gemini response: ' + responseText);
 
