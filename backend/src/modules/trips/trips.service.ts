@@ -1181,24 +1181,37 @@ export class TripsService {
   }
 
   private isNonNameLine(line: string): boolean {
+    // Convert to lowercase and normalize common Turkish characters
+    const lowerLine = line
+      .replace(/İ/g, 'i')
+      .replace(/I/g, 'ı')
+      .toLowerCase()
+      .trim();
+
     // Date patterns: 05.05.2026, 2026-05-05, 05/05/2026
-    if (/^\d{2}[.\/-]\d{2}[.\/-]\d{4}$/.test(line)) return true;
-    if (/^\d{4}-\d{2}-\d{2}$/.test(line)) return true;
+    if (/^\\d{2}[.\\/-]\\d{2}[.\\/-]\\d{4}$/.test(lowerLine)) return true;
+    if (/^\\d{4}-\\d{2}-\\d{2}$/.test(lowerLine)) return true;
     // Time patterns: 22:00, 09:30
-    if (/^\d{1,2}:\d{2}$/.test(line)) return true;
+    if (/^\\d{1,2}:\\d{2}$/.test(lowerLine)) return true;
     // Plate patterns: 34ABC123, 34 BDD 991
-    if (/^\d{2}\s*[A-ZÇĞİÖŞÜa-zçğıöşü]{1,3}\s*\d{2,4}$/i.test(line)) return true;
-    // Lines starting with PLAKA, şoför, driver keywords
-    if (/^(plaka|şoför|sofor|driver|araç|arac|toplam|uçuş|ucus|rezervasyon|alış|alis|bırakış|birakis|iletişim|iletisim|not|ödeme|odeme|acil|ücret|ucret|fiyat|işin|isin|telefon|tel|mail|e-mail)/i.test(line)) return true;
+    if (/^\\d{2}\\s*[a-zçğıöşü]{1,3}\\s*\\d{2,4}$/i.test(lowerLine)) return true;
+
+    // Split line into clean words, removing punctuation
+    const cleanWords = lowerLine.replace(/[^a-zçğıöşü\\s]/g, ' ').split(/\\s+/).filter(Boolean);
+
+    const keywords = ['plaka', 'şoför', 'sofor', 'driver', 'araç', 'arac', 'toplam', 'uçuş', 'ucus', 'rezervasyon', 'alış', 'alis', 'bırakış', 'birakis', 'iletişim', 'iletisim', 'not', 'ödeme', 'odeme', 'acil', 'ücret', 'ucret', 'fiyat', 'işin', 'isin', 'telefon', 'tel', 'mail', 'e-mail', 'booking', 'destination', 'origin', 'pickup', 'dropoff', 'route', 'yön', 'yon', 'güzergah', 'guzergah'];
+
+    const locations = ['saw', 'ist', 'hav', 'istanbul', 'ankara', 'izmir', 'fatih', 'sisli', 'şişli', 'taksim', 'pendik', 'kadıköy', 'kadikoy', 'arnavutköy', 'arnavutkoy', 'sheraton', 'kagithane', 'kağıthane', 'beşiktaş', 'besiktas', 'havalimanı', 'havalimani', 'airport', 'hotel', 'otel', 'bosphorus', 'shuttle', 'transfer', 'hilton', 'marriott', 'hyatt', 'sofitel', 'swissotel', 'plaza', 'hav.'];
+
+    if (cleanWords.some(w => keywords.includes(w))) return true;
+    if (cleanWords.some(w => locations.includes(w))) return true;
+
     // Lines that are just single short words (locations, keywords)
-    const words = line.split(/\s+/).filter(Boolean);
+    const words = lowerLine.split(/\\s+/).filter(Boolean);
     if (words.length < 2) return true;
     // Lines containing only numbers
-    if (/^\d+$/.test(line.replace(/\s/g, ''))) return true;
-    // Known location keywords
-    if (/^(saw|ist|istanbul|ankara|izmir|fatih|sisli|şişli|taksim|pendik|kadıköy|kadikoy|arnavutköy|arnavutkoy|sheraton|kagithane|kağıthane)\b/i.test(line)) return true;
-    // Lines with Saw. / İst. prefix (origin/dest shorthand like "Saw. Fatih")
-    if (/^(saw|ist|hav)\.\s/i.test(line)) return true;
+    if (/^\\d+$/.test(lowerLine.replace(/\\s/g, ''))) return true;
+
     return false;
   }
 
