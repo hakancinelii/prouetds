@@ -1215,7 +1215,7 @@ export class TripsService {
     return false;
   }
 
-      private async parsePassengersWithGemini(message: string): Promise<Partial<Passenger>[]> {
+        private async parsePassengersWithGemini(message: string): Promise<Partial<Passenger>[]> {
     try {
       const apiKey = this.configService.get<string>('GEMINI_API_KEY');
       if (!apiKey) throw new Error('GEMINI_API_KEY not set');
@@ -1237,35 +1237,51 @@ DİKKAT: Yanıtın sadece ham (raw) JSON olmalıdır. Markdown veya kod bloğu k
 
       const endpoints = [
         { v: 'v1beta', m: 'gemini-2.0-flash' },
-        { v: 'v1beta', m: 'gemini-1.5-flash' },
-        { v: 'v1', m: 'gemini-1.5-flash-latest' },
+        { v: 'v1beta', m: 'gemini-1.5-flash-002' },
+        { v: 'v1beta', m: 'gemini-1.5-flash-8b' }
       ];
 
       let responseText = null;
       let lastError = '';
+      
       for (const ep of endpoints) {
-        try {
-          const res = await fetch(
-            `https://generativelanguage.googleapis.com/${ep.v}/models/${ep.m}:generateContent?key=${apiKey}`,
-            {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({ contents: [{ parts: [{ text: prompt }] }] }),
-            },
-          );
-          if (res.ok) {
-            const resData = await res.json();
-            responseText = resData.candidates?.[0]?.content?.parts?.[0]?.text || null;
-            if (responseText) break;
-          } else {
-            const errText = await res.text();
-            lastError = `HTTP ${res.status} ${errText}`;
-            this.logger.error(`[Gemini API Error] ${ep.m}: ${lastError}`);
+        let attempts = 0;
+        while (attempts < 2) {
+          attempts++;
+          try {
+            const res = await fetch(
+              `https://generativelanguage.googleapis.com/${ep.v}/models/${ep.m}:generateContent?key=${apiKey}`,
+              {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ contents: [{ parts: [{ text: prompt }] }] }),
+              },
+            );
+            
+            if (res.ok) {
+              const resData = await res.json();
+              responseText = resData.candidates?.[0]?.content?.parts?.[0]?.text || null;
+              break;
+            } else if (res.status === 429) {
+              const errData = await res.json();
+              const delayStr = errData.error?.details?.[0]?.retryDelay || '2s';
+              const delaySec = parseInt(delayStr) || 2;
+              this.logger.warn(`[Gemini] ${ep.m} Rate Limit (429). Retrying in ${delaySec}s...`);
+              await new Promise(r => setTimeout(r, delaySec * 1000));
+              continue; // Tekrar dene
+            } else {
+              const errText = await res.text();
+              lastError = `HTTP ${res.status} ${errText}`;
+              this.logger.error(`[Gemini API Error] ${ep.m}: ${lastError}`);
+              break; // Diğer modele geç
+            }
+          } catch (err) {
+            lastError = err.message;
+            this.logger.error(`[Gemini Network Error] ${ep.m}: ${err.message}`);
+            break; // Diğer modele geç
           }
-        } catch (err) {
-          lastError = err.message;
-          this.logger.error(`[Gemini Network Error] ${ep.m}: ${err.message}`);
         }
+        if (responseText) break; // Başarılıysa döngüden çık
       }
 
       if (!responseText) throw new Error(`All Gemini endpoints failed. Last error: ${lastError}`);
