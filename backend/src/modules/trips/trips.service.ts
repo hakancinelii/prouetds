@@ -1133,7 +1133,7 @@ export class TripsService {
         departureTime: toLocalTripTime(now),
         endDate: departureDate,
         endTime: '23:59',
-        description: message.trim() || 'AI Autopilot seferi',
+        description: message.trim().substring(0, 190) || 'AI Autopilot seferi',
         originIlCode: origin.ilCode,
         originIlceCode: origin.ilceCode,
         originPlace: origin.place,
