@@ -1323,32 +1323,94 @@ DİKKAT: Yanıtın sadece ham (raw) JSON olmalıdır. Markdown veya kod bloğu k
     }
   }
 
-private parsePassengersFromMessage(message: string): Partial<Passenger>[] {
+  private parsePassengersFromMessage(message: string): Partial<Passenger>[] {
     const lines = message.split(/\n/).map((line) => line.trim()).filter(Boolean);
     const passengers: Partial<Passenger>[] = [];
     const inferredPassports = message.match(/\b[A-Z]{1,3}[0-9]{5,10}\b/g) || [];
     const titlePattern = /\b(Mr|Mrs|Ms|Miss)\.?\s+/i;
 
+    // ── Strategy 1: "Yolcu Adı:" / "Yolcular:" / "Passenger(s):" section parser ──
+    const sectionKeyword = /^(yolcu\s*ad[iı]|yolcular|passenger[s]?|guests?|müşteri|musteri)\s*[:\-]?\s*$/i;
+    const inlineSectionKeyword = /^(yolcu\s*ad[iı]|yolcular|passenger[s]?|guests?|müşteri|musteri)\s*[:\-]\s*(.+)/i;
+
+    let sectionStart = -1;
+    for (let i = 0; i < lines.length; i++) {
+      const inlineMatch = lines[i].match(inlineSectionKeyword);
+      if (inlineMatch && inlineMatch[2]?.trim()) {
+        // e.g. "Yolcu Adı: Andrew Tabaczynski"
+        const namePart = inlineMatch[2].trim();
+        const cleaned = namePart.replace(/[.\-']/g, '');
+        if (/^[A-Za-zÀ-ÿÇçĞğİıÖöŞşÜü\s]+$/.test(cleaned)) {
+          const parts = normalizePassengerName(namePart).split(/\s+/).filter(Boolean);
+          if (parts.length >= 2) {
+            const firstName = parts.slice(0, -1).join(' ');
+            const lastName = parts[parts.length - 1];
+            passengers.push({
+              firstName, lastName,
+              tcPassportNo: inferredPassports[passengers.length] || `MSG${Date.now()}${passengers.length + 1}`,
+              nationalityCode: 'TR', gender: 'E',
+              seatNumber: String(passengers.length + 1),
+              source: PassengerSource.MANUAL,
+            });
+          }
+        }
+        sectionStart = i + 1;
+        break;
+      }
+      if (sectionKeyword.test(lines[i])) {
+        sectionStart = i + 1;
+        break;
+      }
+    }
+
+    if (sectionStart >= 0) {
+      // Parse all name lines after the keyword until a non-name line appears
+      const stopKeywords = /^(alış|bırakış|tarih|saat|araç|plaka|şoför|notlar?|not|pickup|dropoff|date|time|vehicle|driver|note)\s*[:\-]/i;
+      for (let i = sectionStart; i < lines.length; i++) {
+        const line = lines[i];
+        if (!line || stopKeywords.test(line)) break;
+        // Remove leading bullet/number
+        const cleanLine = line.replace(/^[•\-\*\d]+[\s.\)\-]*/, '').trim();
+        if (!cleanLine) continue;
+        // Strip Mr/Mrs if present
+        const titleMatch = cleanLine.match(titlePattern);
+        const namePart = titleMatch ? cleanLine.replace(titlePattern, '').trim() : cleanLine;
+        const cleaned = namePart.replace(/[.\-']/g, '');
+        if (!/^[A-Za-zÀ-ÿÇçĞğİıÖöŞşÜü\s]+$/.test(cleaned)) continue;
+        const parts = normalizePassengerName(namePart).split(/\s+/).filter(Boolean);
+        if (parts.length < 2) continue;
+        const firstName = parts.slice(0, -1).join(' ');
+        const lastName = parts[parts.length - 1];
+        const isDuplicate = passengers.some(p => p.firstName === firstName && p.lastName === lastName);
+        if (isDuplicate) continue;
+        passengers.push({
+          firstName, lastName,
+          tcPassportNo: inferredPassports[passengers.length] || `MSG${Date.now()}${passengers.length + 1}`,
+          nationalityCode: 'TR', gender: 'E',
+          seatNumber: String(passengers.length + 1),
+          source: PassengerSource.MANUAL,
+        });
+      }
+      if (passengers.length > 0) return passengers;
+    }
+
+    // ── Strategy 2: Mr./Mrs. prefix (original logic) ──
     for (const line of lines) {
       const cleanLine = line.replace(/^[0-9]+[\s.\-\)]+\s*/, '').trim();
       if (!cleanLine) continue;
       let fullName = '';
 
-      // First try: Mr./Mrs. prefix
       const titleMatch = cleanLine.match(titlePattern);
       if (titleMatch) {
         fullName = normalizePassengerName(cleanLine.replace(titlePattern, ""));
       } else {
-        // Second try: plain name line (at least 2 words, all alphabetic/spaces)
         if (this.isNonNameLine(cleanLine)) continue;
-        // Check if line is mostly alphabetic (allow Turkish chars, spaces, dots)
         const cleaned = cleanLine.replace(/[.\-']/g, '');
         if (!/^[A-Za-zÀ-ÿÇçĞğİıÖöŞşÜü\s]+$/.test(cleaned)) continue;
         fullName = normalizePassengerName(cleanLine);
       }
 
       if (!fullName || fullName.length < 3) continue;
-
       const parts = fullName.split(/\s+/);
       if (parts.length < 2) continue;
 
@@ -1356,7 +1418,6 @@ private parsePassengersFromMessage(message: string): Partial<Passenger>[] {
       const lastName = parts[parts.length - 1];
       const autoPassportNo = inferredPassports[passengers.length] || `MSG${Date.now()}${passengers.length + 1}`;
 
-      // Avoid duplicates
       const isDuplicate = passengers.some(
         (p) => p.firstName === normalizePassengerName(firstName) && p.lastName === normalizePassengerName(lastName),
       );
