@@ -1238,7 +1238,6 @@ DİKKAT: Yanıtın sadece ham (raw) JSON olmalıdır. Markdown veya kod bloğu k
       const endpoints = [
         { v: 'v1beta', m: 'gemini-2.0-flash' },
         { v: 'v1beta', m: 'gemini-2.0-flash-lite' },
-        { v: 'v1beta', m: 'gemini-2.0-flash-exp' },
       ];
 
       let responseText = null;
@@ -1265,7 +1264,8 @@ DİKKAT: Yanıtın sadece ham (raw) JSON olmalıdır. Markdown veya kod bloğu k
             } else if (res.status === 429) {
               const errData = await res.json();
               const delayStr = errData.error?.details?.[0]?.retryDelay || '2s';
-              const delaySec = parseInt(delayStr) || 2;
+              const rawDelay = parseInt(delayStr) || 2;
+              const delaySec = Math.max(rawDelay + 4, 6); // Free tier needs 6s+ between retries
               this.logger.warn(`[Gemini] ${ep.m} Rate Limit (429). Retrying in ${delaySec}s...`);
               await new Promise(r => setTimeout(r, delaySec * 1000));
               continue; // Tekrar dene
