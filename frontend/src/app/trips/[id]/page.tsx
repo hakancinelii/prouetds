@@ -1333,7 +1333,7 @@ Her satıra bir yolcu yazın.
                   <p className="text-sm theme-text-soft">Her satıra bir yolcu bilgisi girin. Satır ekleyip çıkarabilirsiniz.</p>
                   <div className="space-y-3 max-h-[50vh] overflow-y-auto pr-1 custom-scrollbar">
                     {(manualRows || [{ firstName: '', lastName: '', tcPassportNo: '', nationalityCode: 'TR', gender: '' }]).map((row: any, idx: number) => (
-                      <div key={idx} className="p-3 rounded-xl border border-slate-700/50 bg-slate-800/30 space-y-2">
+                      <div key={idx} className="p-3 rounded-xl border border-slate-200 dark:border-slate-700/50 bg-slate-50 dark:bg-slate-800/30 space-y-2">
                         <div className="flex items-center justify-between">
                           <span className="text-xs text-slate-500 font-medium">Yolcu {idx + 1}</span>
                           {(manualRows || []).length > 1 && (
@@ -1391,7 +1391,7 @@ Her satıra bir yolcu yazın.
                   <button
                     type="button"
                     onClick={() => setManualRows([...(manualRows || []), { firstName: '', lastName: '', tcPassportNo: '', nationalityCode: 'TR', gender: '' }])}
-                    className="w-full py-2 rounded-lg border-2 border-dashed border-slate-600 text-slate-400 hover:border-emerald-500/50 hover:text-emerald-400 transition flex items-center justify-center gap-2 text-sm"
+                    className="w-full py-2 rounded-lg border-2 border-dashed border-slate-300 dark:border-slate-600 text-slate-500 dark:text-slate-400 hover:border-emerald-500/50 hover:text-emerald-500 dark:hover:text-emerald-400 transition flex items-center justify-center gap-2 text-sm"
                   >
                     <Plus size={16} /> Yolcu Satırı Ekle
                   </button>
