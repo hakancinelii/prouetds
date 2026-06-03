@@ -462,6 +462,9 @@ export default function TripDetailPage() {
     gender: '',
     phone: '',
   });
+  const [manualRows, setManualRows] = useState<Array<{ firstName: string; lastName: string; tcPassportNo: string; nationalityCode: string; gender: string }>>([
+    { firstName: '', lastName: '', tcPassportNo: '', nationalityCode: 'TR', gender: '' },
+  ]);
 
   const fetchTrip = async () => {
     try {
@@ -1238,8 +1241,8 @@ export default function TripDetailPage() {
 
       {/* Unified Add Passenger Modal */}
       {showPassengerModal && (
-        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-          <div className="glass-card w-full max-w-2xl p-6 animate-slide-in flex flex-col max-h-[90vh]">
+        <div className="fixed inset-0 bg-black/70 backdrop-blur-md z-50 flex items-center justify-center p-4">
+          <div className="w-full max-w-2xl p-6 animate-slide-in flex flex-col max-h-[90vh] rounded-2xl border border-slate-700/60 bg-[rgb(var(--surface-rgb))] shadow-2xl">
             <div className="flex items-center justify-between mb-4">
               <h3 className="text-xl font-bold flex items-center gap-2 text-emerald-400">
                 <Users size={22} />
@@ -1255,39 +1258,26 @@ export default function TripDetailPage() {
             </div>
 
             {/* Tabs */}
-            <div className="flex gap-1 border-b border-slate-700/50 pb-4 mb-4 overflow-x-auto hide-scrollbar">
-              <button
-                type="button"
-                onClick={() => setActivePassengerTab('text')}
-                className={`px-4 py-2 text-sm font-medium rounded-lg transition whitespace-nowrap flex items-center gap-2 ${activePassengerTab === 'text' ? 'bg-emerald-500/20 text-emerald-300' : 'text-slate-400 hover:bg-slate-800'}`}
-              >
-                <Clipboard size={16} />
-                Metin (WhatsApp)
-              </button>
-              <button
-                type="button"
-                onClick={() => setActivePassengerTab('manual')}
-                className={`px-4 py-2 text-sm font-medium rounded-lg transition whitespace-nowrap flex items-center gap-2 ${activePassengerTab === 'manual' ? 'bg-emerald-500/20 text-emerald-300' : 'text-slate-400 hover:bg-slate-800'}`}
-              >
-                <UserPlus size={16} />
-                Manuel Ekle
-              </button>
-              <button
-                type="button"
-                onClick={() => setActivePassengerTab('excel')}
-                className={`px-4 py-2 text-sm font-medium rounded-lg transition whitespace-nowrap flex items-center gap-2 ${activePassengerTab === 'excel' ? 'bg-emerald-500/20 text-emerald-300' : 'text-slate-400 hover:bg-slate-800'}`}
-              >
-                <UploadCloud size={16} />
-                Excel / CSV
-              </button>
-              <button
-                type="button"
-                onClick={() => setActivePassengerTab('ocr')}
-                className={`px-4 py-2 text-sm font-medium rounded-lg transition whitespace-nowrap flex items-center gap-2 ${activePassengerTab === 'ocr' ? 'bg-emerald-500/20 text-emerald-300' : 'text-slate-400 hover:bg-slate-800'}`}
-              >
-                <ScanFace size={16} />
-                Pasaport OCR
-              </button>
+            <div className="flex gap-1 border-b border-slate-700/50 pb-3 mb-4 overflow-x-auto hide-scrollbar">
+              {[
+                { key: 'text' as const, icon: <Clipboard size={16} />, label: 'Metin (WhatsApp)' },
+                { key: 'manual' as const, icon: <UserPlus size={16} />, label: 'Manuel Ekle' },
+                { key: 'excel' as const, icon: <UploadCloud size={16} />, label: 'Excel / CSV' },
+                { key: 'ocr' as const, icon: <ScanFace size={16} />, label: 'Pasaport OCR' },
+              ].map((tab) => (
+                <button
+                  key={tab.key}
+                  type="button"
+                  onClick={() => setActivePassengerTab(tab.key)}
+                  className={`px-4 py-2 text-sm font-medium rounded-lg transition whitespace-nowrap flex items-center gap-2 ${activePassengerTab === tab.key
+                    ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/30'
+                    : 'text-slate-400 hover:bg-slate-700/50 hover:text-slate-200'
+                    }`}
+                >
+                  {tab.icon}
+                  {tab.label}
+                </button>
+              ))}
             </div>
 
             <div className="flex-1 overflow-y-auto pr-2 custom-scrollbar">
@@ -1300,7 +1290,14 @@ export default function TripDetailPage() {
                     value={pasteText}
                     onChange={(e) => setPasteText(e.target.value)}
                     className="input-field font-mono text-sm h-48"
-                    placeholder={"Ahmet Yılmaz 12345678901\\nJohn Smith P12345678"}
+                    placeholder={`Ahmet Yılmaz 12345678901
+Ayşe Demir 23456789012
+Mehmet Kaya 34567890123
+John Smith P12345678
+Maria Garcia ES987654
+
+Her satıra bir yolcu yazın.
+İsim + TC/Pasaport No alt alta yapıştırın.`}
                   />
                   {parsedResults && (
                     <div className="p-3 rounded-lg bg-emerald-500/10 border border-emerald-500/20">
@@ -1322,96 +1319,98 @@ export default function TripDetailPage() {
               )}
 
               {activePassengerTab === 'manual' && (
-                <form onSubmit={(e) => {
-                  handleAddPassenger(e);
-                  // The form handler will close the modal successfully, so we just let it run.
-                  // Except the previous logic was setShowAddPassenger(false). We might need to ensure it doesn't break,
-                  // handleAddPassenger is still there, but it calls setShowAddPassenger(false) which is removed!
-                  // Let's modify handleAddPassenger directly or just keep it simple and fix handleAddPassenger in another chunk.
-                }} className="space-y-4 animate-fade-in">
-                  <div className="grid grid-cols-2 gap-4">
-                    <div>
-                      <label className="block text-xs text-slate-400 mb-1">Ad</label>
-                      <input
-                        value={passengerForm.firstName}
-                        onChange={(e) =>
-                          setPassengerForm({ ...passengerForm, firstName: normalizePassengerText(e.target.value) })
-                        }
-                        className="input-field"
-                        autoComplete="off"
-                        spellCheck={false}
-                        required
-                      />
-                    </div>
-                    <div>
-                      <label className="block text-xs text-slate-400 mb-1">Soyad</label>
-                      <input
-                        value={passengerForm.lastName}
-                        onChange={(e) =>
-                          setPassengerForm({ ...passengerForm, lastName: normalizePassengerText(e.target.value) })
-                        }
-                        className="input-field"
-                        autoComplete="off"
-                        spellCheck={false}
-                        required
-                      />
-                    </div>
+                <div className="space-y-4 animate-fade-in">
+                  <p className="text-sm text-slate-400">Her satıra bir yolcu bilgisi girin. Satır ekleyip çıkarabilirsiniz.</p>
+                  <div className="space-y-3 max-h-[50vh] overflow-y-auto pr-1 custom-scrollbar">
+                    {(manualRows || [{ firstName: '', lastName: '', tcPassportNo: '', nationalityCode: 'TR', gender: '' }]).map((row: any, idx: number) => (
+                      <div key={idx} className="p-3 rounded-xl border border-slate-700/50 bg-slate-800/30 space-y-2">
+                        <div className="flex items-center justify-between">
+                          <span className="text-xs text-slate-500 font-medium">Yolcu {idx + 1}</span>
+                          {(manualRows || []).length > 1 && (
+                            <button
+                              type="button"
+                              onClick={() => {
+                                const updated = [...(manualRows || [])]; updated.splice(idx, 1); setManualRows(updated);
+                              }}
+                              className="text-red-400 hover:text-red-300 transition text-xs flex items-center gap-1"
+                            >
+                              <XCircle size={14} /> Sil
+                            </button>
+                          )}
+                        </div>
+                        <div className="grid grid-cols-2 gap-2">
+                          <input
+                            value={row.firstName}
+                            onChange={(e) => { const u = [...(manualRows || [])]; u[idx] = { ...u[idx], firstName: normalizePassengerText(e.target.value) }; setManualRows(u); }}
+                            className="input-field text-sm" placeholder="Ad" autoComplete="off" spellCheck={false} required
+                          />
+                          <input
+                            value={row.lastName}
+                            onChange={(e) => { const u = [...(manualRows || [])]; u[idx] = { ...u[idx], lastName: normalizePassengerText(e.target.value) }; setManualRows(u); }}
+                            className="input-field text-sm" placeholder="Soyad" autoComplete="off" spellCheck={false} required
+                          />
+                        </div>
+                        <input
+                          value={row.tcPassportNo}
+                          onChange={(e) => { const u = [...(manualRows || [])]; u[idx] = { ...u[idx], tcPassportNo: normalizePassengerIdentity(e.target.value) }; setManualRows(u); }}
+                          className="input-field text-sm" placeholder="TC Kimlik / Pasaport No" autoCapitalize="characters" autoComplete="off" spellCheck={false} required
+                        />
+                        <div className="grid grid-cols-2 gap-2">
+                          <select
+                            value={row.nationalityCode}
+                            onChange={(e) => { const u = [...(manualRows || [])]; u[idx] = { ...u[idx], nationalityCode: normalizeNationalityCode(e.target.value) }; setManualRows(u); }}
+                            className="input-field text-sm"
+                          >
+                            {UETDS_COUNTRY_OPTIONS.map((country) => (
+                              <option key={country.code} value={country.code}>{country.code} — {country.name}</option>
+                            ))}
+                          </select>
+                          <select
+                            value={row.gender}
+                            onChange={(e) => { const u = [...(manualRows || [])]; u[idx] = { ...u[idx], gender: e.target.value.trim().toUpperCase() }; setManualRows(u); }}
+                            className="input-field text-sm"
+                          >
+                            <option value="">Cinsiyet</option>
+                            <option value="E">Erkek</option>
+                            <option value="K">Kadın</option>
+                          </select>
+                        </div>
+                      </div>
+                    ))}
                   </div>
-                  <div>
-                    <label className="block text-xs text-slate-400 mb-1">TC Kimlik / Pasaport No</label>
-                    <input
-                      value={passengerForm.tcPassportNo}
-                      onChange={(e) =>
-                        setPassengerForm({ ...passengerForm, tcPassportNo: normalizePassengerIdentity(e.target.value) })
-                      }
-                      className="input-field"
-                      autoCapitalize="characters"
-                      autoComplete="off"
-                      autoCorrect="off"
-                      inputMode="text"
-                      spellCheck={false}
-                      required
-                    />
-                  </div>
-                  <div className="grid grid-cols-2 gap-4">
-                    <div>
-                      <label className="block text-xs text-slate-400 mb-1">Uyruk</label>
-                      <select
-                        value={passengerForm.nationalityCode}
-                        onChange={(e) =>
-                          setPassengerForm({
-                            ...passengerForm,
-                            nationalityCode: normalizeNationalityCode(e.target.value),
-                          })
-                        }
-                        className="input-field"
-                      >
-                        {UETDS_COUNTRY_OPTIONS.map((country) => (
-                          <option key={country.code} value={country.code}>
-                            {country.code} — {country.name}
-                          </option>
-                        ))}
-                      </select>
-                    </div>
-                    <div>
-                      <label className="block text-xs text-slate-400 mb-1">Cinsiyet</label>
-                      <select
-                        value={passengerForm.gender}
-                        onChange={(e) =>
-                          setPassengerForm({ ...passengerForm, gender: e.target.value.trim().toUpperCase() })
-                        }
-                        className="input-field"
-                      >
-                        <option value="">Seçiniz</option>
-                        <option value="E">Erkek</option>
-                        <option value="K">Kadın</option>
-                      </select>
-                    </div>
-                  </div>
-                  <button type="submit" className="btn-primary w-full mt-2">
-                    Ekle
+                  <button
+                    type="button"
+                    onClick={() => setManualRows([...(manualRows || []), { firstName: '', lastName: '', tcPassportNo: '', nationalityCode: 'TR', gender: '' }])}
+                    className="w-full py-2 rounded-lg border-2 border-dashed border-slate-600 text-slate-400 hover:border-emerald-500/50 hover:text-emerald-400 transition flex items-center justify-center gap-2 text-sm"
+                  >
+                    <Plus size={16} /> Yolcu Satırı Ekle
                   </button>
-                </form>
+                  <button
+                    type="button"
+                    onClick={async () => {
+                      const rows = manualRows || [];
+                      const valid = rows.filter((r: any) => r.firstName && r.lastName && r.tcPassportNo);
+                      if (valid.length === 0) { toast.error('En az bir yolcu bilgisi girin'); return; }
+                      let added = 0;
+                      for (const row of valid) {
+                        try {
+                          await tripsApi.addPassenger(selectedGroupId, {
+                            firstName: row.firstName, lastName: row.lastName,
+                            tcPassportNo: row.tcPassportNo, nationalityCode: row.nationalityCode || 'TR',
+                            gender: row.gender || 'E', phone: '',
+                          });
+                          added++;
+                        } catch (err) { console.error('Yolcu eklenemedi:', err); }
+                      }
+                      toast.success(`${added} yolcu başarıyla eklendi`);
+                      setManualRows([{ firstName: '', lastName: '', tcPassportNo: '', nationalityCode: 'TR', gender: '' }]);
+                      fetchTrip();
+                    }}
+                    className="btn-primary w-full"
+                  >
+                    Tümünü Ekle ({(manualRows || []).filter((r: any) => r.firstName && r.lastName && r.tcPassportNo).length} yolcu)
+                  </button>
+                </div>
               )}
 
               {activePassengerTab === 'excel' && (
