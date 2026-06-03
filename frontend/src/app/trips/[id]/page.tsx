@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { useParams, useRouter } from 'next/navigation';
+import { useParams, useRouter, useSearchParams } from 'next/navigation';
 import api, { tripsApi, driversApi } from '@/lib/api';
 import { MERNIS_LOCATIONS, getProvinceByCode } from '@/lib/mernis-locations';
 import { UETDS_COUNTRY_OPTIONS } from '@/lib/uetds-country-codes';
@@ -195,6 +195,7 @@ const getTripFormPayload = (
 export default function TripDetailPage() {
   const params = useParams();
   const router = useRouter();
+  const searchParams = useSearchParams();
   const { user } = useAuthStore();
   const tripId = params.id as string;
 
@@ -203,6 +204,15 @@ export default function TripDetailPage() {
   const [loading, setLoading] = useState(true);
   const [sending, setSending] = useState(false);
   const [showPassengerModal, setShowPassengerModal] = useState(false);
+
+  // Auto-open passenger modal if redirected from create trip
+  useEffect(() => {
+    if (searchParams.get('addPassenger') === 'true') {
+      setShowPassengerModal(true);
+      // Clean URL
+      router.replace('/trips/' + tripId, { scroll: false });
+    }
+  }, [searchParams, tripId, router]);
   const [activePassengerTab, setActivePassengerTab] = useState<'text' | 'manual' | 'excel' | 'ocr'>('text');
   const [pasteText, setPasteText] = useState('');
   const [parsedResults, setParsedResults] = useState<any>(null);
