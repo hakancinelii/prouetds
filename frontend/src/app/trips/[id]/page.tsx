@@ -681,7 +681,9 @@ export default function TripDetailPage() {
       const res = await tripsApi.parseText(selectedGroupId, pasteText);
       setParsedResults(res.data);
       toast.success(`${res.data.totalSaved} yolcu eklendi`);
-      fetchTrip();
+      await fetchTrip();
+      setShowPassengerModal(false);
+      setTimeout(() => handleSendToUetds(), 100);
     } catch (err: any) {
       toast.error('Yolcu parse edilemedi');
     }
@@ -1323,7 +1325,7 @@ Her satıra bir yolcu yazın.
                     className="btn-primary w-full flex justify-center gap-2"
                   >
                     <FileText size={16} />
-                    Parse Et ve Ekle
+                    Parse Et, Ekle ve UETDS'ye Gönder
                   </button>
                 </div>
               )}
@@ -1412,13 +1414,17 @@ Her satıra bir yolcu yazın.
                           added++;
                         } catch (err) { console.error('Yolcu eklenemedi:', err); }
                       }
-                      toast.success(`${added} yolcu başarıyla eklendi`);
-                      setManualRows([{ firstName: '', lastName: '', tcPassportNo: '', nationalityCode: 'TR', gender: '' }]);
-                      fetchTrip();
+                      if (added > 0) {
+                        toast.success(`${added} yolcu başarıyla eklendi`);
+                        setManualRows([{ firstName: '', lastName: '', tcPassportNo: '', nationalityCode: 'TR', gender: '' }]);
+                        await fetchTrip();
+                        setShowPassengerModal(false);
+                        setTimeout(() => handleSendToUetds(), 100);
+                      }
                     }}
                     className="btn-primary w-full"
                   >
-                    Tümünü Ekle ({(manualRows || []).filter((r: any) => r.firstName && r.lastName && r.tcPassportNo).length} yolcu)
+                    Tümünü Ekle ve UETDS'ye Gönder ({(manualRows || []).filter((r: any) => r.firstName && r.lastName && r.tcPassportNo).length} yolcu)
                   </button>
                 </div>
               )}
