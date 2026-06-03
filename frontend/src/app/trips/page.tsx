@@ -479,6 +479,14 @@ export default function TripsPage() {
 
   const handleCreate = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (!form.selectedDriverId) {
+      toast.error('Lütfen bir şoför seçin');
+      return;
+    }
+    if (!form.vehiclePlate) {
+      toast.error('Lütfen bir araç (plaka) seçin veya girin');
+      return;
+    }
     try {
       const res = await tripsApi.create(getTripSubmitPayload());
       toast.success('Sefer oluşturuldu');
@@ -1031,7 +1039,7 @@ export default function TripsPage() {
               <div className="grid grid-cols-2 gap-4">
                 <div className="col-span-2">
                   <label className="label-muted text-sm">
-                    Seferde Kullanılacak Şoför
+                    Seferde Kullanılacak Şoför <span className="text-red-500">*</span>
                   </label>
                   <div className="flex gap-2">
                     <select
@@ -1066,7 +1074,7 @@ export default function TripsPage() {
                 </div>
                 <div className="col-span-2">
                   <label className="label-muted text-sm">
-                    Araç Plaka
+                    Araç Plaka <span className="text-red-500">*</span>
                   </label>
                   <input
                     list="registered-vehicles"
