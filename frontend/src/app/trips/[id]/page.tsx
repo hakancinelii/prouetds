@@ -43,7 +43,7 @@ const PRIORITY_ISTANBUL_DISTRICTS = [
 
 const sortDistrictsForTripFlow = (
   provinceCode: number,
-  districts: ReadonlyArray<{ code: number; name: string }>,
+  districts: Array<{ code: number; name: string }>,
 ) => {
   if (provinceCode !== 34) return districts;
 
@@ -82,7 +82,7 @@ const getEditTripForm = (trip: any) => ({
 
 const getTripEditabilityNote = (status: string) =>
   status === 'sent'
-    ? 'Bu sefer UETDS’ye gönderildi; değişiklikler resmi UETDS güncelleme servisiyle senkronlanır.'
+    ? 'Bu sefer UETDS’ye gönderildiği için doğrudan düzenlenemez.'
     : status === 'cancelled'
       ? 'İptal edilmiş seferlerde yalnızca geçmiş kayıt görüntülenir.'
       : 'Sefer bilgilerini bu ekranda güncelleyebilirsiniz.';
@@ -94,6 +94,8 @@ const getTripEditabilityTone = (status: string) =>
       ? 'theme-callout-neutral'
       : 'theme-callout-info';
 
+const DEFAULT_TRIP_DESCRIPTION = 'İstanbul içi Transfer';
+
 const AIRPORT_OPTIONS = [
   { value: 'airport:ist', label: 'İstanbul Havalimanı', districtCode: '2048', place: 'İstanbul Havalimanı' },
   { value: 'airport:saw', label: 'Sabiha Gökçen Havalimanı', districtCode: '1835', place: 'Sabiha Gökçen Havalimanı' },
@@ -102,7 +104,7 @@ const AIRPORT_OPTIONS = [
 const getDistrictSelectOptions = (
   provinceCode: number,
   provinceName: string,
-  districts: ReadonlyArray<{ code: number; name: string }>,
+  districts: Array<{ code: number; name: string }>,
 ) => {
   const baseOptions = districts.map((district) => ({
     value: `district:${district.code}`,
@@ -118,18 +120,21 @@ const getDistrictSelectOptions = (
   return [...AIRPORT_OPTIONS, ...baseOptions];
 };
 
+const getPlaceFromDistrict = (
+  districtCode: string,
+  province: { name: string } | undefined,
+  districts: Array<{ code: number; name: string }>,
+) => {
+  const selected = districts.find((district) => String(district.code) === districtCode);
+  return selected ? `${selected.name}/${province?.name || ''}` : '';
+};
+
 const normalizePassengerText = (value: string) =>
   value
     .normalize('NFKC')
     .replace(/[​-‍﻿]/g, '')
     .replace(/\s+/g, ' ')
     .trim();
-
-const normalizePassengerTextInput = (value: string) =>
-  value
-    .normalize('NFKC')
-    .replace(/[​-‍﻿]/g, '')
-    .replace(/\s+/g, ' ');
 
 const normalizePassengerIdentity = (value: string) =>
   value
@@ -197,7 +202,8 @@ export default function TripDetailPage() {
   const [drivers, setDrivers] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [sending, setSending] = useState(false);
-  const [showTextParser, setShowTextParser] = useState(false);
+  const [showPassengerModal, setShowPassengerModal] = useState(false);
+  const [activePassengerTab, setActivePassengerTab] = useState<'text' | 'manual' | 'excel' | 'ocr'>('text');
   const [pasteText, setPasteText] = useState('');
   const [parsedResults, setParsedResults] = useState<any>(null);
   const [selectedGroupId, setSelectedGroupId] = useState('');
@@ -209,7 +215,7 @@ export default function TripDetailPage() {
   const [editTripForm, setEditTripForm] = useState(() => getEditTripForm(null));
   const [editOriginDistricts, setEditOriginDistricts] = useState<Array<{ code: number; name: string }>>([]);
   const [editDestDistricts, setEditDestDistricts] = useState<Array<{ code: number; name: string }>>([]);
-  const canEditTrip = trip?.status !== 'cancelled';
+  const canEditTrip = trip?.status !== 'sent' && trip?.status !== 'cancelled';
   const tripEditabilityNote = getTripEditabilityNote(trip?.status || 'draft');
   const tripEditabilityTone = getTripEditabilityTone(trip?.status || 'draft');
   const editOriginProvince = getProvinceByCode(Number(editTripForm.originIlCode));
@@ -342,8 +348,6 @@ export default function TripDetailPage() {
       return;
     }
 
-    const whatsappWindow = window.open('', '_blank', 'noopener,noreferrer');
-
     try {
       const baseUrl = getApiBaseUrl();
       const shareRes = await tripsApi.getPdfShareLink(tripData?.id || tripId, baseUrl);
@@ -354,13 +358,8 @@ export default function TripDetailPage() {
         pdfShareUrl,
       );
       const whatsappUrl = `https://api.whatsapp.com/send/?phone=${primaryDriverWhatsappPhone}&text=${encodeURIComponent(message)}&type=phone_number&app_absent=0`;
-      if (whatsappWindow) {
-        whatsappWindow.location.href = whatsappUrl;
-      } else {
-        window.location.href = whatsappUrl;
-      }
+      window.open(whatsappUrl, '_blank', 'noopener,noreferrer');
     } catch (err: any) {
-      if (whatsappWindow) whatsappWindow.close();
       toast.error(err.response?.data?.message || 'PDF paylaşım linki oluşturulamadı');
     }
   };
@@ -375,7 +374,7 @@ export default function TripDetailPage() {
     primaryDriver?.phone || primaryDriver?.driver?.phone,
   );
   const hasDriverWhatsappPhone = Boolean(primaryDriverWhatsappPhone);
-
+  const canOpenPassengerTools = hasGroups && selectedGroupId;
   const tripActionNote = 'Devlet ekranındaki sırayı yakalamak için grup → personel → yolcu mantığına gidiyoruz.';
 
   const getTripSectionTitle = () => 'Sefer Çalışma Alanı';
@@ -452,8 +451,6 @@ export default function TripDetailPage() {
   const [uploading, setUploading] = useState(false);
 
   // Add passenger form
-  const [showAddPassenger, setShowAddPassenger] = useState(false);
-  const [editingPassengerId, setEditingPassengerId] = useState<string | null>(null);
   const [showPdfViewer, setShowPdfViewer] = useState(false);
   const [pdfUrl, setPdfUrl] = useState<string | null>(null);
   const [pdfLoading, setPdfLoading] = useState(false);
@@ -512,7 +509,7 @@ export default function TripDetailPage() {
     setUploading(true);
     const toastId = toast.loading('Pasaport OCR ile taranıyor...');
     try {
-      await tripsApi.parsePassport(selectedGroupId, file);
+      const res = await tripsApi.parsePassport(selectedGroupId, file);
       toast.success('Yolcu OCR ile eklendi', { id: toastId });
       fetchTrip();
     } catch (err: any) {
@@ -543,18 +540,18 @@ export default function TripDetailPage() {
   useEffect(() => {
     const originProvince = getProvinceByCode(Number(editTripForm.originIlCode));
     const destProvince = getProvinceByCode(Number(editTripForm.destIlCode));
-    setEditOriginDistricts([
-      ...sortDistrictsForTripFlow(
+    setEditOriginDistricts(
+      sortDistrictsForTripFlow(
         Number(editTripForm.originIlCode),
         originProvince?.districts || [],
       ),
-    ]);
-    setEditDestDistricts([
-      ...sortDistrictsForTripFlow(
+    );
+    setEditDestDistricts(
+      sortDistrictsForTripFlow(
         Number(editTripForm.destIlCode),
         destProvince?.districts || [],
       ),
-    ]);
+    );
   }, [editTripForm.originIlCode, editTripForm.destIlCode]);
 
   const parsePdfError = async (blob: Blob) => {
@@ -677,59 +674,24 @@ export default function TripDetailPage() {
     }
   };
 
-  const resetPassengerForm = () => {
-    setPassengerForm({
-      firstName: '',
-      lastName: '',
-      tcPassportNo: '',
-      nationalityCode: 'TR',
-      gender: '',
-      phone: '',
-    });
-    setEditingPassengerId(null);
-  };
-
   const handleAddPassenger = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!selectedGroupId) return;
-    const payload = getPassengerFormPayload(passengerForm);
     try {
-      if (editingPassengerId) {
-        await tripsApi.updatePassenger(editingPassengerId, payload);
-        toast.success(trip.status === 'sent' ? 'Yolcu UETDS’de güncellendi' : 'Yolcu güncellendi');
-      } else {
-        await tripsApi.addPassenger(selectedGroupId, payload);
-        toast.success(trip.status === 'sent' ? 'Yolcu UETDS’ye eklendi' : 'Yolcu eklendi');
-      }
-      setShowAddPassenger(false);
-      resetPassengerForm();
+      await tripsApi.addPassenger(selectedGroupId, getPassengerFormPayload(passengerForm));
+      toast.success('Yolcu eklendi');
+      setShowPassengerModal(false);
+      setPassengerForm({
+        firstName: '',
+        lastName: '',
+        tcPassportNo: '',
+        nationalityCode: 'TR',
+        gender: '',
+        phone: '',
+      });
       fetchTrip();
     } catch (err: any) {
-      toast.error(err.response?.data?.details || err.response?.data?.message || 'Yolcu kaydedilemedi');
-    }
-  };
-
-  const openEditPassenger = (passenger: any) => {
-    setEditingPassengerId(passenger.id);
-    setPassengerForm({
-      firstName: passenger.firstName || '',
-      lastName: passenger.lastName || '',
-      tcPassportNo: passenger.tcPassportNo || '',
-      nationalityCode: passenger.nationalityCode || 'TR',
-      gender: passenger.gender || '',
-      phone: passenger.phone || '',
-    });
-    setShowAddPassenger(true);
-  };
-
-  const handleRemovePassenger = async (passenger: any) => {
-    if (!confirm(`${passenger.firstName} ${passenger.lastName} yolcusu silinsin mi?`)) return;
-    try {
-      await tripsApi.removePassenger(passenger.id, 'Yolcu listesi güncellemesi');
-      toast.success(trip.status === 'sent' ? 'Yolcu UETDS’den silindi' : 'Yolcu silindi');
-      fetchTrip();
-    } catch (err: any) {
-      toast.error(err.response?.data?.details || err.response?.data?.message || 'Yolcu silinemedi');
+      toast.error(err.response?.data?.message || 'Yolcu eklenemedi');
     }
   };
 
@@ -759,29 +721,15 @@ export default function TripDetailPage() {
     setEditTripForm(getEditTripForm(trip));
   };
 
-  const handleRemovePersonnel = async (person: any) => {
-    if (!confirm(`${person.firstName} ${person.lastName} personeli silinsin mi?`)) return;
-    try {
-      await tripsApi.removePersonnel(tripId, person.id, 'Personel listesi güncellemesi');
-      toast.success(trip.status === 'sent' ? 'Personel UETDS’den silindi' : 'Personel silindi');
-      fetchTrip();
-    } catch (err: any) {
-      toast.error(err.response?.data?.details || err.response?.data?.message || 'Personel silinemedi');
-    }
-  };
-
   const handleUpdateTrip = async (e: React.FormEvent) => {
     e.preventDefault();
     setSavingTrip(true);
     try {
-      const payload = getTripFormPayload(editTripForm, editOriginDistrictOptions, editDestDistrictOptions);
-      if (trip.status === 'sent') {
-        await tripsApi.updateUetdsSync(tripId, payload);
-        toast.success('Sefer bilgileri UETDS’de güncellendi');
-      } else {
-        await tripsApi.update(tripId, payload);
-        toast.success('Sefer bilgileri güncellendi');
-      }
+      await tripsApi.update(
+        tripId,
+        getTripFormPayload(editTripForm, editOriginDistrictOptions, editDestDistrictOptions),
+      );
+      toast.success('Sefer bilgileri güncellendi');
       setShowEditTrip(false);
       fetchTrip();
     } catch (err: any) {
@@ -823,6 +771,7 @@ export default function TripDetailPage() {
       (sum: number, g: any) => sum + (g.passengers?.length || 0),
       0,
     ) || 0;
+  const canSendToUetds = Boolean(trip?.personnel?.length) && Boolean(totalPassengers) && Boolean(hasGroups);
   const quickFlowChecklist = getQuickFlowChecklist(trip, totalPassengers);
 
   return (
@@ -966,20 +915,20 @@ export default function TripDetailPage() {
       </div>
 
       {/* Trip Info Cards */}
-      <div className="mobile-trip-detail-grid">
-        <div className="glass-card p-5">
+      <div className="mobile-trip-detail-grid grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+        <div className="glass-card p-5 min-h-[124px]">
           <p className="text-xs theme-text-soft uppercase tracking-wider">Plaka</p>
           <p className="text-lg font-bold theme-text-strong mt-1 font-mono">
             {trip.vehiclePlate}
           </p>
         </div>
-        <div className="glass-card p-5">
+        <div className="glass-card p-5 min-h-[124px]">
           <p className="text-xs theme-text-soft uppercase tracking-wider">
             Toplam Yolcu
           </p>
           <p className="text-lg font-bold theme-text-strong mt-1">{totalPassengers}</p>
         </div>
-        <div className="glass-card p-5">
+        <div className="glass-card p-5 min-h-[124px]">
           <p className="text-xs theme-text-soft uppercase tracking-wider">
             UETDS Referans
           </p>
@@ -1042,7 +991,15 @@ export default function TripDetailPage() {
               {canSendDriverWhatsapp && (
                 <button
                   type="button"
-                  onClick={() => openDriverWhatsApp(trip)}
+                  onClick={() => {
+                    if (!hasDriverWhatsappPhone) {
+                      toast.error('Şoför için WhatsApp telefon numarası bulunamadı');
+                      return;
+                    }
+                    const message = buildDriverWhatsAppMessage(trip, primaryDriver);
+                    const whatsappUrl = `https://wa.me/${primaryDriverWhatsappPhone}?text=${encodeURIComponent(message)}`;
+                    window.open(whatsappUrl, '_blank', 'noopener,noreferrer');
+                  }}
                   className="btn-danger flex items-center gap-2 bg-red-400/90 border border-red-300 text-white hover:bg-red-400 shadow-sm"
                 >
                   <MessageCircle size={16} />
@@ -1113,14 +1070,14 @@ export default function TripDetailPage() {
             <Users size={20} className="text-blue-400" />
             Personel / Şoförler ({trip.personnel?.length || 0})
           </h2>
-          {trip.status !== 'cancelled' && (
+          {trip.status !== 'sent' && trip.status !== 'cancelled' && (
             <button
               type="button"
               onClick={openPersonnelModal}
               className="btn-secondary text-sm flex items-center gap-1.5"
             >
               <Plus size={14} />
-              {trip.status === 'sent' ? 'UETDS Şoför Ekle' : 'Personel Ekle'}
+              Personel Ekle
             </button>
           )}
         </div>
@@ -1159,7 +1116,6 @@ export default function TripDetailPage() {
                 <th className="px-5 py-3">TC Kimlik</th>
                 <th className="px-5 py-3">Tip</th>
                 <th className="px-5 py-3">Telefon</th>
-                <th className="px-5 py-3 text-right">Aksiyon</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-700/30">
@@ -1178,24 +1134,11 @@ export default function TripDetailPage() {
                     <td className="px-5 py-3 text-sm theme-table-cell">
                       {p.phone || '-'}
                     </td>
-                    <td className="px-5 py-3 text-right">
-                      {trip.status !== 'cancelled' && (
-                        <button
-                          type="button"
-                          onClick={() => handleRemovePersonnel(p)}
-                          className="theme-icon-muted hover:text-red-400 transition"
-                          aria-label="Personeli sil"
-                          title="Personeli sil"
-                        >
-                          <Trash2 size={16} />
-                        </button>
-                      )}
-                    </td>
                   </tr>
                 ))
               ) : (
                 <tr>
-                  <td colSpan={5} className="px-5 py-8 text-center text-slate-500">
+                  <td colSpan={4} className="px-5 py-8 text-center text-slate-500">
                     Henüz personel eklenmemiş (Şoför eklemeden UETDS'ye gönderemezsiniz)
                   </td>
                 </tr>
@@ -1212,39 +1155,15 @@ export default function TripDetailPage() {
             <Users size={20} className="text-emerald-400" />
             Yolcular ({totalPassengers})
           </h2>
-          {trip.status !== 'cancelled' && (
-            <div className="flex gap-2">
-              <button
-                type="button"
-                title="Manuel yolcu ekle"
-                onClick={() => {
-                  resetPassengerForm();
-                  setShowAddPassenger(true);
-                }}
-                className="btn-secondary text-sm flex items-center gap-1.5"
-              >
-                <UserPlus size={14} />
-                {trip.status === 'sent' ? 'UETDS Yolcu Ekle' : 'Manuel Ekle'}
-              </button>
-              <button
-                type="button"
-                onClick={() => setShowTextParser(true)}
-                className="btn-secondary text-sm flex items-center gap-1.5"
-              >
-                <Clipboard size={14} />
-                Metin
-              </button>
-              <label className={`btn-secondary text-sm flex items-center gap-1.5 cursor-pointer ${uploading ? 'opacity-50 pointer-events-none' : ''}`}>
-                <UploadCloud size={14} />
-                Excel
-                <input type="file" accept=".xlsx,.xls,.csv" className="hidden" onChange={handleExcelUpload} disabled={uploading} />
-              </label>
-              <label className={`btn-secondary text-sm flex items-center gap-1.5 cursor-pointer ${uploading ? 'opacity-50 pointer-events-none' : ''}`}>
-                <ScanFace size={14} />
-                OCR
-                <input type="file" accept="image/*" className="hidden" onChange={handlePassportUpload} disabled={uploading} />
-              </label>
-            </div>
+          {trip.status !== 'sent' && trip.status !== 'cancelled' && (
+            <button
+              type="button"
+              onClick={() => setShowPassengerModal(true)}
+              className="btn-primary text-sm flex items-center gap-2 px-4 py-2 shadow-lg"
+            >
+              <UserPlus size={16} />
+              Yolcu Ekle
+            </button>
           )}
         </div>
 
@@ -1277,7 +1196,6 @@ export default function TripDetailPage() {
                 <th className="px-5 py-3">Uyruk</th>
                 <th className="px-5 py-3">Kaynak</th>
                 <th className="px-5 py-3">UETDS Ref</th>
-                <th className="px-5 py-3 text-right">Aksiyon</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-700/30">
@@ -1303,34 +1221,10 @@ export default function TripDetailPage() {
                     <td className="px-5 py-3 text-sm text-slate-400 font-mono">
                       {p.uetdsYolcuRefNo || '-'}
                     </td>
-                    <td className="px-5 py-3 text-right">
-                      {trip.status !== 'cancelled' && (
-                        <div className="flex justify-end gap-2">
-                          <button
-                            type="button"
-                            onClick={() => openEditPassenger(p)}
-                            className="theme-icon-muted hover:text-emerald-400 transition"
-                            aria-label="Yolcuyu düzenle"
-                            title="Yolcuyu düzenle"
-                          >
-                            <Pencil size={16} />
-                          </button>
-                          <button
-                            type="button"
-                            onClick={() => handleRemovePassenger(p)}
-                            className="theme-icon-muted hover:text-red-400 transition"
-                            aria-label="Yolcuyu sil"
-                            title="Yolcuyu sil"
-                          >
-                            <Trash2 size={16} />
-                          </button>
-                        </div>
-                      )}
-                    </td>
                   </tr>
                 )) || (
                   <tr>
-                    <td colSpan={7} className="px-5 py-8 text-center text-slate-500">
+                    <td colSpan={6} className="px-5 py-8 text-center text-slate-500">
                       {trip.groups?.length === 0
                         ? 'Önce bir yolcu grubu ekleyin'
                         : 'Bu grupta yolcu yok'}
@@ -1342,168 +1236,223 @@ export default function TripDetailPage() {
         </div>
       </div>
 
-      {/* Add Passenger Modal */}
-      {showAddPassenger && (
+      {/* Unified Add Passenger Modal */}
+      {showPassengerModal && (
         <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-          <div className="glass-card w-full max-w-md p-6 animate-slide-in">
-            <h3 className="text-lg font-bold mb-4 flex items-center gap-2">
-              <UserPlus size={18} className="text-emerald-400" />
-              Yolcu Ekle
-            </h3>
-            <form onSubmit={handleAddPassenger} className="space-y-3">
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <label className="block text-xs text-slate-400 mb-1">Ad</label>
-                  <input
-                    aria-label="Yolcu adı"
-                    value={passengerForm.firstName}
-                    onChange={(e) =>
-                      setPassengerForm({ ...passengerForm, firstName: normalizePassengerTextInput(e.target.value) })
-                    }
-                    className="input-field"
-                    autoComplete="off"
-                    spellCheck={false}
-                    required
-                  />
-                </div>
-                <div>
-                  <label className="block text-xs text-slate-400 mb-1">Soyad</label>
-                  <input
-                    aria-label="Yolcu soyadı"
-                    value={passengerForm.lastName}
-                    onChange={(e) =>
-                      setPassengerForm({ ...passengerForm, lastName: normalizePassengerTextInput(e.target.value) })
-                    }
-                    className="input-field"
-                    autoComplete="off"
-                    spellCheck={false}
-                    required
-                  />
-                </div>
-              </div>
-              <div>
-                <label className="block text-xs text-slate-400 mb-1">
-                  TC Kimlik / Pasaport No
-                </label>
-                <input
-                  aria-label="Yolcu TC kimlik veya pasaport numarası"
-                  value={passengerForm.tcPassportNo}
-                  onChange={(e) =>
-                    setPassengerForm({ ...passengerForm, tcPassportNo: normalizePassengerIdentity(e.target.value) })
-                  }
-                  className="input-field"
-                  autoCapitalize="characters"
-                  autoComplete="off"
-                  autoCorrect="off"
-                  inputMode="text"
-                  spellCheck={false}
-                  required
-                />
-              </div>
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <label className="block text-xs text-slate-400 mb-1">Uyruk</label>
-                  <select
-                    aria-label="Yolcu uyruğu"
-                    value={passengerForm.nationalityCode}
-                    onChange={(e) =>
-                      setPassengerForm({
-                        ...passengerForm,
-                        nationalityCode: normalizeNationalityCode(e.target.value),
-                      })
-                    }
-                    className="input-field"
-                  >
-                    {UETDS_COUNTRY_OPTIONS.map((country) => (
-                      <option key={country.code} value={country.code}>
-                        {country.code} — {country.name}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-                <div>
-                  <label className="block text-xs text-slate-400 mb-1">Cinsiyet</label>
-                  <select
-                    aria-label="Yolcu cinsiyeti"
-                    value={passengerForm.gender}
-                    onChange={(e) =>
-                      setPassengerForm({ ...passengerForm, gender: e.target.value.trim().toUpperCase() })
-                    }
-                    className="input-field"
-                  >
-                    <option value="">Seçiniz</option>
-                    <option value="E">Erkek</option>
-                    <option value="K">Kadın</option>
-                  </select>
-                </div>
-              </div>
-              <div className="flex gap-3 pt-2">
-                <button type="submit" className="btn-primary flex-1">
-                  Ekle
-                </button>
-                <button
-                  type="button"
-                  onClick={() => {
-                    setShowAddPassenger(false);
-                    resetPassengerForm();
-                  }}
-                  className="btn-secondary"
-                >
-                  İptal
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
+          <div className="glass-card w-full max-w-2xl p-6 animate-slide-in flex flex-col max-h-[90vh]">
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-xl font-bold flex items-center gap-2 text-emerald-400">
+                <Users size={22} />
+                Yolcu Ekle
+              </h3>
+              <button
+                type="button"
+                onClick={() => setShowPassengerModal(false)}
+                className="text-slate-400 hover:text-white transition"
+              >
+                <XCircle size={24} />
+              </button>
+            </div>
+            
+            {/* Tabs */}
+            <div className="flex gap-1 border-b border-slate-700/50 pb-4 mb-4 overflow-x-auto hide-scrollbar">
+              <button
+                type="button"
+                onClick={() => setActivePassengerTab('text')}
+                className={`px-4 py-2 text-sm font-medium rounded-lg transition whitespace-nowrap flex items-center gap-2 ${activePassengerTab === 'text' ? 'bg-emerald-500/20 text-emerald-300' : 'text-slate-400 hover:bg-slate-800'}`}
+              >
+                <Clipboard size={16} />
+                Metin (WhatsApp)
+              </button>
+              <button
+                type="button"
+                onClick={() => setActivePassengerTab('manual')}
+                className={`px-4 py-2 text-sm font-medium rounded-lg transition whitespace-nowrap flex items-center gap-2 ${activePassengerTab === 'manual' ? 'bg-emerald-500/20 text-emerald-300' : 'text-slate-400 hover:bg-slate-800'}`}
+              >
+                <UserPlus size={16} />
+                Manuel Ekle
+              </button>
+              <button
+                type="button"
+                onClick={() => setActivePassengerTab('excel')}
+                className={`px-4 py-2 text-sm font-medium rounded-lg transition whitespace-nowrap flex items-center gap-2 ${activePassengerTab === 'excel' ? 'bg-emerald-500/20 text-emerald-300' : 'text-slate-400 hover:bg-slate-800'}`}
+              >
+                <UploadCloud size={16} />
+                Excel / CSV
+              </button>
+              <button
+                type="button"
+                onClick={() => setActivePassengerTab('ocr')}
+                className={`px-4 py-2 text-sm font-medium rounded-lg transition whitespace-nowrap flex items-center gap-2 ${activePassengerTab === 'ocr' ? 'bg-emerald-500/20 text-emerald-300' : 'text-slate-400 hover:bg-slate-800'}`}
+              >
+                <ScanFace size={16} />
+                Pasaport OCR
+              </button>
+            </div>
 
-      {/* Text Parser Modal */}
-      {showTextParser && (
-        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-          <div className="glass-card w-full max-w-2xl p-6 animate-slide-in">
-            <h3 className="text-lg font-bold mb-4 flex items-center gap-2">
-              <Clipboard size={18} className="text-emerald-400" />
-              Yolcu Listesi Yapıştır
-            </h3>
-            <p className="text-sm text-slate-400 mb-3">
-              Her satıra bir yolcu gelecek şekilde isim, soyisim, TC/Pasaport ve
-              uyruk bilgilerini yapıştırın.
-            </p>
-            <textarea
-              value={pasteText}
-              onChange={(e) => setPasteText(e.target.value)}
-              className="input-field font-mono text-sm"
-              rows={8}
-              placeholder={`Ahmet Yılmaz 12345678901 TR\nJohn Smith P12345678 GB\nMarie Dupont F98765432 FR`}
-            />
-            {parsedResults && (
-              <div className="mt-3 p-3 rounded-lg bg-emerald-500/10 border border-emerald-500/20">
-                <p className="text-sm text-emerald-300">
-                  ✓ {parsedResults.totalSaved} yolcu eklendi (
-                  {parsedResults.totalParsed} satır parse edildi)
-                </p>
-              </div>
-            )}
-            <div className="flex gap-3 pt-4">
-              <button
-                type="button"
-                onClick={handleParseText}
-                className="btn-primary flex-1 flex items-center justify-center gap-2"
-              >
-                <FileText size={16} />
-                Parse Et ve Ekle
-              </button>
-              <button
-                type="button"
-                onClick={() => {
-                  setShowTextParser(false);
-                  setParsedResults(null);
-                  setPasteText('');
-                }}
-                className="btn-secondary"
-              >
-                Kapat
-              </button>
+            <div className="flex-1 overflow-y-auto pr-2 custom-scrollbar">
+              {activePassengerTab === 'text' && (
+                <div className="space-y-4 animate-fade-in">
+                  <p className="text-sm text-slate-400">
+                    WhatsApp vb. kanallardan gelen metni olduğu gibi yapıştırın. Yapay zeka isim, pasaport, TC ve cinsiyet tahminlerini otomatik yapacaktır.
+                  </p>
+                  <textarea
+                    value={pasteText}
+                    onChange={(e) => setPasteText(e.target.value)}
+                    className="input-field font-mono text-sm h-48"
+                    placeholder={"Ahmet Yılmaz 12345678901\\nJohn Smith P12345678"}
+                  />
+                  {parsedResults && (
+                    <div className="p-3 rounded-lg bg-emerald-500/10 border border-emerald-500/20">
+                      <p className="text-sm text-emerald-300">
+                        ✓ {parsedResults.totalSaved} yolcu eklendi (
+                        {parsedResults.totalParsed} satır parse edildi)
+                      </p>
+                    </div>
+                  )}
+                  <button
+                    type="button"
+                    onClick={handleParseText}
+                    className="btn-primary w-full flex justify-center gap-2"
+                  >
+                    <FileText size={16} />
+                    Parse Et ve Ekle
+                  </button>
+                </div>
+              )}
+
+              {activePassengerTab === 'manual' && (
+                <form onSubmit={(e) => {
+                  handleAddPassenger(e);
+                  // The form handler will close the modal successfully, so we just let it run.
+                  // Except the previous logic was setShowAddPassenger(false). We might need to ensure it doesn't break,
+                  // handleAddPassenger is still there, but it calls setShowAddPassenger(false) which is removed!
+                  // Let's modify handleAddPassenger directly or just keep it simple and fix handleAddPassenger in another chunk.
+                }} className="space-y-4 animate-fade-in">
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-xs text-slate-400 mb-1">Ad</label>
+                      <input
+                        value={passengerForm.firstName}
+                        onChange={(e) =>
+                          setPassengerForm({ ...passengerForm, firstName: normalizePassengerText(e.target.value) })
+                        }
+                        className="input-field"
+                        autoComplete="off"
+                        spellCheck={false}
+                        required
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-xs text-slate-400 mb-1">Soyad</label>
+                      <input
+                        value={passengerForm.lastName}
+                        onChange={(e) =>
+                          setPassengerForm({ ...passengerForm, lastName: normalizePassengerText(e.target.value) })
+                        }
+                        className="input-field"
+                        autoComplete="off"
+                        spellCheck={false}
+                        required
+                      />
+                    </div>
+                  </div>
+                  <div>
+                    <label className="block text-xs text-slate-400 mb-1">TC Kimlik / Pasaport No</label>
+                    <input
+                      value={passengerForm.tcPassportNo}
+                      onChange={(e) =>
+                        setPassengerForm({ ...passengerForm, tcPassportNo: normalizePassengerIdentity(e.target.value) })
+                      }
+                      className="input-field"
+                      autoCapitalize="characters"
+                      autoComplete="off"
+                      autoCorrect="off"
+                      inputMode="text"
+                      spellCheck={false}
+                      required
+                    />
+                  </div>
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-xs text-slate-400 mb-1">Uyruk</label>
+                      <select
+                        value={passengerForm.nationalityCode}
+                        onChange={(e) =>
+                          setPassengerForm({
+                            ...passengerForm,
+                            nationalityCode: normalizeNationalityCode(e.target.value),
+                          })
+                        }
+                        className="input-field"
+                      >
+                        {UETDS_COUNTRY_OPTIONS.map((country) => (
+                          <option key={country.code} value={country.code}>
+                            {country.code} — {country.name}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+                    <div>
+                      <label className="block text-xs text-slate-400 mb-1">Cinsiyet</label>
+                      <select
+                        value={passengerForm.gender}
+                        onChange={(e) =>
+                          setPassengerForm({ ...passengerForm, gender: e.target.value.trim().toUpperCase() })
+                        }
+                        className="input-field"
+                      >
+                        <option value="">Seçiniz</option>
+                        <option value="E">Erkek</option>
+                        <option value="K">Kadın</option>
+                      </select>
+                    </div>
+                  </div>
+                  <button type="submit" className="btn-primary w-full mt-2">
+                    Ekle
+                  </button>
+                </form>
+              )}
+
+              {activePassengerTab === 'excel' && (
+                <div className="space-y-4 animate-fade-in text-center py-6">
+                  <div className="w-16 h-16 bg-emerald-500/10 rounded-full flex items-center justify-center mx-auto mb-4">
+                    <UploadCloud size={32} className="text-emerald-400" />
+                  </div>
+                  <h4 className="text-lg font-semibold text-white">Excel veya CSV Yükleyin</h4>
+                  <p className="text-sm text-slate-400 max-w-sm mx-auto">
+                    İsim, soyisim ve kimlik numaralarının bulunduğu Excel tablosunu sürükleyip bırakın veya seçin.
+                  </p>
+                  <label className={`inline-flex items-center justify-center px-6 py-3 mt-4 rounded-xl font-medium transition cursor-pointer ${uploading ? 'bg-slate-700 text-slate-400 pointer-events-none' : 'bg-emerald-500 text-slate-900 hover:bg-emerald-400'}`}>
+                    {uploading ? (
+                      <span className="flex items-center gap-2"><Loader2 size={18} className="animate-spin" /> İşleniyor...</span>
+                    ) : (
+                      <span className="flex items-center gap-2"><UploadCloud size={18} /> Dosya Seç</span>
+                    )}
+                    <input type="file" accept=".xlsx,.xls,.csv" className="hidden" onChange={handleExcelUpload} disabled={uploading} />
+                  </label>
+                </div>
+              )}
+
+              {activePassengerTab === 'ocr' && (
+                <div className="space-y-4 animate-fade-in text-center py-6">
+                  <div className="w-16 h-16 bg-blue-500/10 rounded-full flex items-center justify-center mx-auto mb-4">
+                    <ScanFace size={32} className="text-blue-400" />
+                  </div>
+                  <h4 className="text-lg font-semibold text-white">Pasaport Fotoğrafı Yükleyin</h4>
+                  <p className="text-sm text-slate-400 max-w-sm mx-auto">
+                    Pasaportun kimlik bilgilerinin yer aldığı fotoğrafını yükleyin, yapay zeka otomatik okuyacaktır.
+                  </p>
+                  <label className={`inline-flex items-center justify-center px-6 py-3 mt-4 rounded-xl font-medium transition cursor-pointer ${uploading ? 'bg-slate-700 text-slate-400 pointer-events-none' : 'bg-blue-500 text-white hover:bg-blue-400'}`}>
+                    {uploading ? (
+                      <span className="flex items-center gap-2"><Loader2 size={18} className="animate-spin" /> Taranıyor...</span>
+                    ) : (
+                      <span className="flex items-center gap-2"><ScanFace size={18} /> Fotoğraf Seç / Çek</span>
+                    )}
+                    <input type="file" accept="image/*" className="hidden" onChange={handlePassportUpload} disabled={uploading} />
+                  </label>
+                </div>
+              )}
             </div>
           </div>
         </div>
