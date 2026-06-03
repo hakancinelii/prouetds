@@ -214,6 +214,7 @@ export default function TripDetailPage() {
     }
   }, [searchParams, tripId, router]);
   const [activePassengerTab, setActivePassengerTab] = useState<'text' | 'manual' | 'excel' | 'ocr'>('manual');
+  const [editingPassenger, setEditingPassenger] = useState<any>(null);
   const [pasteText, setPasteText] = useState('');
   const [parsedResults, setParsedResults] = useState<any>(null);
   const [selectedGroupId, setSelectedGroupId] = useState('');
@@ -383,8 +384,19 @@ export default function TripDetailPage() {
   const primaryDriverWhatsappPhone = normalizePhoneForWhatsApp(
     primaryDriver?.phone || primaryDriver?.driver?.phone,
   );
-  const hasDriverWhatsappPhone = Boolean(primaryDriverWhatsappPhone);
-  const canOpenPassengerTools = hasGroups && selectedGroupId;
+  const handleRemovePassenger = async (passengerId: string) => {
+    if (!confirm('Bu yolcuyu silmek istediğinize emin misiniz?')) return;
+    try {
+      await tripsApi.removePassenger(passengerId);
+      toast.success('Yolcu silindi');
+      fetchTrip();
+    } catch (error: any) {
+      toast.error(error.response?.data?.message || 'Yolcu silinemedi');
+    }
+  };
+
+  const hasDriverWhatsappPhone =
+    primaryDriverWhatsappPhone && primaryDriverWhatsappPhone.trim().length > 5;const canOpenPassengerTools = hasGroups && selectedGroupId;
   const tripActionNote = 'Devlet ekranındaki sırayı yakalamak için grup → personel → yolcu mantığına gidiyoruz.';
 
   const getTripSectionTitle = () => 'Sefer Çalışma Alanı';
@@ -1211,6 +1223,7 @@ export default function TripDetailPage() {
                 <th className="px-5 py-3">Uyruk</th>
                 <th className="px-5 py-3">Kaynak</th>
                 <th className="px-5 py-3">UETDS Ref</th>
+                <th className="px-5 py-3 text-right">İşlemler</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-700/30">
@@ -1236,10 +1249,18 @@ export default function TripDetailPage() {
                     <td className="px-5 py-3 text-sm text-slate-400 font-mono">
                       {p.uetdsYolcuRefNo || '-'}
                     </td>
+                    <td className="px-5 py-3 text-right space-x-2">
+                      <button onClick={() => setEditingPassenger(p)} className="p-1.5 text-slate-400 hover:text-emerald-500 hover:bg-emerald-500/10 rounded-lg transition" title="Düzenle">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M17 3a2.828 2.828 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5L17 3z"></path></svg>
+                      </button>
+                      <button onClick={() => handleRemovePassenger(p.id)} className="p-1.5 text-slate-400 hover:text-red-500 hover:bg-red-500/10 rounded-lg transition" title="Sil">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>
+                      </button>
+                    </td>
                   </tr>
                 )) || (
                   <tr>
-                    <td colSpan={6} className="px-5 py-8 text-center text-slate-500">
+                    <td colSpan={7} className="px-5 py-8 text-center text-slate-500">
                       {trip.groups?.length === 0
                         ? 'Önce bir yolcu grubu ekleyin'
                         : 'Bu grupta yolcu yok'}
@@ -1738,6 +1759,57 @@ Her satıra bir yolcu yazın.
               >
                 Kapat
               </button>
+            </div>
+          </div>
+        </div>
+      )}
+      {/* Editing Passenger Modal */}
+      {editingPassenger && (
+        <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-slate-900/80 backdrop-blur-sm">
+          <div className="bg-white dark:bg-slate-800 rounded-2xl shadow-xl w-full max-w-md overflow-hidden border border-slate-200 dark:border-slate-700">
+            <div className="flex items-center justify-between p-4 border-b border-slate-200 dark:border-slate-700">
+              <h3 className="font-semibold text-slate-900 dark:text-white">Yolcu Düzenle</h3>
+              <button onClick={() => setEditingPassenger(null)} className="p-2 text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 transition-colors rounded-lg hover:bg-slate-100 dark:hover:bg-slate-700">
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+            <div className="p-4 space-y-4">
+              <div>
+                <label className="block text-xs font-medium text-slate-500 mb-1">Ad</label>
+                <input type="text" value={editingPassenger.firstName} onChange={e => setEditingPassenger({...editingPassenger, firstName: e.target.value})} className="w-full theme-input" />
+              </div>
+              <div>
+                <label className="block text-xs font-medium text-slate-500 mb-1">Soyad</label>
+                <input type="text" value={editingPassenger.lastName} onChange={e => setEditingPassenger({...editingPassenger, lastName: e.target.value})} className="w-full theme-input" />
+              </div>
+              <div>
+                <label className="block text-xs font-medium text-slate-500 mb-1">TC / Pasaport</label>
+                <input type="text" value={editingPassenger.tcPassportNo} onChange={e => setEditingPassenger({...editingPassenger, tcPassportNo: e.target.value})} className="w-full theme-input" />
+              </div>
+              <div>
+                <label className="block text-xs font-medium text-slate-500 mb-1">Uyruk Kodu (örn: TR)</label>
+                <input type="text" value={editingPassenger.nationalityCode} onChange={e => setEditingPassenger({...editingPassenger, nationalityCode: e.target.value})} className="w-full theme-input" />
+              </div>
+              <div>
+                <label className="block text-xs font-medium text-slate-500 mb-1">Cinsiyet</label>
+                <select value={editingPassenger.gender} onChange={e => setEditingPassenger({...editingPassenger, gender: e.target.value})} className="w-full theme-input">
+                  <option value="E">Erkek</option>
+                  <option value="K">Kadın</option>
+                </select>
+              </div>
+            </div>
+            <div className="p-4 border-t border-slate-200 dark:border-slate-700 flex justify-end gap-3 bg-slate-50 dark:bg-slate-800/50">
+              <button onClick={() => setEditingPassenger(null)} className="px-4 py-2 text-sm font-medium text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-lg transition-colors">İptal</button>
+              <button onClick={async () => {
+                try {
+                  await tripsApi.updatePassenger(editingPassenger.id, editingPassenger);
+                  toast.success('Yolcu güncellendi');
+                  setEditingPassenger(null);
+                  fetchTrip();
+                } catch (e: any) {
+                  toast.error(e.response?.data?.message || 'Hata oluştu');
+                }
+              }} className="btn-primary text-sm px-6 py-2">Kaydet</button>
             </div>
           </div>
         </div>
