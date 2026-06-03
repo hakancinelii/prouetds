@@ -213,7 +213,7 @@ export default function TripDetailPage() {
       router.replace('/trips/' + tripId, { scroll: false });
     }
   }, [searchParams, tripId, router]);
-  const [activePassengerTab, setActivePassengerTab] = useState<'text' | 'manual' | 'excel' | 'ocr'>('text');
+  const [activePassengerTab, setActivePassengerTab] = useState<'text' | 'manual' | 'excel' | 'ocr'>('manual');
   const [pasteText, setPasteText] = useState('');
   const [parsedResults, setParsedResults] = useState<any>(null);
   const [selectedGroupId, setSelectedGroupId] = useState('');
@@ -1268,10 +1268,10 @@ export default function TripDetailPage() {
             </div>
 
             {/* Tabs */}
-            <div className="flex gap-1 border-b border-slate-700/50 pb-3 mb-4 overflow-x-auto hide-scrollbar">
+            <div className="flex gap-1 border-b border-slate-200 dark:border-slate-700/50 pb-3 mb-4 overflow-x-auto hide-scrollbar">
               {[
-                { key: 'text' as const, icon: <Clipboard size={16} />, label: 'Metin (WhatsApp)' },
                 { key: 'manual' as const, icon: <UserPlus size={16} />, label: 'Manuel Ekle' },
+                { key: 'text' as const, icon: <Clipboard size={16} />, label: 'Metin (WhatsApp)' },
                 { key: 'excel' as const, icon: <UploadCloud size={16} />, label: 'Excel / CSV' },
                 { key: 'ocr' as const, icon: <ScanFace size={16} />, label: 'Pasaport OCR' },
               ].map((tab) => (
@@ -1280,8 +1280,8 @@ export default function TripDetailPage() {
                   type="button"
                   onClick={() => setActivePassengerTab(tab.key)}
                   className={`px-4 py-2 text-sm font-medium rounded-lg transition whitespace-nowrap flex items-center gap-2 ${activePassengerTab === tab.key
-                    ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/30'
-                    : 'text-slate-400 hover:bg-slate-700/50 hover:text-slate-200'
+                    ? 'bg-emerald-50 dark:bg-emerald-500/20 text-emerald-700 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-500/30'
+                    : 'theme-text-soft hover:bg-slate-100 dark:hover:bg-slate-700/50 hover:text-slate-900 dark:hover:text-slate-200'
                     }`}
                 >
                   {tab.icon}
@@ -1293,13 +1293,13 @@ export default function TripDetailPage() {
             <div className="flex-1 overflow-y-auto pr-2 custom-scrollbar">
               {activePassengerTab === 'text' && (
                 <div className="space-y-4 animate-fade-in">
-                  <p className="text-sm text-slate-400">
+                  <p className="text-sm theme-text-soft">
                     WhatsApp vb. kanallardan gelen metni olduğu gibi yapıştırın. Yapay zeka isim, pasaport, TC ve cinsiyet tahminlerini otomatik yapacaktır.
                   </p>
                   <textarea
                     value={pasteText}
                     onChange={(e) => setPasteText(e.target.value)}
-                    className="input-field font-mono text-sm h-48"
+                    className="input-field font-mono text-sm h-48 placeholder-slate-400/60 dark:placeholder-slate-600"
                     placeholder={`Ahmet Yılmaz 12345678901
 Ayşe Demir 23456789012
 Mehmet Kaya 34567890123
@@ -1330,7 +1330,7 @@ Her satıra bir yolcu yazın.
 
               {activePassengerTab === 'manual' && (
                 <div className="space-y-4 animate-fade-in">
-                  <p className="text-sm text-slate-400">Her satıra bir yolcu bilgisi girin. Satır ekleyip çıkarabilirsiniz.</p>
+                  <p className="text-sm theme-text-soft">Her satıra bir yolcu bilgisi girin. Satır ekleyip çıkarabilirsiniz.</p>
                   <div className="space-y-3 max-h-[50vh] overflow-y-auto pr-1 custom-scrollbar">
                     {(manualRows || [{ firstName: '', lastName: '', tcPassportNo: '', nationalityCode: 'TR', gender: '' }]).map((row: any, idx: number) => (
                       <div key={idx} className="p-3 rounded-xl border border-slate-700/50 bg-slate-800/30 space-y-2">
