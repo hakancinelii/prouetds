@@ -169,8 +169,8 @@ export class ParserService {
         break;
       }
 
-      // Check for passport number (alphanumeric, 6-9 chars, starts with letter or digit)
-      if (/^[A-Z0-9]{6,9}$/i.test(token) && /[A-Z]/i.test(token)) {
+      // Check for passport number (alphanumeric, 5-15 chars, MUST contain at least one digit to avoid matching names)
+      if (/^[A-Z0-9]{5,15}$/i.test(token) && /\d/.test(token)) {
         idNumber = token.toUpperCase();
         idType = 'PASSPORT';
         idIndex = i;
@@ -178,11 +178,11 @@ export class ParserService {
         // Don't break - continue looking for TC which has higher priority
       }
 
-      // Also detect pure numeric passport numbers (5-9 digits, not 11)
-      if (/^\d{5,9}$/.test(token) && token.length !== 11) {
+      // Also detect pure numeric passport numbers (5-15 digits)
+      if (/^\d{5,15}$/.test(token)) {
         if (!idNumber) {
           idNumber = token;
-          idType = 'PASSPORT';
+          idType = token.length === 11 ? 'TC' : 'PASSPORT';
           idIndex = i;
           confidence = 0.5;
         }
