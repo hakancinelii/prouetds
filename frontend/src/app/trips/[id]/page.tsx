@@ -379,7 +379,7 @@ export default function TripDetailPage() {
 
   const getTripSectionTitle = () => 'Sefer Çalışma Alanı';
 
-  const noop = () => {};
+  const noop = () => { };
 
   void openGroupCreateModal;
   void startPassengerSyncDebug;
@@ -589,8 +589,8 @@ export default function TripDetailPage() {
       const res = await tripsApi.sendToUetds(tripId);
       const passengerSummary = Array.isArray(res.data.passengerSummary)
         ? res.data.passengerSummary
-            .map((item: any) => `${item.groupName}: ${item.successCount}/${item.expected}`)
-            .join(' · ')
+          .map((item: any) => `${item.groupName}: ${item.successCount}/${item.expected}`)
+          .join(' · ')
         : '';
       toast.success(
         passengerSummary
@@ -1253,7 +1253,7 @@ export default function TripDetailPage() {
                 <XCircle size={24} />
               </button>
             </div>
-            
+
             {/* Tabs */}
             <div className="flex gap-1 border-b border-slate-700/50 pb-4 mb-4 overflow-x-auto hide-scrollbar">
               <button
@@ -1688,31 +1688,31 @@ export default function TripDetailPage() {
                 <p className="text-xs text-slate-500">{getDriverRoleHint()}</p>
               </div>
               <div className="space-y-2 max-h-80 overflow-y-auto">
-              {drivers.length === 0 ? (
-                <div className="p-4 text-center text-slate-400">
-                  Kayıtlı personel bulunamadı. Önce Şoförler sayfasından personel kaydı ekleyin.
-                </div>
-              ) : (
-                drivers.map((d) => (
-                  <button
-                    type="button"
-                    key={d.id}
-                    onClick={() => handleAddPersonnel(d)}
-                    disabled={addingPersonnelId !== null}
-                    className="w-full flex items-center justify-between p-3 rounded-lg theme-card-soft hover:bg-[rgb(var(--surface-elevated-rgb))]/80 border theme-border transition group disabled:opacity-60 disabled:cursor-not-allowed"
-                  >
-                    <div className="text-left">
-                      <p className="text-sm font-medium theme-text-strong group-hover:text-emerald-400">
-                        {d.firstName} {d.lastName}
-                      </p>
-                      <p className="text-xs text-slate-500 font-mono">
-                        {d.tcKimlikNo}
-                      </p>
-                    </div>
-                    <Plus size={16} className="text-slate-500 group-hover:text-emerald-400" />
-                  </button>
-                ))
-              )}
+                {drivers.length === 0 ? (
+                  <div className="p-4 text-center text-slate-400">
+                    Kayıtlı personel bulunamadı. Önce Şoförler sayfasından personel kaydı ekleyin.
+                  </div>
+                ) : (
+                  drivers.map((d) => (
+                    <button
+                      type="button"
+                      key={d.id}
+                      onClick={() => handleAddPersonnel(d)}
+                      disabled={addingPersonnelId !== null}
+                      className="w-full flex items-center justify-between p-3 rounded-lg theme-card-soft hover:bg-[rgb(var(--surface-elevated-rgb))]/80 border theme-border transition group disabled:opacity-60 disabled:cursor-not-allowed"
+                    >
+                      <div className="text-left">
+                        <p className="text-sm font-medium theme-text-strong group-hover:text-emerald-400">
+                          {d.firstName} {d.lastName}
+                        </p>
+                        <p className="text-xs text-slate-500 font-mono">
+                          {d.tcKimlikNo}
+                        </p>
+                      </div>
+                      <Plus size={16} className="text-slate-500 group-hover:text-emerald-400" />
+                    </button>
+                  ))
+                )}
               </div>
             </div>
             <div className="pt-4">
