@@ -484,7 +484,7 @@ export default function TripsPage() {
       toast.success('Sefer oluşturuldu');
       setShowCreateModal(false);
       setForm(getDefaultCreateForm());
-      router.push(`/trips/${res.data.id}`);
+      router.push(`/trips/${res.data.id}?addPassenger=true`);
     } catch (err: any) {
       toast.error(err.response?.data?.message || 'Sefer oluşturulamadı');
     }
