@@ -147,7 +147,7 @@ export class ParserService {
     const normalized = line.replace(/[,\t;|]+/g, ' ').replace(/\s+/g, ' ').trim();
     const tokens = normalized.split(' ');
 
-    if (tokens.length < 3) return null;
+    if (tokens.length < 2) return null;
 
     let idNumber = '';
     let idType: 'TC' | 'PASSPORT' = 'PASSPORT';
