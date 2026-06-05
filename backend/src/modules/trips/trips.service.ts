@@ -1133,7 +1133,7 @@ export class TripsService {
         departureTime: toLocalTripTime(now),
         endDate: departureDate,
         endTime: '23:59',
-        description: message.trim().substring(0, 190) || 'AI Autopilot seferi',
+        description: message.trim() || 'AI Autopilot seferi',
         originIlCode: origin.ilCode,
         originIlceCode: origin.ilceCode,
         originPlace: origin.place,
@@ -1181,41 +1181,28 @@ export class TripsService {
   }
 
   private isNonNameLine(line: string): boolean {
-    // Convert to lowercase and normalize common Turkish characters
-    const lowerLine = line
-      .replace(/İ/g, 'i')
-      .replace(/I/g, 'ı')
-      .toLowerCase()
-      .trim();
-
     // Date patterns: 05.05.2026, 2026-05-05, 05/05/2026
-    if (/^\\d{2}[.\\/-]\\d{2}[.\\/-]\\d{4}$/.test(lowerLine)) return true;
-    if (/^\\d{4}-\\d{2}-\\d{2}$/.test(lowerLine)) return true;
+    if (/^\d{2}[.\/-]\d{2}[.\/-]\d{4}$/.test(line)) return true;
+    if (/^\d{4}-\d{2}-\d{2}$/.test(line)) return true;
     // Time patterns: 22:00, 09:30
-    if (/^\\d{1,2}:\\d{2}$/.test(lowerLine)) return true;
+    if (/^\d{1,2}:\d{2}$/.test(line)) return true;
     // Plate patterns: 34ABC123, 34 BDD 991
-    if (/^\\d{2}\\s*[a-zçğıöşü]{1,3}\\s*\\d{2,4}$/i.test(lowerLine)) return true;
-
-    // Split line into clean words, removing punctuation
-    const cleanWords = lowerLine.replace(/[^a-zçğıöşü\\s]/g, ' ').split(/\\s+/).filter(Boolean);
-
-    const keywords = ['plaka', 'şoför', 'sofor', 'driver', 'araç', 'arac', 'toplam', 'uçuş', 'ucus', 'rezervasyon', 'alış', 'alis', 'bırakış', 'birakis', 'iletişim', 'iletisim', 'not', 'ödeme', 'odeme', 'acil', 'ücret', 'ucret', 'fiyat', 'işin', 'isin', 'telefon', 'tel', 'mail', 'e-mail', 'booking', 'destination', 'origin', 'pickup', 'dropoff', 'route', 'yön', 'yon', 'güzergah', 'guzergah'];
-
-    const locations = ['saw', 'ist', 'hav', 'istanbul', 'ankara', 'izmir', 'fatih', 'sisli', 'şişli', 'taksim', 'pendik', 'kadıköy', 'kadikoy', 'arnavutköy', 'arnavutkoy', 'sheraton', 'kagithane', 'kağıthane', 'beşiktaş', 'besiktas', 'havalimanı', 'havalimani', 'airport', 'hotel', 'otel', 'bosphorus', 'shuttle', 'transfer', 'hilton', 'marriott', 'hyatt', 'sofitel', 'swissotel', 'plaza', 'hav.'];
-
-    if (cleanWords.some(w => keywords.includes(w))) return true;
-    if (cleanWords.some(w => locations.includes(w))) return true;
-
+    if (/^\d{2}\s*[A-ZÇĞİÖŞÜa-zçğıöşü]{1,3}\s*\d{2,4}$/i.test(line)) return true;
+    // Lines starting with PLAKA, şoför, driver keywords
+    if (/^(plaka|şoför|sofor|driver|araç|arac)\b/i.test(line)) return true;
     // Lines that are just single short words (locations, keywords)
-    const words = lowerLine.split(/\\s+/).filter(Boolean);
+    const words = line.split(/\s+/).filter(Boolean);
     if (words.length < 2) return true;
     // Lines containing only numbers
-    if (/^\\d+$/.test(lowerLine.replace(/\\s/g, ''))) return true;
-
+    if (/^\d+$/.test(line.replace(/\s/g, ''))) return true;
+    // Known location keywords
+    if (/^(saw|ist|istanbul|ankara|izmir|fatih|sisli|şişli|taksim|pendik|kadıköy|kadikoy|arnavutköy|arnavutkoy|sheraton|kagithane|kağıthane)\b/i.test(line)) return true;
+    // Lines with Saw. / İst. prefix (origin/dest shorthand like "Saw. Fatih")
+    if (/^(saw|ist|hav)\.\s/i.test(line)) return true;
     return false;
   }
 
-        private async parsePassengersWithGemini(message: string): Promise<Partial<Passenger>[]> {
+  private async parsePassengersWithGemini(message: string): Promise<Partial<Passenger>[]> {
     try {
       const apiKey = this.configService.get<string>('GEMINI_API_KEY');
       if (!apiKey) throw new Error('GEMINI_API_KEY not set');
@@ -1224,7 +1211,6 @@ export class TripsService {
 Aşağıdaki rezervasyon mesajından YALNIZCA gerçek insan yolcu isimlerini çıkar.
 Şunları ÇIKARMA: konum, adres, otel adı, havalimanı, ilçe, semt, araç plakası, telefon, tarih, uçuş numarası, ödeme bilgisi, şoför adı, toplam kişi sayısı.
 Sadece yolcu olarak seyahat eden gerçek kişilerin isimlerini JSON dizisi olarak döndür.
-Her yolcunun cinsiyetini isminden tahmin ederek (Erkek için "E", Kadın için "K") "gender" alanına ekle.
 Eğer gerçek yolcu ismi bulamazsan boş dizi döndür: []
 
 Mesaj:
@@ -1232,82 +1218,51 @@ Mesaj:
 ${message}
 """
 
-DİKKAT: Yanıtın sadece ham (raw) JSON olmalıdır. Markdown veya kod bloğu kullanma!
-Örnek Yanıt: [{"firstName":"Ahmet","lastName":"Yılmaz","gender":"E"},{"firstName":"Ayşe","lastName":"Kaya","gender":"K"}]`;
+Yalnızca geçerli JSON döndür. Örnek: [{"firstName":"Andrew","lastName":"Tabaczynski"},{"firstName":"Misha","lastName":"Daha"}]`;
 
       const endpoints = [
         { v: 'v1beta', m: 'gemini-2.0-flash' },
-        { v: 'v1beta', m: 'gemini-2.0-flash-lite' },
+        { v: 'v1beta', m: 'gemini-1.5-flash' },
+        { v: 'v1', m: 'gemini-1.5-flash-latest' },
       ];
 
-      let responseText = null;
-      let lastError = '';
-      
+      let responseText: string | null = null;
       for (const ep of endpoints) {
-        let attempts = 0;
-        while (attempts < 2) {
-          attempts++;
-          try {
-            const res = await fetch(
-              `https://generativelanguage.googleapis.com/${ep.v}/models/${ep.m}:generateContent?key=${apiKey}`,
-              {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ contents: [{ parts: [{ text: prompt }] }] }),
-              },
-            );
-            
-            if (res.ok) {
-              const resData = await res.json();
-              responseText = resData.candidates?.[0]?.content?.parts?.[0]?.text || null;
-              break;
-            } else if (res.status === 429) {
-              const errData = await res.json();
-              const delayStr = errData.error?.details?.[0]?.retryDelay || '2s';
-              const rawDelay = parseInt(delayStr) || 2;
-              const delaySec = Math.max(rawDelay + 4, 6); // Free tier needs 6s+ between retries
-              this.logger.warn(`[Gemini] ${ep.m} Rate Limit (429). Retrying in ${delaySec}s...`);
-              await new Promise(r => setTimeout(r, delaySec * 1000));
-              continue; // Tekrar dene
-            } else {
-              const errText = await res.text();
-              lastError = `HTTP ${res.status} ${errText}`;
-              this.logger.error(`[Gemini API Error] ${ep.m}: ${lastError}`);
-              break; // Diğer modele geç
-            }
-          } catch (err) {
-            lastError = err.message;
-            this.logger.error(`[Gemini Network Error] ${ep.m}: ${err.message}`);
-            break; // Diğer modele geç
+        try {
+          const res = await fetch(
+            `https://generativelanguage.googleapis.com/${ep.v}/models/${ep.m}:generateContent?key=${apiKey}`,
+            {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ contents: [{ parts: [{ text: prompt }] }] }),
+            },
+          );
+          if (res.ok) {
+            const resData = await res.json() as any;
+            responseText = resData.candidates?.[0]?.content?.parts?.[0]?.text || null;
+            if (responseText) break;
           }
-        }
-        if (responseText) break; // Başarılıysa döngüden çık
+        } catch (_) { /* try next endpoint */ }
       }
 
-      if (!responseText) throw new Error(`All Gemini endpoints failed. Last error: ${lastError}`);
+      if (!responseText) throw new Error('All Gemini endpoints failed');
 
-      let cleanJson = responseText.replace(/[\`]{3}json/gi, '').replace(/[\`]{3}/g, '').trim();
-      const jsonMatch = cleanJson.match(/\[[\s\S]*\]/);
-      if (!jsonMatch) throw new Error('No JSON array in Gemini response: ' + responseText);
+      const jsonMatch = responseText.match(/\[\s*[\s\S]*?\]/);
+      if (!jsonMatch) throw new Error('No JSON array in Gemini response');
 
-      const parsed = JSON.parse(jsonMatch[0]);
-      this.logger.log(`[Gemini] Parsed ${parsed.length} passengers`);
+      const parsed: { firstName: string; lastName: string }[] = JSON.parse(jsonMatch[0]);
+      this.logger.log(`[Gemini] Parsed ${parsed.length} passengers from message`);
 
-      const result = [];
+      const result: Partial<Passenger>[] = [];
       for (let i = 0; i < parsed.length; i++) {
         const p = parsed[i];
         if (!p.firstName || !p.lastName) continue;
-        
-        const predictedGender = (p.gender === 'K' || p.gender === 'k') ? 'K' : 'E';
-        const safeFirstName = normalizePassengerName(p.firstName).substring(0, 100);
-        const safeLastName = normalizePassengerName(p.lastName).substring(0, 100);
-
         result.push({
-          firstName: safeFirstName,
-          lastName: safeLastName,
+          firstName: normalizePassengerName(p.firstName),
+          lastName: normalizePassengerName(p.lastName),
           tcPassportNo: `MSG${Date.now()}${i + 1}`,
           nationalityCode: 'TR',
-          gender: predictedGender,
+          gender: 'E',
           seatNumber: String(i + 1),
           source: PassengerSource.MANUAL,
         });
@@ -1315,109 +1270,86 @@ DİKKAT: Yanıtın sadece ham (raw) JSON olmalıdır. Markdown veya kod bloğu k
       return result;
     } catch (err: any) {
       this.logger.warn(`[Gemini] Passenger parse failed, falling back to regex: ${err.message}`);
-      const fallbackResult = this.parsePassengersFromMessage(message);
-      if (fallbackResult.length === 0) {
-        throw new BadRequestException(`Yapay Zeka (Gemini) Hatası: ${err.message} -- Yapay zeka çalışamadığı için eski sisteme düşüldü, onda da Mr/Mrs bulunamadı.`);
-      }
-      return fallbackResult;
+      return this.parsePassengersFromMessage(message);
     }
   }
 
   private parsePassengersFromMessage(message: string): Partial<Passenger>[] {
-    const lines = message.split(/\n/).map((line) => line.trim()).filter(Boolean);
+    // 1. Clean the message from known prefixes/labels that might confuse the parser
+    let cleanedMessage = message
+      .replace(/Yolcu (Adı|Bilgileri):?/gi, '')
+      .replace(/Diğer Yolcular:?/gi, '')
+      .replace(/Misafir (isimleri|sayısı):?/gi, '')
+      .replace(/Name:/gi, '')
+      .replace(/Pax:/gi, '')
+      .replace(/乘客英文名:/g, '')
+      .replace(/乘客姓名:/g, '');
+
+    // 2. Extract lines, split by comma if multiple names on same line like "Yanfei, Wenjie Tu"
+    let lines = cleanedMessage.split(/\n/);
+    
+    let expandedLines: string[] = [];
+    for (const line of lines) {
+      if (line.includes(',') && !/\d/.test(line)) {
+        expandedLines.push(...line.split(','));
+      } else {
+        expandedLines.push(line);
+      }
+    }
+
     const passengers: Partial<Passenger>[] = [];
     const inferredPassports = message.match(/\b[A-Z]{1,3}[0-9]{5,10}\b/g) || [];
     const titlePattern = /\b(Mr|Mrs|Ms|Miss)\.?\s+/i;
 
-    // ── Strategy 1: "Yolcu Adı:" / "Yolcular:" / "Passenger(s):" section parser ──
-    const sectionKeyword = /^(yolcu\s*ad[iı]|yolcular|passenger[s]?|guests?|müşteri|musteri)\s*[:\-]?\s*$/i;
-    const inlineSectionKeyword = /^(yolcu\s*ad[iı]|yolcular|passenger[s]?|guests?|müşteri|musteri)\s*[:\-]\s*(.+)/i;
+    for (const rawLine of expandedLines) {
+      // Clean up bullets, numbers, dashes at the beginning
+      let cleanLine = rawLine
+        .replace(/^[\s•\-\*>]+/, '') // Remove leading bullets
+        .replace(/^[0-9]+[\s.\-\)]+\s*/, '') // Remove numbering like "1. ", "2- "
+        .replace(/^[0-9]+\.\s*Yolcu:?\s*/i, '') // Remove "1. Yolcu:"
+        .replace(/\(infant\)|\(child\)/gi, '') // Remove age modifiers
+        .trim();
 
-    let sectionStart = -1;
-    for (let i = 0; i < lines.length; i++) {
-      const inlineMatch = lines[i].match(inlineSectionKeyword);
-      if (inlineMatch && inlineMatch[2]?.trim()) {
-        // e.g. "Yolcu Adı: Andrew Tabaczynski"
-        const namePart = inlineMatch[2].trim();
-        const cleaned = namePart.replace(/[.\-']/g, '');
-        if (/^[A-Za-zÀ-ÿÇçĞğİıÖöŞşÜü\s]+$/.test(cleaned)) {
-          const parts = normalizePassengerName(namePart).split(/\s+/).filter(Boolean);
-          if (parts.length >= 2) {
-            const firstName = parts.slice(0, -1).join(' ');
-            const lastName = parts[parts.length - 1];
-            passengers.push({
-              firstName, lastName,
-              tcPassportNo: inferredPassports[passengers.length] || `MSG${Date.now()}${passengers.length + 1}`,
-              nationalityCode: 'TR', gender: 'E',
-              seatNumber: String(passengers.length + 1),
-              source: PassengerSource.MANUAL,
-            });
-          }
-        }
-        sectionStart = i + 1;
-        break;
-      }
-      if (sectionKeyword.test(lines[i])) {
-        sectionStart = i + 1;
-        break;
-      }
-    }
-
-    if (sectionStart >= 0) {
-      // Parse all name lines after the keyword until a non-name line appears
-      const stopKeywords = /^(alış|bırakış|tarih|saat|araç|plaka|şoför|notlar?|not|pickup|dropoff|date|time|vehicle|driver|note)\s*[:\-]/i;
-      for (let i = sectionStart; i < lines.length; i++) {
-        const line = lines[i];
-        if (!line || stopKeywords.test(line)) break;
-        // Remove leading bullet/number
-        const cleanLine = line.replace(/^[•\-\*\d]+[\s.\)\-]*/, '').trim();
-        if (!cleanLine) continue;
-        // Strip Mr/Mrs if present
-        const titleMatch = cleanLine.match(titlePattern);
-        const namePart = titleMatch ? cleanLine.replace(titlePattern, '').trim() : cleanLine;
-        const cleaned = namePart.replace(/[.\-']/g, '');
-        if (!/^[A-Za-zÀ-ÿÇçĞğİıÖöŞşÜü\s]+$/.test(cleaned)) continue;
-        const parts = normalizePassengerName(namePart).split(/\s+/).filter(Boolean);
-        if (parts.length < 2) continue;
-        const firstName = parts.slice(0, -1).join(' ');
-        const lastName = parts[parts.length - 1];
-        const isDuplicate = passengers.some(p => p.firstName === firstName && p.lastName === lastName);
-        if (isDuplicate) continue;
-        passengers.push({
-          firstName, lastName,
-          tcPassportNo: inferredPassports[passengers.length] || `MSG${Date.now()}${passengers.length + 1}`,
-          nationalityCode: 'TR', gender: 'E',
-          seatNumber: String(passengers.length + 1),
-          source: PassengerSource.MANUAL,
-        });
-      }
-      if (passengers.length > 0) return passengers;
-    }
-
-    // ── Strategy 2: Mr./Mrs. prefix (original logic) ──
-    for (const line of lines) {
-      const cleanLine = line.replace(/^[0-9]+[\s.\-\)]+\s*/, '').trim();
       if (!cleanLine) continue;
+
       let fullName = '';
 
+      // Ignore lines that are definitely not names
+      if (this.isNonNameLine(cleanLine)) continue;
+
+      // Extract title if exists
       const titleMatch = cleanLine.match(titlePattern);
       if (titleMatch) {
-        fullName = normalizePassengerName(cleanLine.replace(titlePattern, ""));
-      } else {
-        if (this.isNonNameLine(cleanLine)) continue;
-        const cleaned = cleanLine.replace(/[.\-']/g, '');
-        if (!/^[A-Za-zÀ-ÿÇçĞğİıÖöŞşÜü\s]+$/.test(cleaned)) continue;
-        fullName = normalizePassengerName(cleanLine);
+        cleanLine = cleanLine.replace(titlePattern, '').trim();
       }
 
-      if (!fullName || fullName.length < 3) continue;
-      const parts = fullName.split(/\s+/);
-      if (parts.length < 2) continue;
+      // Replace common separators in names like "/"
+      cleanLine = cleanLine.replace(/\//g, ' ');
 
-      const firstName = parts.slice(0, -1).join(' ') || parts[0] || 'Yolcu';
-      const lastName = parts[parts.length - 1];
+      // Check if line contains mostly letters
+      // Allow Turkish letters, English letters, spaces, dots, dashes, apostrophes
+      const letterRatio = (cleanLine.match(/[A-Za-zÀ-ÿÇçĞğİıÖöŞşÜü]/g) || []).length / cleanLine.length;
+      
+      // If the line is short or has very few letters, skip
+      if (cleanLine.length < 3 || letterRatio < 0.6) continue;
+
+      // Remove any trailing non-alphabet characters (e.g. if there's a stray number)
+      fullName = cleanLine.replace(/[^A-Za-zÀ-ÿÇçĞğİıÖöŞşÜü\s\-\.']/g, ' ').replace(/\s+/g, ' ').trim();
+
+      if (!fullName || fullName.length < 3) continue;
+
+      const parts = fullName.split(/\s+/);
+      if (parts.length < 2 && passengers.length > 0) {
+        // Single word name - might be valid but risky. Let's allow if length >= 3
+      } else if (parts.length < 2) {
+        continue;
+      }
+
+      const firstName = parts.length > 1 ? parts.slice(0, -1).join(' ') : parts[0];
+      const lastName = parts.length > 1 ? parts[parts.length - 1] : parts[0];
       const autoPassportNo = inferredPassports[passengers.length] || `MSG${Date.now()}${passengers.length + 1}`;
 
+      // Avoid duplicates
       const isDuplicate = passengers.some(
         (p) => p.firstName === normalizePassengerName(firstName) && p.lastName === normalizePassengerName(lastName),
       );
