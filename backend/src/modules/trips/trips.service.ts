@@ -527,11 +527,14 @@ export class TripsService {
   ) {
     const description =
       group.groupDescription?.trim() || trip?.description?.trim() || 'Transfer';
-    return description;
+    // groupDescription is varchar(200) (trip-group.entity.ts); the trip description
+    // can be up to 400 chars (a full autopilot message), so clamp before insert.
+    return description.slice(0, 200);
   }
 
   private ensureGroupHasMeaningfulName(group: Partial<TripGroup>) {
-    return group.groupName?.trim() || '1. Grup';
+    // groupName is varchar(100).
+    return (group.groupName?.trim() || '1. Grup').slice(0, 100);
   }
 
   private ensureGroupFee(group: Partial<TripGroup>) {
