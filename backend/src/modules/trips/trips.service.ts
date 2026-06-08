@@ -1149,7 +1149,7 @@ export class TripsService {
         // Keep this short and single-line: it is sent to UETDS as the trip/group
         // note and printed on the official "SEFER DETAY" PDF, where a long raw
         // message overflows the cell and overlaps the fee column.
-        description: `AI Autopilot transfer: ${origin.label} → ${dest.label}`,
+        description: `AI Autopilot transfer: ${origin.label} -> ${dest.label}`,
         originIlCode: origin.ilCode,
         originIlceCode: origin.ilceCode,
         originPlace: origin.place,
@@ -1231,18 +1231,24 @@ export class TripsService {
       const apiKey = this.configService.get<string>('GEMINI_API_KEY');
       if (!apiKey) throw new Error('GEMINI_API_KEY not set');
 
-      const prompt = `Sen bir ulaşım rezervasyon sistemi için yolcu ismi ayıklayıcısısın.
-Aşağıdaki rezervasyon mesajından YALNIZCA gerçek insan yolcu isimlerini çıkar.
+      const prompt = `Sen bir ulaşım rezervasyon sistemi için yolcu bilgisi ayıklayıcısısın.
+Aşağıdaki rezervasyon mesajından YALNIZCA gerçek insan yolcularını çıkar.
 Şunları ÇIKARMA: konum, adres, otel adı, havalimanı, ilçe, semt, araç plakası, telefon, tarih, uçuş numarası, ödeme bilgisi, şoför adı, toplam kişi sayısı.
-Sadece yolcu olarak seyahat eden gerçek kişilerin isimlerini JSON dizisi olarak döndür.
-Eğer gerçek yolcu ismi bulamazsan boş dizi döndür: []
+Her yolcu için şu alanları döndür:
+- firstName: yolcunun adı (Mr/Mrs/Ms/Dr gibi ön ekleri çıkar)
+- lastName: yolcunun soyadı
+- tcPassportNo: mesajda o yolcuya ait pasaport veya TC kimlik numarası varsa onu yaz, yoksa boş bırak ""
+- nationalityCode: yolcunun uyruğu için ISO 3166-1 alpha-2 ülke kodu (Türkiye=TR, İngiltere/UK/GBR=GB, ABD/USA=US, Almanya=DE, Çin/China=CN, Rusya=RU, Fransa=FR). Belirsizse boş bırak "".
+Aynı kişi birden fazla formatta geçiyorsa TEK kez döndür, tekrarlama.
+Eğer gerçek yolcu bulamazsan boş dizi döndür: []
 
 Mesaj:
 """
 ${message}
 """
 
-Yalnızca geçerli JSON döndür. Örnek: [{"firstName":"Andrew","lastName":"Tabaczynski"},{"firstName":"Misha","lastName":"Daha"}]`;
+Yalnızca geçerli JSON dizisi döndür, başka açıklama yapma.
+Örnek: [{"firstName":"James Robert","lastName":"Anderson","tcPassportNo":"P8842219","nationalityCode":"GB"},{"firstName":"Ahmet","lastName":"Demir","tcPassportNo":"","nationalityCode":"TR"}]`;
 
       const endpoints = [
         { v: 'v1beta', m: 'gemini-2.0-flash' },
@@ -1285,18 +1291,21 @@ Yalnızca geçerli JSON döndür. Örnek: [{"firstName":"Andrew","lastName":"Tab
       const jsonMatch = responseText.match(/\[\s*[\s\S]*?\]/);
       if (!jsonMatch) throw new Error('No JSON array in Gemini response');
 
-      const parsed: { firstName: string; lastName: string }[] = JSON.parse(jsonMatch[0]);
+      const parsed: { firstName: string; lastName: string; tcPassportNo?: string; nationalityCode?: string }[] = JSON.parse(jsonMatch[0]);
       this.logger.log(`[Gemini] Parsed ${parsed.length} passengers from message`);
 
       const result: Partial<Passenger>[] = [];
       for (let i = 0; i < parsed.length; i++) {
         const p = parsed[i];
         if (!p.firstName || !p.lastName) continue;
+        // Use the passport/TC and nationality the model read from the message when
+        // present; otherwise fall back to a synthetic id and TR (occasional transport).
+        const identity = normalizePassengerIdentity(p.tcPassportNo);
         result.push({
           firstName: normalizePassengerName(p.firstName),
           lastName: normalizePassengerName(p.lastName),
-          tcPassportNo: `MSG${Date.now()}${i + 1}`,
-          nationalityCode: 'TR',
+          tcPassportNo: identity || `MSG${Date.now()}${i + 1}`,
+          nationalityCode: normalizePassengerNationality(p.nationalityCode),
           gender: 'E',
           seatNumber: String(i + 1),
           source: PassengerSource.MANUAL,
