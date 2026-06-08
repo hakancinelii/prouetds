@@ -1,0 +1,22 @@
+{
+ "ssh_keys": [
+  {
+   "id": 110128663,
+   "name": "ProUETDS-Key",
+   "public_key": "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIFVJtbfqrNa5cfEycKKKUCYC2JytS3VWkJW8wktGRQFJ admin@prouetds.com",
+   "fingerprint": "2b:d5:75:9e:45:e8:10:00:31:d4:dd:d7:b7:94:c1:ae",
+   "labels": {},
+   "created": "2026-04-01T18:36:31Z"
+  }
+ ],
+ "meta": {
+  "pagination": {
+   "last_page": 1,
+   "next_page": null,
+   "page": 1,
+   "per_page": 25,
+   "previous_page": null,
+   "total_entries": 1
+  }
+ }
+}
