@@ -366,10 +366,18 @@ export class TripsService {
   private normalizeTripData(
     tripData: Partial<Trip> & { originPlace?: string; destPlace?: string },
   ) {
+    // Clamp to the DB column limits (trip.entity.ts) so a long autopilot message
+    // (which is stored verbatim as the description) can never crash the insert
+    // with "value too long for character varying(400)".
+    const description =
+      tripData.description != null
+        ? String(tripData.description).slice(0, 400)
+        : tripData.description;
     return {
       ...tripData,
-      originPlace: tripData.originPlace?.trim(),
-      destPlace: tripData.destPlace?.trim(),
+      ...(description !== undefined ? { description } : {}),
+      originPlace: tripData.originPlace?.trim().slice(0, 200),
+      destPlace: tripData.destPlace?.trim().slice(0, 200),
     };
   }
 
