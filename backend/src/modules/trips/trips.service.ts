@@ -153,13 +153,15 @@ const normalizeImportedGender = (value?: string | null) => {
 
 const normalizePassengerRecord = (data: Partial<Passenger>) => ({
   ...data,
-  firstName: normalizePassengerName(data.firstName),
-  lastName: normalizePassengerName(data.lastName),
-  tcPassportNo: normalizePassengerIdentity(data.tcPassportNo),
+  // Lengths are clamped to the DB column limits (passenger.entity.ts) so a bad
+  // parse can never crash the insert with "value too long for character varying".
+  firstName: normalizePassengerName(data.firstName).slice(0, 50),
+  lastName: normalizePassengerName(data.lastName).slice(0, 50),
+  tcPassportNo: normalizePassengerIdentity(data.tcPassportNo).slice(0, 30),
   nationalityCode: normalizePassengerNationality(data.nationalityCode),
   gender: normalizeImportedGender(data.gender),
-  phone: String(data.phone || '').trim() || null,
-  seatNumber: String(data.seatNumber || '').trim() || null,
+  phone: String(data.phone || '').trim().slice(0, 20) || null,
+  seatNumber: String(data.seatNumber || '').trim().slice(0, 10) || null,
 });
 
 const buildUetdsNationalityCode = (value?: string | null) =>
@@ -1190,9 +1192,17 @@ export class TripsService {
     if (/^\d{2}\s*[A-ZÇĞİÖŞÜa-zçğıöşü]{1,3}\s*\d{2,4}$/i.test(line)) return true;
     // Lines starting with PLAKA, şoför, driver keywords
     if (/^(plaka|şoför|sofor|driver|araç|arac)\b/i.test(line)) return true;
+    // Label/info lines (e.g. "Pick up location: ...", "Drop off location: ...",
+    // "Pax:", "Flight:", "Hotel:") — a real passenger name never contains a colon.
+    if (line.includes(':')) return true;
+    // Address/location keywords anywhere in the line (covers "... location ...",
+    // "... Hotel(...)", airport names) which otherwise leak in as fake passengers.
+    if (/\b(pick\s*up|drop\s*off|pickup|dropoff|location|address|hotel|airport|havaliman|terminal|flight|uçuş|ucus|transfer|otel)\b/i.test(line)) return true;
     // Lines that are just single short words (locations, keywords)
     const words = line.split(/\s+/).filter(Boolean);
     if (words.length < 2) return true;
+    // Passenger names are short; 5+ words is almost always an address/description line.
+    if (words.length > 4) return true;
     // Lines containing only numbers
     if (/^\d+$/.test(line.replace(/\s/g, ''))) return true;
     // Known location keywords
@@ -1222,11 +1232,12 @@ Yalnızca geçerli JSON döndür. Örnek: [{"firstName":"Andrew","lastName":"Tab
 
       const endpoints = [
         { v: 'v1beta', m: 'gemini-2.0-flash' },
-        { v: 'v1beta', m: 'gemini-1.5-flash' },
-        { v: 'v1', m: 'gemini-1.5-flash-latest' },
+        { v: 'v1beta', m: 'gemini-2.5-flash' },
+        { v: 'v1beta', m: 'gemini-flash-latest' },
       ];
 
       let responseText: string | null = null;
+      const failures: string[] = [];
       for (const ep of endpoints) {
         try {
           const res = await fetch(
@@ -1241,11 +1252,21 @@ Yalnızca geçerli JSON döndür. Örnek: [{"firstName":"Andrew","lastName":"Tab
             const resData = await res.json() as any;
             responseText = resData.candidates?.[0]?.content?.parts?.[0]?.text || null;
             if (responseText) break;
+            failures.push(`${ep.m}: ok but empty response`);
+          } else {
+            // Surface the actual HTTP status + body so prod logs explain WHY Gemini
+            // failed (bad key, retired model, quota, region) instead of a generic message.
+            const body = await res.text().catch(() => '');
+            failures.push(`${ep.m}: HTTP ${res.status} ${body.slice(0, 300)}`);
           }
-        } catch (_) { /* try next endpoint */ }
+        } catch (err: any) {
+          failures.push(`${ep.m}: ${err?.message || err}`);
+        }
       }
 
-      if (!responseText) throw new Error('All Gemini endpoints failed');
+      if (!responseText) {
+        throw new Error(`All Gemini endpoints failed -> ${failures.join(' | ')}`);
+      }
 
       const jsonMatch = responseText.match(/\[\s*[\s\S]*?\]/);
       if (!jsonMatch) throw new Error('No JSON array in Gemini response');
