@@ -1239,6 +1239,7 @@ Her yolcu için şu alanları döndür:
 - lastName: yolcunun soyadı
 - tcPassportNo: mesajda o yolcuya ait pasaport veya TC kimlik numarası varsa onu yaz, yoksa boş bırak ""
 - nationalityCode: yolcunun uyruğu için ISO 3166-1 alpha-2 ülke kodu (Türkiye=TR, İngiltere/UK/GBR=GB, ABD/USA=US, Almanya=DE, Çin/China=CN, Rusya=RU, Fransa=FR). Belirsizse boş bırak "".
+- gender: yolcunun cinsiyeti; erkek için "E", kadın için "K". Mr/Bay=E, Mrs/Ms/Miss/Bayan=K. İsme veya ön eke göre belirle, belirsizse "E".
 Aynı kişi birden fazla formatta geçiyorsa TEK kez döndür, tekrarlama.
 Eğer gerçek yolcu bulamazsan boş dizi döndür: []
 
@@ -1248,7 +1249,7 @@ ${message}
 """
 
 Yalnızca geçerli JSON dizisi döndür, başka açıklama yapma.
-Örnek: [{"firstName":"James Robert","lastName":"Anderson","tcPassportNo":"P8842219","nationalityCode":"GB"},{"firstName":"Ahmet","lastName":"Demir","tcPassportNo":"","nationalityCode":"TR"}]`;
+Örnek: [{"firstName":"James Robert","lastName":"Anderson","tcPassportNo":"P8842219","nationalityCode":"GB","gender":"E"},{"firstName":"Sophia","lastName":"Anderson","tcPassportNo":"","nationalityCode":"GB","gender":"K"}]`;
 
       const endpoints = [
         { v: 'v1beta', m: 'gemini-2.0-flash' },
@@ -1291,7 +1292,7 @@ Yalnızca geçerli JSON dizisi döndür, başka açıklama yapma.
       const jsonMatch = responseText.match(/\[\s*[\s\S]*?\]/);
       if (!jsonMatch) throw new Error('No JSON array in Gemini response');
 
-      const parsed: { firstName: string; lastName: string; tcPassportNo?: string; nationalityCode?: string }[] = JSON.parse(jsonMatch[0]);
+      const parsed: { firstName: string; lastName: string; tcPassportNo?: string; nationalityCode?: string; gender?: string }[] = JSON.parse(jsonMatch[0]);
       this.logger.log(`[Gemini] Parsed ${parsed.length} passengers from message`);
 
       const result: Partial<Passenger>[] = [];
@@ -1306,7 +1307,7 @@ Yalnızca geçerli JSON dizisi döndür, başka açıklama yapma.
           lastName: normalizePassengerName(p.lastName),
           tcPassportNo: identity || `MSG${Date.now()}${i + 1}`,
           nationalityCode: normalizePassengerNationality(p.nationalityCode),
-          gender: 'E',
+          gender: normalizeImportedGender(p.gender),
           seatNumber: String(i + 1),
           source: PassengerSource.MANUAL,
         });
