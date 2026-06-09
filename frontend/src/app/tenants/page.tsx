@@ -21,7 +21,8 @@ import {
   Loader2,
   X,
   Lock,
-  AtSign
+  AtSign,
+  LogIn,
 } from 'lucide-react';
 import { useAuthStore } from '@/lib/store';
 
@@ -39,7 +40,7 @@ const getCapacityText = (tenant: any) => {
 };
 
 export default function TenantsPage() {
-  const { user } = useAuthStore();
+  const { user, setImpersonatedTenant } = useAuthStore();
   const [tenants, setTenants] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
@@ -156,6 +157,13 @@ export default function TenantsPage() {
     }
   };
 
+  // Enter a company's operational context (super-admin impersonation).
+  const enterTenant = (tenant: any) => {
+    setImpersonatedTenant({ id: tenant.id, companyName: tenant.companyName });
+    toast.success(`${tenant.companyName} bağlamına geçildi`);
+    if (typeof window !== 'undefined') window.location.href = '/trips';
+  };
+
   const filteredTenants = Array.isArray(tenants) ? tenants.filter(t => 
     t.companyName?.toLowerCase().includes(search.toLowerCase()) ||
     t.taxNumber?.includes(search)
@@ -263,6 +271,14 @@ export default function TenantsPage() {
                     <Building2 size={28} />
                   </div>
                   <div className="flex items-center gap-2">
+                    <button
+                      type="button"
+                      onClick={() => enterTenant(tenant)}
+                      className="p-3 rounded-xl transition-all border border-emerald-500/30 text-emerald-400 hover:bg-emerald-500/10 shadow-sm"
+                      title="Şirkete Gir"
+                    >
+                      <LogIn size={18} />
+                    </button>
                     <button
                       type="button"
                       onClick={() => handleOpenModal(tenant)}
@@ -377,6 +393,7 @@ export default function TenantsPage() {
                   </td>
                   <td className="px-6 py-5 text-right">
                     <div className="flex justify-end gap-2 opacity-0 group-hover:opacity-100 transition-opacity translate-x-4 group-hover:translate-x-0">
+                      <button type="button" title="Şirkete Gir" onClick={() => enterTenant(tenant)} className="p-2.5 rounded-xl border border-emerald-500/30 text-emerald-400 hover:bg-emerald-500/10 shadow-lg"><LogIn size={16} /></button>
                       <button type="button" title="Şirketi düzenle" onClick={() => handleOpenModal(tenant)} className="p-2.5 theme-dark-action rounded-xl border theme-surface-border shadow-lg"><Edit2 size={16} /></button>
                       <button type="button" title={tenant.isActive ? 'Şirketi pasif yap' : 'Şirketi aktif yap'} onClick={() => toggleTenantStatus(tenant)} className={`p-2.5 theme-dark-action rounded-xl border theme-surface-border shadow-lg ${tenant.isActive ? 'text-red-400 hover:text-red-500' : 'text-emerald-400 hover:text-emerald-500'}`}>
                         {tenant.isActive ? <PowerOff size={16} /> : <Power size={16} />}
