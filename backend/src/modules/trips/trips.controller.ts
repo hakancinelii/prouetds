@@ -48,6 +48,11 @@ export class TripsController {
     return this.tripsService.findDriverTrips(tenantId, userId, query);
   }
 
+  @Get('stats')
+  getStats(@TenantId() tenantId: string, @Query() query: any) {
+    return this.tripsService.getStats(tenantId, query);
+  }
+
   @Get(':id')
   findOne(@Param('id') id: string, @TenantId() tenantId: string, @CurrentUser() user: any) {
     return this.tripsService.findOne(id, tenantId, user);
