@@ -200,6 +200,8 @@ const decorateTenantEntity = (
   tenant: Tenant,
   activeVehicleCount: number,
   activeUserCount: number,
+  tripCount = 0,
+  lastActivityAt: Date | null = null,
 ): TenantWithUsage => {
   const snapshot = buildTenantCapacitySnapshot(
     tenant.subscriptionPlan,
@@ -216,6 +218,8 @@ const decorateTenantEntity = (
     remainingVehicleSlots: snapshot.remainingVehicleSlots,
     remainingUserSlots: snapshot.remainingUserSlots,
     package: snapshot.package,
+    tripCount,
+    lastActivityAt,
   } as TenantWithUsage;
 };
 
@@ -236,12 +240,24 @@ export class TenantsService {
   ) {}
 
   private async getTenantCounts(tenantId: string) {
-    const [activeVehicleCount, activeUserCount] = await Promise.all([
-      this.vehicleRepo.count({ where: { tenantId, isActive: true } }),
-      this.userRepo.count({ where: { tenantId, isActive: true } }),
-    ]);
+    const [activeVehicleCount, activeUserCount, tripCount, lastTrip] =
+      await Promise.all([
+        this.vehicleRepo.count({ where: { tenantId, isActive: true } }),
+        this.userRepo.count({ where: { tenantId, isActive: true } }),
+        this.tripRepo.count({ where: { tenantId } }),
+        this.tripRepo.findOne({
+          where: { tenantId },
+          order: { createdAt: 'DESC' },
+          select: ['id', 'createdAt'],
+        }),
+      ]);
 
-    return { activeVehicleCount, activeUserCount };
+    return {
+      activeVehicleCount,
+      activeUserCount,
+      tripCount,
+      lastActivityAt: lastTrip?.createdAt ?? null,
+    };
   }
 
   async getTenantCapacity(tenantId: string) {
@@ -270,7 +286,13 @@ export class TenantsService {
 
   async decorateTenant(tenant: Tenant) {
     const counts = await this.getTenantCounts(tenant.id);
-    return decorateTenantEntity(tenant, counts.activeVehicleCount, counts.activeUserCount);
+    return decorateTenantEntity(
+      tenant,
+      counts.activeVehicleCount,
+      counts.activeUserCount,
+      counts.tripCount,
+      counts.lastActivityAt,
+    );
   }
 
   async decorateTenants(tenants: Tenant[]) {

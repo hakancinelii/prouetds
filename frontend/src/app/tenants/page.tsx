@@ -39,6 +39,19 @@ const getCapacityText = (tenant: any) => {
   return `${tenant?.activeVehicleCount ?? 0}/${vehicleMax} araç · ${tenant?.activeUserCount ?? 0}/${userMax} kullanıcı`;
 };
 
+const formatLastActivity = (value?: string | null) => {
+  if (!value) return 'Hiç';
+  try {
+    return new Date(value).toLocaleDateString('tr-TR', {
+      day: '2-digit',
+      month: '2-digit',
+      year: 'numeric',
+    });
+  } catch {
+    return 'Hiç';
+  }
+};
+
 export default function TenantsPage() {
   const { user, setImpersonatedTenant } = useAuthStore();
   const [tenants, setTenants] = useState<any[]>([]);
@@ -313,6 +326,9 @@ export default function TenantsPage() {
                 <div className="rounded-2xl theme-kpi-box theme-surface-on-dark px-4 py-3">
                   <p className="theme-kpi-label text-[11px] font-black uppercase tracking-[0.18em]">Kota Kullanımı</p>
                   <p className="theme-text mt-2 text-sm font-semibold">{getCapacityText(tenant)}</p>
+                  <p className="theme-text-soft mt-2 text-xs">
+                    {tenant.tripCount ?? 0} sefer · Son aktivite: {formatLastActivity(tenant.lastActivityAt)}
+                  </p>
                 </div>
 
                 <div className="space-y-3 pt-2 text-sm theme-text-soft theme-divider-top">
@@ -358,6 +374,7 @@ export default function TenantsPage() {
                 <th className="px-6 py-5 text-xs font-black text-slate-400 uppercase tracking-[0.2em]">VKN</th>
                 <th className="px-6 py-5 text-xs font-black text-slate-400 uppercase tracking-[0.2em]">Plân</th>
                 <th className="px-6 py-5 text-xs font-black text-slate-400 uppercase tracking-[0.2em]">Durum</th>
+                <th className="px-6 py-5 text-xs font-black text-slate-400 uppercase tracking-[0.2em]">Sefer / Aktivite</th>
                 <th className="px-6 py-5 text-xs font-black text-slate-400 uppercase tracking-[0.2em]">UETDS</th>
                 <th className="px-6 py-5 text-xs font-black text-slate-400 uppercase tracking-[0.2em] text-right">İşlemler</th>
               </tr>
@@ -385,6 +402,10 @@ export default function TenantsPage() {
                       <span className={`w-1.5 h-1.5 rounded-full ${tenant.isActive ? 'bg-emerald-400 animate-pulse' : 'bg-red-400'}`}></span>
                       {tenant.isActive ? 'AKTİF' : 'PASİF'}
                     </span>
+                  </td>
+                  <td className="px-6 py-5">
+                    <p className="text-sm font-bold theme-text-soft">{tenant.tripCount ?? 0} sefer</p>
+                    <p className="text-[11px] text-slate-500">{formatLastActivity(tenant.lastActivityAt)}</p>
                   </td>
                   <td className="px-6 py-5">
                     <span className={`text-sm font-bold ${tenant.uetdsUsername ? 'text-emerald-400' : 'text-slate-600 font-normal italic'}`}>
