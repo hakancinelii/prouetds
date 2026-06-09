@@ -1,7 +1,8 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { logsApi, tripsApi } from '@/lib/api';
+import { logsApi, tripsApi, tenantsApi } from '@/lib/api';
+import { useAuthStore } from '@/lib/store';
 import {
   Bus,
   Users,
@@ -13,6 +14,7 @@ import {
   Zap,
   BarChart3,
   MapPin,
+  Building2,
 } from 'lucide-react';
 
 interface Stats {
@@ -34,6 +36,8 @@ export default function DashboardPage() {
   const [fleetStats, setFleetStats] = useState<any>(null);
   const [fleetPeriod, setFleetPeriod] = useState<'daily' | 'weekly' | 'monthly'>('monthly');
   const [loading, setLoading] = useState(true);
+  const [platform, setPlatform] = useState<{ total: number; active: number; passive: number; plans: Record<string, number> } | null>(null);
+  const { user } = useAuthStore();
 
   const fetchFleetStats = (period: string) => {
     tripsApi.getStats({ period }).then((res: any) => {
@@ -53,6 +57,27 @@ export default function DashboardPage() {
       setLoading(false);
     });
   }, []);
+
+  // Platform overview (super admin only): aggregate all tenants.
+  useEffect(() => {
+    if (user?.role !== 'super_admin') return;
+    tenantsApi
+      .list()
+      .then((res: any) => {
+        const list = Array.isArray(res.data)
+          ? res.data
+          : res.data?.data || res.data?.tenants || [];
+        const total = list.length;
+        const active = list.filter((t: any) => t.isActive).length;
+        const plans: Record<string, number> = {};
+        list.forEach((t: any) => {
+          const p = t.subscriptionPlan || 'basic';
+          plans[p] = (plans[p] || 0) + 1;
+        });
+        setPlatform({ total, active, passive: total - active, plans });
+      })
+      .catch(() => {});
+  }, [user?.role]);
 
   const handlePeriodChange = (period: 'daily' | 'weekly' | 'monthly') => {
     setFleetPeriod(period);
@@ -129,6 +154,39 @@ export default function DashboardPage() {
         <h1 className="text-2xl theme-heading">Dashboard</h1>
         <p className="theme-text-soft mt-1">UETDS bildirim sistemi genel durumu</p>
       </div>
+
+      {/* Platform Özeti (sadece süper admin) */}
+      {platform && (
+        <div className="space-y-4">
+          <h2 className="theme-section-title flex items-center gap-2">
+            <Building2 size={20} className="text-emerald-400" />
+            Platform Özeti
+          </h2>
+          <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-5">
+            {[
+              { title: 'Toplam Firma', value: platform.total, icon: Building2, color: 'from-emerald-500 to-cyan-500', shadow: 'shadow-emerald-500/20' },
+              { title: 'Aktif Firma', value: platform.active, icon: CheckCircle2, color: 'from-violet-500 to-purple-600', shadow: 'shadow-violet-500/20' },
+              { title: 'Pasif Firma', value: platform.passive, icon: AlertTriangle, color: 'from-amber-500 to-orange-500', shadow: 'shadow-amber-500/20' },
+              { title: 'Plan Türleri', value: Object.keys(platform.plans).length, icon: BarChart3, color: 'from-blue-500 to-indigo-500', shadow: 'shadow-blue-500/20' },
+            ].map((card, i) => (
+              <div key={i} className="glass-card p-5 animate-slide-in">
+                <div className="flex items-center justify-between mb-3">
+                  <div className={`w-10 h-10 bg-gradient-to-br ${card.color} rounded-xl flex items-center justify-center shadow-lg ${card.shadow}`}>
+                    <card.icon size={20} className="text-white" />
+                  </div>
+                </div>
+                <p className="text-2xl theme-heading">{card.value}</p>
+                <p className="text-sm theme-text-soft mt-1">{card.title}</p>
+              </div>
+            ))}
+          </div>
+          {Object.keys(platform.plans).length > 0 && (
+            <p className="text-xs theme-text-soft">
+              Plan dağılımı: {Object.entries(platform.plans).map(([p, c]) => `${p}: ${c}`).join(' · ')}
+            </p>
+          )}
+        </div>
+      )}
 
       {/* Stat Cards */}
       <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-5">

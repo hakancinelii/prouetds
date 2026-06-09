@@ -6,6 +6,7 @@ import Link from 'next/link';
 import { useAuthStore } from '@/lib/store';
 import {
   Building2, // Üst kısma taşıdık
+  LayoutDashboard,
   Bus,
   Users,
   CarFront,
@@ -21,23 +22,52 @@ import {
   Moon,
 } from 'lucide-react';
 
-const navigation = [
-  { name: 'Seferler', href: '/trips', icon: Bus },
-  { name: 'Şirketler', href: '/tenants', icon: Building2, superAdminOnly: true },
-  { name: 'Abonelikler', href: '/dashboard/admin/billing', icon: CreditCard, superAdminOnly: true },
-  { name: 'Kullanıcılar', href: '/users', icon: Users, roles: ['super_admin', 'company_admin'] },
-  { name: 'Şoförler', href: '/drivers', icon: Users },
-  { name: 'Araçlar', href: '/vehicles', icon: CarFront },
-  { name: 'Loglar', href: '/logs', icon: FileText },
-  { name: 'Ayarlar', href: '/settings', icon: Settings },
+type NavItem = {
+  name: string;
+  href: string;
+  icon: typeof Bus;
+  exact?: boolean;
+  superAdminOnly?: boolean;
+  roles?: string[];
+};
+
+const navGroups: { title: string | null; items: NavItem[] }[] = [
+  {
+    title: null,
+    items: [
+      { name: 'Genel Bakış', href: '/dashboard', icon: LayoutDashboard, exact: true, roles: ['super_admin', 'company_admin'] },
+    ],
+  },
+  {
+    title: 'PLATFORM',
+    items: [
+      { name: 'Şirketler', href: '/tenants', icon: Building2, superAdminOnly: true },
+      { name: 'Abonelikler', href: '/dashboard/admin/billing', icon: CreditCard, superAdminOnly: true },
+    ],
+  },
+  {
+    title: 'OPERASYON',
+    items: [
+      { name: 'Seferler', href: '/trips', icon: Bus },
+      { name: 'Şoförler', href: '/drivers', icon: Users },
+      { name: 'Araçlar', href: '/vehicles', icon: CarFront },
+      { name: 'Kullanıcılar', href: '/users', icon: Users, roles: ['super_admin', 'company_admin'] },
+      { name: 'Loglar', href: '/logs', icon: FileText },
+      { name: 'Ayarlar', href: '/settings', icon: Settings },
+    ],
+  },
 ];
 
-const getVisibleNavigation = (role?: string) =>
-  navigation.filter((item) => {
-    if (item.superAdminOnly && role !== 'super_admin') return false;
-    if (item.roles && !item.roles.includes(role || '')) return false;
-    return true;
-  });
+const isItemVisible = (item: NavItem, role?: string) => {
+  if (item.superAdminOnly && role !== 'super_admin') return false;
+  if (item.roles && !item.roles.includes(role || '')) return false;
+  return true;
+};
+
+const getVisibleGroups = (role?: string) =>
+  navGroups
+    .map((group) => ({ ...group, items: group.items.filter((item) => isItemVisible(item, role)) }))
+    .filter((group) => group.items.length > 0);
 
 export default function Sidebar() {
   const router = useRouter();
@@ -181,24 +211,37 @@ export default function Sidebar() {
 
         {/* Navigation */}
         <nav className="flex-1 p-4 space-y-1 overflow-y-auto">
-          {getVisibleNavigation(user?.role).map((item) => {
-            const isActive = pathname.startsWith(item.href);
-            return (
-              <Link
-                key={item.href}
-                href={item.href}
-                onClick={() => setSidebarOpen(false)}
-                className={`flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium transition-all duration-200 ${
-                  isActive
-                    ? 'bg-gradient-to-r from-emerald-500/15 to-cyan-500/15 text-emerald-700 dark:text-emerald-300 shadow-lg shadow-emerald-500/5 border border-emerald-500/20'
-                    : 'theme-text hover:text-[rgb(var(--foreground-rgb))] hover:bg-[rgb(var(--surface-elevated-rgb))]/70'
-                }`}
-              >
-                <item.icon size={18} />
-                {item.name}
-              </Link>
-            );
-          })}
+          {getVisibleGroups(user?.role).map((group, groupIndex) => (
+            <div key={group.title ?? `group-${groupIndex}`} className={groupIndex > 0 ? 'pt-3' : ''}>
+              {group.title && user?.role === 'super_admin' && (
+                <p className="px-4 pb-1 text-[10px] font-semibold uppercase tracking-wider theme-text-soft">
+                  {group.title}
+                </p>
+              )}
+              <div className="space-y-1">
+                {group.items.map((item) => {
+                  const isActive = item.exact
+                    ? pathname === item.href
+                    : pathname.startsWith(item.href);
+                  return (
+                    <Link
+                      key={item.href}
+                      href={item.href}
+                      onClick={() => setSidebarOpen(false)}
+                      className={`flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium transition-all duration-200 ${
+                        isActive
+                          ? 'bg-gradient-to-r from-emerald-500/15 to-cyan-500/15 text-emerald-700 dark:text-emerald-300 shadow-lg shadow-emerald-500/5 border border-emerald-500/20'
+                          : 'theme-text hover:text-[rgb(var(--foreground-rgb))] hover:bg-[rgb(var(--surface-elevated-rgb))]/70'
+                      }`}
+                    >
+                      <item.icon size={18} />
+                      {item.name}
+                    </Link>
+                  );
+                })}
+              </div>
+            </div>
+          ))}
         </nav>
 
         <div className="hidden lg:block px-4 pb-2 desktop-theme-slot">
