@@ -18,12 +18,28 @@ interface AuthState {
   login: (accessToken: string, refreshToken: string, user: User) => void;
   logout: () => void;
   loadFromStorage: () => void;
+  impersonatedTenant: { id: string; companyName: string } | null;
+  setImpersonatedTenant: (tenant: { id: string; companyName: string } | null) => void;
 }
 
 export const useAuthStore = create<AuthState>((set) => ({
   user: null,
   isAuthenticated: false,
   isLoading: true,
+  impersonatedTenant: null,
+
+  setImpersonatedTenant: (tenant) => {
+    if (typeof window !== 'undefined') {
+      if (tenant) {
+        localStorage.setItem('impersonateTenantId', tenant.id);
+        localStorage.setItem('impersonateTenantName', tenant.companyName);
+      } else {
+        localStorage.removeItem('impersonateTenantId');
+        localStorage.removeItem('impersonateTenantName');
+      }
+    }
+    set({ impersonatedTenant: tenant });
+  },
 
   login: (accessToken, refreshToken, user) => {
     localStorage.setItem('accessToken', accessToken);
@@ -36,7 +52,9 @@ export const useAuthStore = create<AuthState>((set) => ({
     localStorage.removeItem('accessToken');
     localStorage.removeItem('refreshToken');
     localStorage.removeItem('user');
-    set({ user: null, isAuthenticated: false, isLoading: false });
+    localStorage.removeItem('impersonateTenantId');
+    localStorage.removeItem('impersonateTenantName');
+    set({ user: null, isAuthenticated: false, isLoading: false, impersonatedTenant: null });
   },
 
   loadFromStorage: () => {
@@ -46,10 +64,15 @@ export const useAuthStore = create<AuthState>((set) => ({
     }
     const token = localStorage.getItem('accessToken');
     const userStr = localStorage.getItem('user');
+    const impId = localStorage.getItem('impersonateTenantId');
+    const impName = localStorage.getItem('impersonateTenantName');
+    const impersonatedTenant = impId
+      ? { id: impId, companyName: impName || impId }
+      : null;
     if (token && userStr) {
       try {
         const user = JSON.parse(userStr);
-        set({ user, isAuthenticated: true, isLoading: false });
+        set({ user, isAuthenticated: true, isLoading: false, impersonatedTenant });
       } catch {
         set({ isLoading: false });
       }

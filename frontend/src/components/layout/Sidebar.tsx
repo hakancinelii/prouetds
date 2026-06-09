@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react';
 import { useRouter, usePathname } from 'next/navigation';
 import Link from 'next/link';
 import { useAuthStore } from '@/lib/store';
+import { tenantsApi } from '@/lib/api';
 import {
   Building2, // Üst kısma taşıdık
   LayoutDashboard,
@@ -72,8 +73,9 @@ const getVisibleGroups = (role?: string) =>
 export default function Sidebar() {
   const router = useRouter();
   const pathname = usePathname();
-  const { user, logout, isAuthenticated, isLoading, loadFromStorage } =
+  const { user, logout, isAuthenticated, isLoading, loadFromStorage, impersonatedTenant, setImpersonatedTenant } =
     useAuthStore();
+  const [tenants, setTenants] = useState<{ id: string; companyName: string }[]>([]);
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [theme, setTheme] = useState<'light' | 'dark'>('light');
   const [touchStartX, setTouchStartX] = useState<number | null>(null);
@@ -89,6 +91,35 @@ export default function Sidebar() {
   useEffect(() => {
     loadFromStorage();
   }, [loadFromStorage]);
+
+  useEffect(() => {
+    if (user?.role !== 'super_admin') return;
+    tenantsApi
+      .list()
+      .then((res: any) => {
+        const list = Array.isArray(res.data)
+          ? res.data
+          : res.data?.data || res.data?.tenants || [];
+        setTenants(
+          list
+            .filter((t: any) => t.id !== user?.tenantId)
+            .map((t: any) => ({ id: t.id, companyName: t.companyName })),
+        );
+      })
+      .catch(() => {});
+  }, [user?.role, user?.tenantId]);
+
+  const handleTenantSwitch = (id: string) => {
+    if (!id) {
+      setImpersonatedTenant(null);
+    } else {
+      const target = tenants.find((t) => t.id === id);
+      setImpersonatedTenant(
+        target ? { id: target.id, companyName: target.companyName } : null,
+      );
+    }
+    if (typeof window !== 'undefined') window.location.reload();
+  };
 
   useEffect(() => {
     if (typeof window === 'undefined') return;
@@ -208,6 +239,44 @@ export default function Sidebar() {
             </div>
           </div>
         </div>
+
+        {/* Company switcher (super admin) */}
+        {user?.role === 'super_admin' && (
+          <div className="px-4 pt-4">
+            <label className="block text-[10px] font-semibold uppercase tracking-wider theme-text-soft mb-1">
+              Aktif Firma
+            </label>
+            <div className="relative">
+              <select
+                value={impersonatedTenant?.id || ''}
+                onChange={(e) => handleTenantSwitch(e.target.value)}
+                className="w-full appearance-none rounded-xl border theme-border bg-[rgb(var(--surface-elevated-rgb))]/70 px-3 py-2 pr-8 text-sm theme-text focus:outline-none focus:ring-2 focus:ring-emerald-500/30"
+              >
+                <option value="">{user?.tenant?.companyName || 'Kendi firmam'} (kendi)</option>
+                {tenants.map((t) => (
+                  <option key={t.id} value={t.id}>
+                    {t.companyName}
+                  </option>
+                ))}
+              </select>
+              <Building2 size={14} className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 theme-text-soft" />
+            </div>
+            {impersonatedTenant && (
+              <div className="mt-2 flex items-center justify-between rounded-lg bg-amber-500/10 px-2 py-1.5">
+                <span className="text-[11px] text-amber-600 dark:text-amber-400 truncate">
+                  {impersonatedTenant.companyName} baglami
+                </span>
+                <button
+                  type="button"
+                  onClick={() => handleTenantSwitch('')}
+                  className="ml-2 whitespace-nowrap text-[11px] font-medium text-amber-700 dark:text-amber-300 hover:underline"
+                >
+                  Cik
+                </button>
+              </div>
+            )}
+          </div>
+        )}
 
         {/* Navigation */}
         <nav className="flex-1 p-4 space-y-1 overflow-y-auto">

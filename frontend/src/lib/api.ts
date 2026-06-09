@@ -20,6 +20,11 @@ api.interceptors.request.use((config) => {
     if (token && !isAuthEndpoint(config.url)) {
       config.headers.Authorization = `Bearer ${token}`;
     }
+    // Super admin "sirkete gir": operate within a selected tenant's context.
+    const impersonate = localStorage.getItem('impersonateTenantId');
+    if (impersonate && !isAuthEndpoint(config.url)) {
+      config.headers['x-impersonate-tenant'] = impersonate;
+    }
   }
   return config;
 });
