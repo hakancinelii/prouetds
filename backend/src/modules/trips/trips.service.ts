@@ -25,6 +25,7 @@ import {
 import type { OcrPassengerResult } from '../ocr/ocr.service';
 import { UetdsService } from '../uetds/uetds.service';
 import { TenantsService } from '../tenants/tenants.service';
+import { WhatsappService } from '../whatsapp/whatsapp.service';
 
 const DEMO_TRIP_NUMBER = 'DMO-2026-001';
 const IMPORT_TRIP_PREFIX = 'UETDS-IMPORT';
@@ -754,6 +755,7 @@ export class TripsService {
     private tenantsService: TenantsService,
     private jwtService: JwtService,
     private configService: ConfigService,
+    private whatsappService: WhatsappService,
   ) {}
 
   private getPdfShareSecret() {
@@ -1693,6 +1695,59 @@ Yalnızca geçerli JSON dizisi döndür, başka açıklama yapma.
     return this.passengerRepo.save(entities);
   }
 
+  private async notifyDriverViaWhatsapp(
+    trip: Trip,
+    tenant: Tenant | null,
+    seferRefNo: number,
+    username: string,
+    password: string,
+    environment: string,
+  ) {
+    try {
+      const sessionId =
+        (tenant?.settings?.whatsappSessionId as string) ||
+        this.configService.get<string>('WHATSAPP_DEFAULT_SESSION_ID') ||
+        '';
+      if (!sessionId) return;
+
+      const person = trip.personnel?.find((p) => p.phone || p.driver?.phone);
+      const phone = this.whatsappService.normalizePhone(
+        person?.phone || person?.driver?.phone,
+      );
+      if (!phone) {
+        this.logger.warn(`[WhatsApp] trip ${trip.id}: driver phone missing, skipping`);
+        return;
+      }
+
+      const pdf = await this.uetdsService.seferDetayCiktisiAl(
+        username,
+        password,
+        tenant!.id,
+        trip.id,
+        seferRefNo,
+        environment,
+      );
+      const raw: any = pdf?.sonucPdf;
+      if (!raw) {
+        this.logger.warn(`[WhatsApp] trip ${trip.id}: UETDS PDF unavailable`);
+        return;
+      }
+      const base64File =
+        typeof raw === 'string' ? raw : Buffer.from(raw).toString('base64');
+      const fileName = `UETDS-${(trip.firmTripNumber || trip.id.slice(0, 8)).replace(/[^\w.-]/g, '_')}.pdf`;
+      const caption =
+        `UETDS sefer bildirimi\n` +
+        `Plaka: ${trip.vehiclePlate}\n` +
+        `Tarih: ${trip.departureDate} ${trip.departureTime}\n` +
+        `UETDS Ref: ${seferRefNo}`;
+      await this.whatsappService.sendDocument(sessionId, phone, base64File, fileName, caption);
+    } catch (error: any) {
+      this.logger.warn(
+        `[WhatsApp] trip ${trip.id} notification failed: ${error?.message || error}`,
+      );
+    }
+  }
+
   async sendToUetds(tripId: string, tenantId: string): Promise<any> {
     const trip = await this.findOne(tripId, tenantId);
     const tenant = await this.tenantRepo.findOne({ where: { id: tenantId } });
@@ -1957,6 +2012,16 @@ Yalnızca geçerli JSON dizisi döndür, başka açıklama yapma.
         uetdsSentAt: new Date(),
         uetdsErrorMessage: '',
       });
+
+      // Best-effort: WhatsApp the official UETDS PDF to the driver (never blocks).
+      void this.notifyDriverViaWhatsapp(
+        trip,
+        tenant,
+        seferRefNo,
+        username,
+        password,
+        environment,
+      );
 
       return {
         success: true,
