@@ -21,6 +21,7 @@ import {
   Shield,
   Sun,
   Moon,
+  MessageCircle,
 } from 'lucide-react';
 
 type NavItem = {
@@ -44,6 +45,7 @@ const navGroups: { title: string | null; items: NavItem[] }[] = [
     items: [
       { name: 'Şirketler', href: '/tenants', icon: Building2, superAdminOnly: true },
       { name: 'Abonelikler', href: '/dashboard/admin/billing', icon: CreditCard, superAdminOnly: true },
+      { name: 'WhatsApp', href: '/dashboard/admin/whatsapp', icon: MessageCircle, superAdminOnly: true },
     ],
   },
   {

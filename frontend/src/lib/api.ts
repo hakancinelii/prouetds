@@ -223,3 +223,9 @@ export const logsApi = {
   getAuditLogs: (params?: any) => api.get('/api/logs/audit', { params }),
   getStats: () => api.get('/api/logs/stats'),
 };
+
+export const whatsappApi = {
+  status: () => api.get('/api/whatsapp/session/status'),
+  connect: () => api.post('/api/whatsapp/session/connect'),
+  disconnect: () => api.post('/api/whatsapp/session/disconnect'),
+};

@@ -3,7 +3,7 @@ import { ConfigService } from '@nestjs/config';
 
 /**
  * Thin client for the local Baileys-based whatsapp-service
- * (POST /sessions/:userId/send-media, x-api-key auth).
+ * (sessions API, x-api-key auth). Single shared "Pro UETDS" session by default.
  */
 @Injectable()
 export class WhatsappService {
@@ -22,6 +22,13 @@ export class WhatsappService {
     return this.configService.get<string>('WHATSAPP_SERVICE_API_KEY') || '';
   }
 
+  defaultSessionId() {
+    return (
+      this.configService.get<string>('WHATSAPP_DEFAULT_SESSION_ID') ||
+      'prouetds-main'
+    );
+  }
+
   /** Normalize a Turkish phone number to WhatsApp MSISDN form (e.g. 905321234567). */
   normalizePhone(raw?: string | null): string | null {
     if (!raw) return null;
@@ -31,6 +38,50 @@ export class WhatsappService {
     if (d.length === 11 && d.startsWith('0')) d = d.slice(1);
     if (d.length === 10 && d.startsWith('5')) d = '90' + d;
     return d.length >= 11 ? d : null;
+  }
+
+  private async request(method: string, path: string, body?: any) {
+    const res = await fetch(`${this.baseUrl()}${path}`, {
+      method,
+      headers: {
+        'Content-Type': 'application/json',
+        'x-api-key': this.apiKey(),
+      },
+      body: body ? JSON.stringify(body) : undefined,
+    });
+    const data = await res.json().catch(() => ({}));
+    return { ok: res.ok, status: res.status, data };
+  }
+
+  // ---- session management (used by the super-admin WhatsApp page) ----
+  async getSessionStatus(sessionId?: string) {
+    const sid = sessionId || this.defaultSessionId();
+    try {
+      const r = await this.request('GET', `/sessions/${encodeURIComponent(sid)}/status`);
+      return { sessionId: sid, ...(r.data || {}) };
+    } catch (e: any) {
+      return { sessionId: sid, status: 'ERROR', error: e?.message || String(e) };
+    }
+  }
+
+  async connectSession(sessionId?: string) {
+    const sid = sessionId || this.defaultSessionId();
+    try {
+      const r = await this.request('POST', `/sessions/${encodeURIComponent(sid)}/connect`);
+      return { sessionId: sid, ...(r.data || {}) };
+    } catch (e: any) {
+      return { sessionId: sid, status: 'ERROR', error: e?.message || String(e) };
+    }
+  }
+
+  async disconnectSession(sessionId?: string) {
+    const sid = sessionId || this.defaultSessionId();
+    try {
+      const r = await this.request('DELETE', `/sessions/${encodeURIComponent(sid)}/disconnect`);
+      return { sessionId: sid, ...(r.data || {}) };
+    } catch (e: any) {
+      return { sessionId: sid, status: 'ERROR', error: e?.message || String(e) };
+    }
   }
 
   /** Send a document (e.g. PDF) to a WhatsApp number via a connected session. Best-effort. */
@@ -47,21 +98,14 @@ export class WhatsappService {
       return false;
     }
     try {
-      const res = await fetch(
-        `${this.baseUrl()}/sessions/${encodeURIComponent(sessionId)}/send-media`,
-        {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'x-api-key': this.apiKey(),
-          },
-          body: JSON.stringify({ to, file: base64File, fileName, caption }),
-        },
+      const r = await this.request(
+        'POST',
+        `/sessions/${encodeURIComponent(sessionId)}/send-media`,
+        { to, file: base64File, fileName, caption },
       );
-      if (!res.ok) {
-        const body = await res.text().catch(() => '');
+      if (!r.ok) {
         this.logger.warn(
-          `[WhatsApp] send-media ${res.status} (session=${sessionId}, to=${to}): ${body.slice(0, 200)}`,
+          `[WhatsApp] send-media ${r.status} (session=${sessionId}, to=${to}): ${JSON.stringify(r.data).slice(0, 200)}`,
         );
         return false;
       }
