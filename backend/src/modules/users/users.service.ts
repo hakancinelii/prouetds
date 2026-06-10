@@ -101,6 +101,19 @@ export class UsersService {
     }
   }
 
+  // Convert a Postgres unique violation (drivers tenantId+tcKimlikNo) into a clean
+  // 409 so a concurrent/edge case can never surface as a raw 500.
+  private async guardDriverIdentity<T>(action: () => Promise<T>): Promise<T> {
+    try {
+      return await action();
+    } catch (error: any) {
+      if (error?.code === '23505' || /duplicate key/i.test(error?.message || '')) {
+        throw new ConflictException('Bu TC Kimlik No başka bir şoförde kayıtlı');
+      }
+      throw error;
+    }
+  }
+
   private async getUserEntity(id: string, tenantId: string) {
     const user = await this.userRepo.findOne({ where: { id, tenantId } });
     if (!user) throw new NotFoundException('Kullanıcı bulunamadı');
@@ -140,23 +153,57 @@ export class UsersService {
     const tcKimlikNo = normalizeTc(data.tcKimlikNo);
 
     await this.ensureEmailAvailable(email);
-    await this.ensureDriverIdentityAvailable(tenantId, tcKimlikNo);
 
     const normalizedPlateNumber =
       normalizeText(data.plateNumber)?.toUpperCase() || null;
 
-    const driver = await this.driversService.createDriverUserRecord(tenantId, {
-      firstName,
-      lastName,
-      tcKimlikNo,
-      phone: normalizeText(data.phone),
-      plateNumber: normalizedPlateNumber,
-      nationalityCode: normalizeText(data.nationalityCode)?.toUpperCase() || 'TR',
-      gender: normalizeText(data.gender),
-      srcCertificate: normalizeText(data.srcCertificate),
-      address: normalizeText(data.address),
-      isActive: data.isActive ?? true,
-    });
+    // If a driver with this TC already exists in the tenant, link the new user to it
+    // (no duplicate driver). Only block when that driver already has a user account.
+    const existingDriver = await this.driversService.findByIdentity(tenantId, tcKimlikNo);
+    let driver: Driver;
+    if (existingDriver) {
+      const linkedUser = await this.userRepo.findOne({
+        where: { tenantId, driverId: existingDriver.id },
+      });
+      if (linkedUser) {
+        throw new ConflictException(
+          'Bu TC Kimlik No ile kayıtlı şoförün zaten bir kullanıcı hesabı var',
+        );
+      }
+      driver = await this.guardDriverIdentity(() =>
+        this.driversService.updateDriverRecord(existingDriver.id, tenantId, {
+          firstName,
+          lastName,
+          tcKimlikNo,
+          phone: normalizeText(data.phone) ?? existingDriver.phone,
+          plateNumber: normalizedPlateNumber ?? existingDriver.plateNumber,
+          nationalityCode:
+            normalizeText(data.nationalityCode)?.toUpperCase() ||
+            existingDriver.nationalityCode ||
+            'TR',
+          gender: normalizeText(data.gender) ?? existingDriver.gender,
+          srcCertificate:
+            normalizeText(data.srcCertificate) ?? existingDriver.srcCertificate,
+          address: normalizeText(data.address) ?? existingDriver.address,
+          isActive: data.isActive ?? true,
+        }),
+      );
+    } else {
+      driver = await this.guardDriverIdentity(() =>
+        this.driversService.createDriverUserRecord(tenantId, {
+          firstName,
+          lastName,
+          tcKimlikNo,
+          phone: normalizeText(data.phone),
+          plateNumber: normalizedPlateNumber,
+          nationalityCode: normalizeText(data.nationalityCode)?.toUpperCase() || 'TR',
+          gender: normalizeText(data.gender),
+          srcCertificate: normalizeText(data.srcCertificate),
+          address: normalizeText(data.address),
+          isActive: data.isActive ?? true,
+        }),
+      );
+    }
 
     const user = await this.userRepo.save(
       this.userRepo.create({
@@ -216,25 +263,27 @@ export class UsersService {
 
     let nextDriver = driver;
     if (driver) {
-      nextDriver = await this.driversService.updateDriverRecord(driver.id, tenantId, {
-        firstName: nextFirstName,
-        lastName: nextLastName,
-        tcKimlikNo: nextTc || driver.tcKimlikNo,
-        phone: data.phone !== undefined ? normalizeText(data.phone) : user.phone,
-        plateNumber:
-          data.plateNumber !== undefined
-            ? normalizeText(data.plateNumber)?.toUpperCase() || null
-            : driver.plateNumber || user.plateNumber,
-        nationalityCode:
-          data.nationalityCode !== undefined
-            ? normalizeText(data.nationalityCode)?.toUpperCase() || 'TR'
-            : driver.nationalityCode,
-        gender: data.gender !== undefined ? normalizeText(data.gender) : driver.gender,
-        srcCertificate:
-          data.srcCertificate !== undefined ? normalizeText(data.srcCertificate) : driver.srcCertificate,
-        address: data.address !== undefined ? normalizeText(data.address) : driver.address,
-        isActive: data.isActive !== undefined ? data.isActive : driver.isActive,
-      });
+      nextDriver = await this.guardDriverIdentity(() =>
+        this.driversService.updateDriverRecord(driver.id, tenantId, {
+          firstName: nextFirstName,
+          lastName: nextLastName,
+          tcKimlikNo: nextTc || driver.tcKimlikNo,
+          phone: data.phone !== undefined ? normalizeText(data.phone) : user.phone,
+          plateNumber:
+            data.plateNumber !== undefined
+              ? normalizeText(data.plateNumber)?.toUpperCase() || null
+              : driver.plateNumber || user.plateNumber,
+          nationalityCode:
+            data.nationalityCode !== undefined
+              ? normalizeText(data.nationalityCode)?.toUpperCase() || 'TR'
+              : driver.nationalityCode,
+          gender: data.gender !== undefined ? normalizeText(data.gender) : driver.gender,
+          srcCertificate:
+            data.srcCertificate !== undefined ? normalizeText(data.srcCertificate) : driver.srcCertificate,
+          address: data.address !== undefined ? normalizeText(data.address) : driver.address,
+          isActive: data.isActive !== undefined ? data.isActive : driver.isActive,
+        }),
+      );
     }
 
     return {
