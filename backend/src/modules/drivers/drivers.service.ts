@@ -72,6 +72,15 @@ export class DriversService {
     return this.driverRepo.save(driver);
   }
 
+  // Free the unique (tenantId, tcKimlikNo) slot held by a soft-deleted driver so the
+  // identity can be reused, without hard-deleting the row (keeps trip history intact).
+  async releaseIdentity(id: string, tenantId: string) {
+    const driver = await this.findOne(id, tenantId);
+    driver.isActive = false;
+    driver.tcKimlikNo = `x${driver.id.replace(/-/g, '')}`.slice(0, 30);
+    return this.driverRepo.save(driver);
+  }
+
   async toggleDriverRecordActive(id: string, tenantId: string, isActive: boolean) {
     const driver = await this.findOne(id, tenantId);
     driver.isActive = isActive;

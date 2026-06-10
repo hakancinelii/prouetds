@@ -161,7 +161,7 @@ export class UsersService {
     // (no duplicate driver). Only block when that driver already has a user account.
     const existingDriver = await this.driversService.findByIdentity(tenantId, tcKimlikNo);
     let driver: Driver;
-    if (existingDriver) {
+    if (existingDriver && existingDriver.isActive) {
       const linkedUser = await this.userRepo.findOne({
         where: { tenantId, driverId: existingDriver.id },
       });
@@ -189,6 +189,10 @@ export class UsersService {
         }),
       );
     } else {
+      // A soft-deleted driver may still hold this TC in the unique index; free it.
+      if (existingDriver) {
+        await this.driversService.releaseIdentity(existingDriver.id, tenantId);
+      }
       driver = await this.guardDriverIdentity(() =>
         this.driversService.createDriverUserRecord(tenantId, {
           firstName,
@@ -245,7 +249,16 @@ export class UsersService {
     const nextTc = data.tcKimlikNo !== undefined ? normalizeTc(data.tcKimlikNo) : driver?.tcKimlikNo;
 
     if (nextTc) {
-      await this.ensureDriverIdentityAvailable(tenantId, nextTc, driver?.id);
+      const clash = await this.driversService.findByIdentity(tenantId, nextTc);
+      if (clash && clash.id !== driver?.id) {
+        if (clash.isActive) {
+          throw new ConflictException(
+            'Bu TC Kimlik No başka bir aktif şoförde kayıtlı',
+          );
+        }
+        // TC belongs to a soft-deleted driver — free it so it can be reused.
+        await this.driversService.releaseIdentity(clash.id, tenantId);
+      }
     }
 
     user.email = nextEmail;
