@@ -12,7 +12,7 @@ import {
 } from 'react-native';
 import { WebView } from 'react-native-webview';
 
-const APP_URL = 'https://www.prouetds.com.tr';
+const APP_URL = 'https://www.prouetds.com.tr/login';
 
 export default function App() {
   const webRef = useRef(null);
