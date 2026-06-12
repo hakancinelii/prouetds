@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import Image from 'next/image';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import {
@@ -243,6 +244,18 @@ export default function Home() {
             </div>
           </div>
 
+          <div className="flex flex-col gap-6">
+            <div className="flex justify-center">
+              <Image
+                src="/pngegg.png"
+                alt="Transfer aracı"
+                width={520}
+                height={320}
+                className="w-full max-w-md drop-shadow-2xl"
+                priority
+              />
+            </div>
+
           <div className="theme-landing-surface theme-contrast-box relative overflow-hidden rounded-[2rem] border border-[rgb(var(--border-rgb))]/26 bg-[radial-gradient(circle_at_top_left,rgba(16,185,129,0.16),transparent_42%),linear-gradient(180deg,rgba(255,255,255,0.92),rgba(248,250,252,0.88))] p-6 shadow-[0_30px_80px_-48px_rgba(15,23,42,0.4)] dark:border-white/8 dark:bg-[radial-gradient(circle_at_top_left,rgba(16,185,129,0.16),transparent_42%),linear-gradient(180deg,rgba(15,23,42,0.96),rgba(17,24,39,0.94))]">
             <div className="space-y-5">
               <div className="flex items-center justify-between">
@@ -282,6 +295,7 @@ export default function Home() {
                 ))}
               </div>
             </div>
+          </div>
           </div>
         </section>
 
