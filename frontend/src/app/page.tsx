@@ -67,27 +67,9 @@ const features = [
 
 const pricingPlans = [
   {
-    code: 'A-10',
-    monthlyPrice: '750 ₺',
-    yearlyPrice: '7.500 ₺',
-    detail: '1-10 Araç / Max.10 Kullanıcı',
-  },
-  {
-    code: 'A-25',
-    monthlyPrice: '1.300 ₺',
-    yearlyPrice: '13.000 ₺',
-    detail: '11-25 Araç / Max.25 Kullanıcı',
-  },
-  {
-    code: 'A-50',
-    monthlyPrice: '2.400 ₺',
-    yearlyPrice: '24.000 ₺',
-    detail: '26-50 Araç / Max.50 Kullanıcı',
-  },
-  {
-    code: 'A-Sınırsız',
-    monthlyPrice: '8.000 ₺',
-    yearlyPrice: '80.000 ₺',
+    code: 'Standart',
+    monthlyPrice: '1.000 ₺',
+    yearlyPrice: '10.000 ₺',
     detail: 'Limitsiz Araç / Limitsiz Kullanıcı',
   },
 ];
@@ -397,22 +379,21 @@ export default function Home() {
           <div className="mb-8 flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
             <div>
               <p className="text-sm font-semibold uppercase tracking-[0.2em] text-emerald-600 dark:text-emerald-300">Ücretlendirme</p>
-              <h2 className="mt-3 text-4xl font-black tracking-tight text-slate-950 dark:text-white">Aylık ve yıllık fiyatlandırma</h2>
-              <p className="mt-4 max-w-3xl text-base leading-8 text-slate-600 dark:text-slate-300">Aylık ve yıllık fiyatlandırma ile araç ve kullanıcı kapasitenize göre en uygun paketi seçin.</p>
+              <h2 className="mt-3 text-4xl font-black tracking-tight text-slate-950 dark:text-white">Sade ve şeffaf fiyatlandırma</h2>
+              <p className="mt-4 max-w-3xl text-base leading-8 text-slate-600 dark:text-slate-300">Limitsiz araç ve kullanıcı. Tek fiyat, sıfır sürpriz.</p>
             </div>
-            <p className="max-w-2xl text-base leading-8 text-slate-600 dark:text-slate-300">Aylık paketler hızlı başlangıç için, yıllık paketler ise iki ay avantajlı uzun dönem kullanım için tasarlandı.</p>
           </div>
 
-          <div className="grid gap-4 xl:grid-cols-4">
+          <div className="flex justify-center">
             {pricingPlans.map((plan) => (
               <article
                 key={plan.code}
-                className="rounded-[1.6rem] border border-[rgb(var(--border-rgb))]/22 bg-[rgb(var(--surface-rgb))]/96 p-6 shadow-[0_18px_42px_-32px_rgba(15,23,42,0.24)] dark:border-white/8 dark:bg-white/4"
+                className="w-full max-w-sm rounded-[1.6rem] border border-[rgb(var(--border-rgb))]/22 bg-[rgb(var(--surface-rgb))]/96 p-8 shadow-[0_18px_42px_-32px_rgba(15,23,42,0.24)] dark:border-white/8 dark:bg-white/4"
               >
-                <p className="text-xs font-semibold uppercase tracking-[0.18em] text-emerald-600 dark:text-emerald-300">{plan.code} Paketi</p>
+                <p className="text-xs font-semibold uppercase tracking-[0.18em] text-emerald-600 dark:text-emerald-300">{plan.code} Paket</p>
                 <div className="mt-5">
                   <p className="text-sm text-slate-500 dark:text-slate-400">Aylık Ücret</p>
-                  <p className="mt-2 text-4xl font-black text-slate-950 dark:text-white">{plan.monthlyPrice}</p>
+                  <p className="mt-2 text-5xl font-black text-slate-950 dark:text-white">{plan.monthlyPrice}</p>
                 </div>
                 <div className="mt-5 border-t border-[rgb(var(--border-rgb))]/22 pt-5 dark:border-white/8">
                   <p className="text-sm text-slate-500 dark:text-slate-400">Yıllık Ücret</p>
