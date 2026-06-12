@@ -21,6 +21,7 @@
   },
   "dependencies": {
     "@google-cloud/vision": "^4.3.0",
+    "@google/generative-ai": "^0.24.0",
     "@nestjs/common": "^11.0.1",
     "@nestjs/config": "^4.0.0",
     "@nestjs/core": "^11.0.1",
@@ -44,7 +45,8 @@
     "tesseract.js": "^7.0.0",
     "typeorm": "^0.3.20",
     "uuid": "^10.0.0",
-    "xlsx": "^0.18.5"
+    "xlsx": "^0.18.5",
+    "zod": "^3.24.0"
   },
   "devDependencies": {
     "@eslint/eslintrc": "^3.2.0",
