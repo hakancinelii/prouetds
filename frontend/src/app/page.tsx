@@ -70,7 +70,7 @@ const pricingPlans = [
     code: 'Standart',
     monthlyPrice: '1.000 ₺',
     yearlyPrice: '10.000 ₺',
-    detail: 'Limitsiz Araç / Limitsiz Kullanıcı',
+    detail: '',
   },
 ];
 
@@ -399,7 +399,7 @@ export default function Home() {
                   <p className="text-sm text-slate-500 dark:text-slate-400">Yıllık Ücret</p>
                   <p className="mt-2 text-3xl font-bold text-slate-950 dark:text-white">{plan.yearlyPrice}</p>
                 </div>
-                <p className="mt-5 text-sm leading-7 text-slate-600 dark:text-slate-300">{plan.detail}</p>
+                {plan.detail && <p className="mt-5 text-sm leading-7 text-slate-600 dark:text-slate-300">{plan.detail}</p>}
               </article>
             ))}
           </div>
