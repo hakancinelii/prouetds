@@ -1,16 +1,13 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository, IsNull, Not } from 'typeorm';
-import { Driver, Trip, TripPersonnel, User } from '../../database/entities';
+import { Repository } from 'typeorm';
+import { Driver } from '../../database/entities';
 import { TenantsService } from '../tenants/tenants.service';
 
 @Injectable()
 export class DriversService {
   constructor(
     @InjectRepository(Driver) private driverRepo: Repository<Driver>,
-    @InjectRepository(Trip) private tripRepo: Repository<Trip>,
-    @InjectRepository(TripPersonnel) private personnelRepo: Repository<TripPersonnel>,
-    @InjectRepository(User) private userRepo: Repository<User>,
     private tenantsService: TenantsService,
   ) {}
 

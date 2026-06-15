@@ -169,7 +169,6 @@ export const driversApi = {
   create: (data: any) => api.post('/api/drivers', data),
   update: (id: string, data: any) => api.patch(`/api/drivers/${id}`, data),
   remove: (id: string) => api.delete(`/api/drivers/${id}`),
-  autoMatchPlates: () => api.post('/api/drivers/auto-match-plates'),
 };
 
 export const vehiclesApi = {
@@ -216,10 +215,7 @@ export const usersApi = {
     api.patch(`/api/users/${id}`, data, { params: tenantId ? { tenantId } : undefined }),
   toggleActive: (id: string, tenantId?: string) =>
     api.post(`/api/users/${id}/toggle-active`, {}, { params: tenantId ? { tenantId } : undefined }),
-  getMe: () => api.get('/api/users/me'),
-  updateMe: (data: { phone?: string; plateNumber?: string }) => api.patch('/api/users/me', data),
 };
-
 
 export const logsApi = {
   getUetdsLogs: (params?: any) => api.get('/api/logs/uetds', { params }),

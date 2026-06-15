@@ -33,17 +33,21 @@ export class WhatsappIncomingController {
     }
 
     const from: string = body.from || body.sender || '';
+    const rawJid: string = body.rawJid || '';
     const text: string = (body.message ?? body.body ?? body.text ?? '').trim();
 
     if (!from || !text) {
       return { ok: false, reason: 'missing from or text' };
     }
 
-    // Normalize sender: strip WhatsApp suffix and leading country code digits
+    // Normalize sender for DB lookup (strips @lid / @s.whatsapp.net suffixes)
     const normalized = this.whatsappService.normalizePhone(from.replace(/@.*/, ''));
     if (!normalized) {
       return { ok: false, reason: 'invalid phone' };
     }
+
+    // For replies: prefer rawJid (preserves @lid for privacy-mode users), fallback to normalized phone
+    const sendTo = rawJid && rawJid.includes('@') ? rawJid : normalized;
 
     this.logger.log(`[Webhook] Incoming from ${normalized}: ${text.slice(0, 100)}`);
 
@@ -74,7 +78,7 @@ export class WhatsappIncomingController {
       this.logger.warn(`[Webhook] No user found for ${normalized}`);
       await this.whatsappService.sendText(
         sessionId,
-        normalized,
+        sendTo,
         'Sisteme kayıtlı kullanıcı bulunamadı. Lütfen yöneticinizle iletişime geçin.',
       );
       return { ok: false, reason: 'user not found' };
@@ -122,14 +126,14 @@ export class WhatsappIncomingController {
         const errMsg = (result as any).uetdsError
           ? `Sefer oluşturuldu ancak UETDS hatası: ${(result as any).uetdsError}`
           : 'Sefer oluşturma başarısız';
-        await this.whatsappService.sendText(sessionId, normalized, errMsg);
+        await this.whatsappService.sendText(sessionId, sendTo, errMsg);
       }
 
       return { ok: result.success, tripId: result.tripId, status: result.status };
     } catch (err: any) {
       const errMsg = err?.response?.message || err?.message || 'Beklenmedik hata';
       this.logger.error(`[Webhook] Autopilot error: ${errMsg}`);
-      await this.whatsappService.sendText(sessionId, normalized, `Sefer oluşturulamadı: ${errMsg}`);
+      await this.whatsappService.sendText(sessionId, sendTo, `Sefer oluşturulamadı: ${errMsg}`);
       return { ok: false, reason: errMsg };
     }
   }

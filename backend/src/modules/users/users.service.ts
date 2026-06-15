@@ -305,36 +305,6 @@ export class UsersService {
     };
   }
 
-  async getMe(userId: string) {
-    const user = await this.userRepo.findOne({ where: { id: userId }, relations: ['driver'] });
-    if (!user) throw new NotFoundException('Kullanıcı bulunamadı');
-    return this.buildListItem(user, user.driver || null);
-  }
-
-  async updateMyProfile(userId: string, data: { phone?: string | null; plateNumber?: string | null }) {
-    const user = await this.userRepo.findOne({ where: { id: userId }, relations: ['driver'] });
-    if (!user) throw new NotFoundException('Kullanıcı bulunamadı');
-
-    if (data.phone !== undefined) user.phone = normalizeText(data.phone);
-    if (data.plateNumber !== undefined) {
-      user.plateNumber = normalizeText(data.plateNumber)?.toUpperCase() || null;
-    }
-    await this.userRepo.save(user);
-
-    if (user.driver && user.driverId) {
-      await this.driversService.updateDriverRecord(user.driverId, user.tenantId, {
-        phone: data.phone !== undefined ? normalizeText(data.phone) : user.driver.phone,
-        plateNumber:
-          data.plateNumber !== undefined
-            ? normalizeText(data.plateNumber)?.toUpperCase() || null
-            : user.driver.plateNumber,
-      });
-    }
-
-    const updated = await this.userRepo.findOne({ where: { id: userId }, relations: ['driver'] });
-    return this.buildListItem(updated!, updated?.driver || null);
-  }
-
   async toggleActive(id: string, tenantId: string) {
     const user = await this.getUserEntity(id, tenantId);
     user.isActive = !user.isActive;
