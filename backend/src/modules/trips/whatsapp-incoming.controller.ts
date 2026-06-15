@@ -118,7 +118,7 @@ export class WhatsappIncomingController {
           driverId: user.driverId,
           phone: user.phone,
         },
-        { message: text, passports: [], senderJid: sendTo },
+        { message: text, passports: [], senderJid: this.whatsappService.normalizePhone(user.phone) || sendTo },
         noopOcr,
       );
 
