@@ -91,12 +91,22 @@ export class DriversService {
   }
 
   async autoMatchPlatesFromTrips(tenantId: string) {
-    // Find all UETDS-sent trips with a vehicle plate for this tenant
-    const sentTrips = await this.tripRepo.find({
+    // Find trips with a vehicle plate — prefer UETDS-sent ones, fall back to any trip
+    let sentTrips = await this.tripRepo.find({
       where: { tenantId, uetdsSeferRefNo: Not(IsNull()) },
       select: ['id', 'vehiclePlate', 'createdAt'],
       order: { createdAt: 'DESC' },
     });
+
+    // Fallback: include all trips that have a plate assigned
+    if (sentTrips.length === 0) {
+      sentTrips = await this.tripRepo.find({
+        where: { tenantId },
+        select: ['id', 'vehiclePlate', 'createdAt'],
+        order: { createdAt: 'DESC' },
+      });
+      sentTrips = sentTrips.filter(t => t.vehiclePlate);
+    }
 
     if (sentTrips.length === 0) return { matched: 0, results: [] };
 
