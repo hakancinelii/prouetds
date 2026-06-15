@@ -1023,12 +1023,22 @@ export class TripsService {
 
   
   private inferAutopilotDate(message: string) {
+    // Priority: explicit "Transfer Tarihi: DD/MM/YYYY HH:MM" label
+    const labeled = message.match(/(?:transfer\s*tarihi|tarih)\s*[:：]\s*(\d{1,2}[\/.\-]\d{1,2}[\/.\-]\d{2,4})/i);
+    if (labeled) {
+      const d = normalizeDateInput(labeled[1]);
+      if (d) return d;
+    }
     const lines = message.split(/\n/);
     for (const line of lines) {
-      const cleanLine = line.replace(/^[0-9]+[\s.\-\)]+\s*/, '').trim();
-      if (!cleanLine) continue;
-      const date = normalizeDateInput(line.trim());
-      if (date) return date;
+      // Find date pattern anywhere in the line (not just start)
+      const inLine = line.match(/(\d{1,2}[\/.\-]\d{1,2}[\/.\-]\d{2,4})/);
+      if (inLine) {
+        const d = normalizeDateInput(inLine[1]);
+        if (d) return d;
+      }
+      const d = normalizeDateInput(line.trim());
+      if (d) return d;
     }
     return toLocalTripDate(new Date());
   }
@@ -1082,47 +1092,62 @@ export class TripsService {
     );
   }
 
-  private inferAutopilotLocation(message: string, role: 'origin' | 'dest') {
-    const normalizedMessage = normalizeSearchText(message);
+  private resolveIstanbulDistrict(text: string, preferFirst: boolean): { ilCode: number; ilceCode: number; place: string; label: string } | null {
+    const normalizedText = normalizeSearchText(text);
     const matches = ISTANBUL_DISTRICTS.flatMap((district) =>
       district.aliases
-        .map((alias) => ({ district, index: normalizedMessage.indexOf(normalizeSearchText(alias)) }))
-        .filter((match) => match.index >= 0),
+        .map((alias) => ({ district, index: normalizedText.indexOf(normalizeSearchText(alias)) }))
+        .filter((m) => m.index >= 0),
     ).sort((a, b) => a.index - b.index);
+    const matched = preferFirst ? matches[0]?.district : matches[matches.length - 1]?.district;
+    if (!matched) return null;
+    const place = matched.code === 2048 ? 'İstanbul Havalimanı'
+      : matched.code === 1835 ? 'Sabiha Gökçen Havalimanı'
+      : `${matched.name}/İSTANBUL`;
+    return { ilCode: 34, ilceCode: matched.code, place, label: matched.name };
+  }
 
-    const selectedMatch = matches.length > 1
-      ? role === 'origin'
-        ? matches[0]
-        : matches[matches.length - 1]
-      : role === 'dest'
-        ? matches[0]
-        : null;
-    const matched = selectedMatch?.district;
+  private inferAutopilotLocation(message: string, role: 'origin' | 'dest') {
+    const labelRe = role === 'origin'
+      ? /nereden\s*[:：]\s*(.+)/im
+      : /nereye\s*[:：]\s*(.+)/im;
+    const labeled = message.match(labelRe);
 
-    if (matched) {
-      const airportPlace = matched.code === 2048
-        ? 'İstanbul Havalimanı'
-        : matched.code === 1835
-          ? 'Sabiha Gökçen Havalimanı'
-          : `${matched.name}/İSTANBUL`;
-      return {
-        ilCode: 34,
-        ilceCode: matched.code,
-        place: airportPlace,
-        label: matched.name,
-      };
+    if (labeled) {
+      const fullText = labeled[1].trim();
+      // Truncate at next labeled field if present
+      const shortText = fullText.split(/\n|nereye|nereden|uçuş|kişi|ödeme|araç/i)[0].trim();
+      const placeText = shortText.split(',')[0].trim().slice(0, 150);
+
+      // Airport quick checks
+      if (/sabiha|gökçen|\bsaw\b/i.test(shortText)) {
+        return { ilCode: 34, ilceCode: 1835, place: 'Sabiha Gökçen Havalimanı', label: 'PENDİK' };
+      }
+      if (/istanbul\s*hava|atatürk\s*hava|\bist\b/i.test(shortText)) {
+        return { ilCode: 34, ilceCode: 2048, place: 'İstanbul Havalimanı', label: 'ARNAVUTKÖY' };
+      }
+
+      // District match within the labeled text
+      const district = this.resolveIstanbulDistrict(shortText, true);
+      if (district) {
+        return { ...district, place: district.place === `${district.label}/İSTANBUL` ? placeText || district.place : district.place };
+      }
+
+      // No district found — use the address text with generic fallback
+      const fallback = role === 'origin'
+        ? { ilceCode: 2048, label: 'ARNAVUTKÖY' }
+        : { ilceCode: 1663, label: 'ŞİŞLİ' };
+      return { ilCode: 34, ilceCode: fallback.ilceCode, place: placeText, label: fallback.label };
     }
+
+    // Legacy fallback: search full message for districts
+    const district = this.resolveIstanbulDistrict(message, role === 'origin');
+    if (district) return district;
 
     const fallback = role === 'origin'
       ? { code: 2048, name: 'ARNAVUTKÖY', place: 'İstanbul Havalimanı' }
       : { code: 1663, name: 'ŞİŞLİ', place: 'ŞİŞLİ/İSTANBUL' };
-
-    return {
-      ilCode: 34,
-      ilceCode: fallback.code,
-      place: fallback.place,
-      label: fallback.name,
-    };
+    return { ilCode: 34, ilceCode: fallback.code, place: fallback.place, label: fallback.name };
   }
 
   private buildAutopilotTripData(
@@ -1145,7 +1170,7 @@ export class TripsService {
         vehicleId: vehicles.find((vehicle) => normalizePlate(vehicle.plateNumber) === vehiclePlate)?.id,
         selectedDriverId: selectedDriver?.id,
         departureDate,
-        departureTime: toLocalTripTime(now),
+        departureTime: '23:00',
         endDate: departureDate,
         endTime: '23:59',
         // Keep this short and single-line: it is sent to UETDS as the trip/group
@@ -1160,7 +1185,7 @@ export class TripsService {
         destPlace: dest.place,
       },
       decisions: [
-        `Hareket zamanı ${departureDate} ${toLocalTripTime(now)} olarak alındı.`,
+        `Hareket zamanı ${departureDate} 23:00 olarak alındı.`,
         `Bitiş zamanı ${departureDate} 23:59 olarak alındı.`,
         `Kalkış ${origin.label}, varış ${dest.label} olarak eşleşti.`,
         vehiclePlate ? `Araç plakası ${vehiclePlate} olarak seçildi.` : 'Araç plakası bulunamadı.',
@@ -1235,13 +1260,20 @@ export class TripsService {
 
       const prompt = `Sen bir ulaşım rezervasyon sistemi için yolcu bilgisi ayıklayıcısısın.
 Aşağıdaki rezervasyon mesajından YALNIZCA gerçek insan yolcularını çıkar.
-Şunları ÇIKARMA: konum, adres, otel adı, havalimanı, ilçe, semt, araç plakası, telefon, tarih, uçuş numarası, ödeme bilgisi, şoför adı, toplam kişi sayısı.
+
+Mesajda yolcular şu şekillerde listelenir:
+- "Yolcu Adı: AD SOYAD" satırı
+- "Diğer Yolcu Bilgileri" bölümündeki • veya - ile başlayan satırlar (sadece isimler)
+- Mr./Mrs./Ms. ile başlayan isimler
+
+Şunları ÇIKARMA: konum, adres, otel adı, havalimanı, ilçe, semt, araç plakası, telefon, tarih, uçuş numarası, ödeme bilgisi, şoför adı, toplam kişi sayısı, "Kişi:", "Ödeme Durumu:", araç tipi.
+
 Her yolcu için şu alanları döndür:
-- firstName: yolcunun adı (Mr/Mrs/Ms/Dr gibi ön ekleri çıkar)
+- firstName: yolcunun adı (Mr/Mrs/Ms/Dr/Bay/Bayan gibi ön ekleri çıkar)
 - lastName: yolcunun soyadı
 - tcPassportNo: mesajda o yolcuya ait pasaport veya TC kimlik numarası varsa onu yaz, yoksa boş bırak ""
-- nationalityCode: yolcunun uyruğu için ISO 3166-1 alpha-2 ülke kodu (Türkiye=TR, İngiltere/UK/GBR=GB, ABD/USA=US, Almanya=DE, Çin/China=CN, Rusya=RU, Fransa=FR). Belirsizse boş bırak "".
-- gender: yolcunun cinsiyeti; erkek için "E", kadın için "K". Mr/Bay=E, Mrs/Ms/Miss/Bayan=K. İsme veya ön eke göre belirle, belirsizse "E".
+- nationalityCode: yolcunun uyruğu için ISO 3166-1 alpha-2 ülke kodu (Türkiye=TR, İngiltere/UK/GBR=GB, ABD/USA=US, Almanya=DE, Çin/China=CN, Rusya=RU, Fransa=FR). Belirsizse "TR".
+- gender: yolcunun cinsiyeti; erkek için "E", kadın için "K". Mr/Bay=E, Mrs/Ms/Miss/Bayan=K. İsme göre belirle, belirsizse "E".
 Aynı kişi birden fazla formatta geçiyorsa TEK kez döndür, tekrarlama.
 Eğer gerçek yolcu bulamazsan boş dizi döndür: []
 
