@@ -191,6 +191,7 @@ type AutopilotPassport = {
 type AutopilotInput = {
   message?: string;
   passports?: AutopilotPassport[];
+  senderJid?: string;
 };
 
 @Injectable()
@@ -1539,7 +1540,7 @@ Yalnızca geçerli JSON dizisi döndür, başka açıklama yapma.
 
     let uetdsResult: any = null;
     try {
-      uetdsResult = await this.sendToUetds(trip.id, tenantId);
+      uetdsResult = await this.sendToUetds(trip.id, tenantId, data.senderJid);
     } catch (error) {
       const message = error instanceof BadRequestException
         ? error.getResponse()
@@ -1734,6 +1735,7 @@ Yalnızca geçerli JSON dizisi döndür, başka açıklama yapma.
     username: string,
     password: string,
     environment: string,
+    senderJid?: string,
   ) {
     try {
       const sessionId =
@@ -1742,12 +1744,18 @@ Yalnızca geçerli JSON dizisi döndür, başka açıklama yapma.
         '';
       if (!sessionId) return;
 
-      const person = trip.personnel?.find((p) => p.phone || p.driver?.phone);
-      const phone = this.whatsappService.normalizePhone(
-        person?.phone || person?.driver?.phone,
-      );
-      if (!phone) {
-        this.logger.warn(`[WhatsApp] trip ${trip.id}: driver phone missing, skipping`);
+      // Use senderJid (WhatsApp autopilot sender) if provided, else fall back to driver's stored phone
+      let sendTarget: string | null = null;
+      if (senderJid) {
+        sendTarget = senderJid;
+      } else {
+        const person = trip.personnel?.find((p) => p.phone || p.driver?.phone);
+        sendTarget = this.whatsappService.normalizePhone(
+          person?.phone || person?.driver?.phone,
+        );
+      }
+      if (!sendTarget) {
+        this.logger.warn(`[WhatsApp] trip ${trip.id}: no send target, skipping`);
         return;
       }
 
@@ -1772,7 +1780,7 @@ Yalnızca geçerli JSON dizisi döndür, başka açıklama yapma.
         `Plaka: ${trip.vehiclePlate}\n` +
         `Tarih: ${trip.departureDate} ${trip.departureTime}\n` +
         `UETDS Ref: ${seferRefNo}`;
-      await this.whatsappService.sendDocument(sessionId, phone, base64File, fileName, caption);
+      await this.whatsappService.sendDocument(sessionId, sendTarget, base64File, fileName, caption);
     } catch (error: any) {
       this.logger.warn(
         `[WhatsApp] trip ${trip.id} notification failed: ${error?.message || error}`,
@@ -1780,7 +1788,7 @@ Yalnızca geçerli JSON dizisi döndür, başka açıklama yapma.
     }
   }
 
-  async sendToUetds(tripId: string, tenantId: string): Promise<any> {
+  async sendToUetds(tripId: string, tenantId: string, senderJid?: string): Promise<any> {
     const trip = await this.findOne(tripId, tenantId);
     const tenant = await this.tenantRepo.findOne({ where: { id: tenantId } });
 
@@ -2053,6 +2061,7 @@ Yalnızca geçerli JSON dizisi döndür, başka açıklama yapma.
         username,
         password,
         environment,
+        senderJid,
       );
 
       return {
