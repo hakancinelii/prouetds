@@ -45,6 +45,9 @@ export class User {
   @Column({ length: 20, nullable: true })
   plateNumber: string;
 
+  @Column({ length: 50, nullable: true })
+  whatsappJid: string;
+
   @Column({ type: 'enum', enum: UserRole, default: UserRole.OPERATOR })
   role: UserRole;
 

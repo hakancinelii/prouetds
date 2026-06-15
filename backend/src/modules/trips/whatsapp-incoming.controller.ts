@@ -49,9 +49,9 @@ export class WhatsappIncomingController {
 
     const sessionId = this.whatsappService.defaultSessionId();
 
-    // Find user by last 10 digits of phone (handles +90/0 prefixes)
+    // Primary: find user by last 10 digits of phone (handles +90/0 prefixes)
     const suffix = normalized.slice(-10);
-    const user = await this.userRepo
+    let user = await this.userRepo
       .createQueryBuilder('u')
       .leftJoinAndSelect('u.driver', 'driver')
       .where(`REPLACE(REPLACE(REPLACE(REPLACE(u.phone, '+', ''), '-', ''), ' ', ''), '(', '') LIKE :sfx`, {
@@ -59,6 +59,16 @@ export class WhatsappIncomingController {
       })
       .andWhere('u.isActive = true')
       .getOne();
+
+    // Fallback: find by stored WhatsApp JID (handles @lid privacy-mode senders)
+    if (!user) {
+      user = await this.userRepo
+        .createQueryBuilder('u')
+        .leftJoinAndSelect('u.driver', 'driver')
+        .where('u.whatsappJid = :jid', { jid: normalized })
+        .andWhere('u.isActive = true')
+        .getOne();
+    }
 
     if (!user) {
       this.logger.warn(`[Webhook] No user found for ${normalized}`);
@@ -68,6 +78,12 @@ export class WhatsappIncomingController {
         'Sisteme kayıtlı kullanıcı bulunamadı. Lütfen yöneticinizle iletişime geçin.',
       );
       return { ok: false, reason: 'user not found' };
+    }
+
+    // Auto-save WhatsApp JID for future LID lookups
+    if (user.whatsappJid !== normalized) {
+      user.whatsappJid = normalized;
+      await this.userRepo.save(user);
     }
 
     this.logger.log(`[Webhook] User: ${user.firstName} ${user.lastName} (tenant: ${user.tenantId})`);
