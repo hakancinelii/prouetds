@@ -2,6 +2,7 @@
 
 import { usePathname } from 'next/navigation';
 import Sidebar from '@/components/layout/Sidebar';
+import DriverOnboardingModal from '@/components/DriverOnboardingModal';
 
 const publicPaths = new Set(['/', '/login', '/register']);
 
@@ -16,6 +17,7 @@ export default function AppShell({
   return (
     <>
       {!isPublicPage && <Sidebar />}
+      {!isPublicPage && <DriverOnboardingModal />}
       <main
         className={
           isPublicPage

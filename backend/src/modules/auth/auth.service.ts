@@ -69,6 +69,9 @@ export class AuthService {
         lastName: user.lastName,
         role: user.role,
         tenantId: user.tenantId,
+        phone: user.phone || null,
+        plateNumber: user.plateNumber || null,
+        driverId: user.driverId || null,
         tenant: user.tenant
           ? {
               id: user.tenant.id,

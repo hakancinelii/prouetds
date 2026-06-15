@@ -8,6 +8,8 @@ interface User {
   role: string;
   tenantId: string;
   driverId?: string | null;
+  phone?: string | null;
+  plateNumber?: string | null;
   tenant?: { id: string; companyName: string };
 }
 
@@ -18,6 +20,7 @@ interface AuthState {
   login: (accessToken: string, refreshToken: string, user: User) => void;
   logout: () => void;
   loadFromStorage: () => void;
+  updateUser: (patch: Partial<User>) => void;
   impersonatedTenant: { id: string; companyName: string } | null;
   setImpersonatedTenant: (tenant: { id: string; companyName: string } | null) => void;
 }
@@ -27,6 +30,14 @@ export const useAuthStore = create<AuthState>((set) => ({
   isAuthenticated: false,
   isLoading: true,
   impersonatedTenant: null,
+
+  updateUser: (patch) =>
+    set((state) => {
+      if (!state.user) return {};
+      const updated = { ...state.user, ...patch };
+      localStorage.setItem('user', JSON.stringify(updated));
+      return { user: updated };
+    }),
 
   setImpersonatedTenant: (tenant) => {
     if (typeof window !== 'undefined') {
