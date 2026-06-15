@@ -22,6 +22,7 @@ import {
   Sun,
   Moon,
   MessageCircle,
+  UserCircle,
 } from 'lucide-react';
 
 type NavItem = {
@@ -57,6 +58,7 @@ const navGroups: { title: string | null; items: NavItem[] }[] = [
       { name: 'Kullanıcılar', href: '/users', icon: Users, roles: ['super_admin', 'company_admin'] },
       { name: 'Loglar', href: '/logs', icon: FileText },
       { name: 'Ayarlar', href: '/settings', icon: Settings },
+      { name: 'Profilim', href: '/profile', icon: UserCircle },
     ],
   },
 ];
@@ -250,6 +252,7 @@ export default function Sidebar() {
             </label>
             <div className="relative">
               <select
+                aria-label="Aktif Firma"
                 value={impersonatedTenant?.id || ''}
                 onChange={(e) => handleTenantSwitch(e.target.value)}
                 className="w-full appearance-none rounded-xl border theme-border bg-[rgb(var(--surface-elevated-rgb))]/70 px-3 py-2 pr-8 text-sm theme-text focus:outline-none focus:ring-2 focus:ring-emerald-500/30"

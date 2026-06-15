@@ -6,6 +6,7 @@ import { Roles } from '../../common/decorators/roles.decorator';
 import { RolesGuard } from '../../common/guards/roles.guard';
 import { UserRole } from '../../database/entities';
 
+
 @Controller('api/drivers')
 @UseGuards(AuthGuard('jwt'), RolesGuard)
 export class DriversController {
@@ -31,6 +32,12 @@ export class DriversController {
   @Roles(UserRole.COMPANY_ADMIN, UserRole.OPERATOR)
   update(@Param('id') id: string, @TenantId() tenantId: string, @Body() data: any) {
     return this.driversService.update(id, tenantId, data);
+  }
+
+  @Post('auto-match-plates')
+  @Roles(UserRole.COMPANY_ADMIN, UserRole.SUPER_ADMIN)
+  autoMatchPlates(@TenantId() tenantId: string) {
+    return this.driversService.autoMatchPlatesFromTrips(tenantId);
   }
 
   @Delete(':id')

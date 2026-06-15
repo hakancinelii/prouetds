@@ -9,6 +9,7 @@ import {
   UseGuards,
   ForbiddenException,
 } from '@nestjs/common';
+
 import { AuthGuard } from '@nestjs/passport';
 import { Roles } from '../../common/decorators/roles.decorator';
 import { CurrentUser, TenantId } from '../../common/decorators/user.decorator';
@@ -20,6 +21,16 @@ import { UsersService } from './users.service';
 @UseGuards(AuthGuard('jwt'), RolesGuard)
 export class UsersController {
   constructor(private usersService: UsersService) {}
+
+  @Get('me')
+  getMe(@CurrentUser('id') userId: string) {
+    return this.usersService.getMe(userId);
+  }
+
+  @Patch('me')
+  updateMe(@CurrentUser('id') userId: string, @Body() body: { phone?: string; plateNumber?: string }) {
+    return this.usersService.updateMyProfile(userId, body);
+  }
 
   @Get()
   @Roles(UserRole.SUPER_ADMIN, UserRole.COMPANY_ADMIN)

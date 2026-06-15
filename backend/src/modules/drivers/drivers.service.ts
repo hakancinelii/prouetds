@@ -1,13 +1,16 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
-import { Driver } from '../../database/entities';
+import { Repository, IsNull, Not } from 'typeorm';
+import { Driver, Trip, TripPersonnel, User } from '../../database/entities';
 import { TenantsService } from '../tenants/tenants.service';
 
 @Injectable()
 export class DriversService {
   constructor(
     @InjectRepository(Driver) private driverRepo: Repository<Driver>,
+    @InjectRepository(Trip) private tripRepo: Repository<Trip>,
+    @InjectRepository(TripPersonnel) private personnelRepo: Repository<TripPersonnel>,
+    @InjectRepository(User) private userRepo: Repository<User>,
     private tenantsService: TenantsService,
   ) {}
 
@@ -85,5 +88,61 @@ export class DriversService {
     const driver = await this.findOne(id, tenantId);
     driver.isActive = isActive;
     return this.driverRepo.save(driver);
+  }
+
+  async autoMatchPlatesFromTrips(tenantId: string) {
+    // Find all UETDS-sent trips with a vehicle plate for this tenant
+    const sentTrips = await this.tripRepo.find({
+      where: { tenantId, uetdsSeferRefNo: Not(IsNull()) },
+      select: ['id', 'vehiclePlate', 'createdAt'],
+      order: { createdAt: 'DESC' },
+    });
+
+    if (sentTrips.length === 0) return { matched: 0, results: [] };
+
+    const tripIds = sentTrips.map((t) => t.id);
+    const plateByTripId = new Map(sentTrips.map((t) => [t.id, t.vehiclePlate]));
+
+    // Find personnel (drivers) for these trips
+    const personnel = await this.personnelRepo.find({
+      where: tripIds.map((id) => ({ tripId: id, personnelType: 0 })),
+    });
+
+    // Build driverId → most recent plate map (trips are already sorted by createdAt DESC)
+    const driverPlateMap = new Map<string, string>();
+    for (const p of personnel) {
+      if (!p.driverId) continue;
+      const plate = plateByTripId.get(p.tripId);
+      if (plate && !driverPlateMap.has(p.driverId)) {
+        driverPlateMap.set(p.driverId, plate);
+      }
+    }
+
+    const results: { driverId: string; name: string; plate: string; updated: boolean }[] = [];
+
+    for (const [driverId, plate] of driverPlateMap) {
+      const driver = await this.driverRepo.findOne({ where: { id: driverId, tenantId } });
+      if (!driver) continue;
+
+      const wasEmpty = !driver.plateNumber;
+      driver.plateNumber = plate.toUpperCase();
+      await this.driverRepo.save(driver);
+
+      // Sync to linked user record
+      const linkedUser = await this.userRepo.findOne({ where: { driverId, tenantId } });
+      if (linkedUser) {
+        linkedUser.plateNumber = plate.toUpperCase();
+        await this.userRepo.save(linkedUser);
+      }
+
+      results.push({
+        driverId,
+        name: `${driver.firstName} ${driver.lastName}`,
+        plate: plate.toUpperCase(),
+        updated: wasEmpty,
+      });
+    }
+
+    return { matched: results.length, results };
   }
 }
