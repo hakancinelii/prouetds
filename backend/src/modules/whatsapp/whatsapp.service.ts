@@ -84,6 +84,23 @@ export class WhatsappService {
     }
   }
 
+  /** Send a plain text message to a WhatsApp number. Best-effort. */
+  async sendText(sessionId: string, to: string, text: string): Promise<boolean> {
+    if (!sessionId || !to || !text) return false;
+    if (!this.apiKey()) return false;
+    try {
+      const r = await this.request('POST', `/sessions/${encodeURIComponent(sessionId)}/send-message`, { to, message: text });
+      if (!r.ok) {
+        this.logger.warn(`[WhatsApp] send-message ${r.status} (to=${to}): ${JSON.stringify(r.data).slice(0, 200)}`);
+        return false;
+      }
+      return true;
+    } catch (error: any) {
+      this.logger.warn(`[WhatsApp] sendText failed: ${error?.message || error}`);
+      return false;
+    }
+  }
+
   /** Send a document (e.g. PDF) to a WhatsApp number via a connected session. Best-effort. */
   async sendDocument(
     sessionId: string,

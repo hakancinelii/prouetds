@@ -5,6 +5,7 @@ import { ConfigModule, ConfigService } from '@nestjs/config';
 import { TripsService } from './trips.service';
 import { TripsController } from './trips.controller';
 import { TripsPublicController } from './trips-public.controller';
+import { WhatsappIncomingController } from './whatsapp-incoming.controller';
 import {
   Driver,
   Trip,
@@ -36,7 +37,7 @@ import { WhatsappModule } from '../whatsapp/whatsapp.module';
     TenantsModule,
     WhatsappModule,
   ],
-  controllers: [TripsController, TripsPublicController],
+  controllers: [TripsController, TripsPublicController, WhatsappIncomingController],
   providers: [TripsService],
   exports: [TripsService],
 })
