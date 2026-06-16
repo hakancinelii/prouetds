@@ -1185,6 +1185,21 @@ export class TripsService {
     return { ilCode: 34, ilceCode: fallback.code, place: fallback.place, label: fallback.name };
   }
 
+  private inferAutopilotGuide(message: string): { firstName: string; lastName: string; tcPassportNo?: string } | null {
+    // Match: "Rehber: Ad Soyad [11-digit TC]" or "Rehber Ad Soyad"
+    const m = message.match(
+      /rehber\s*[:：]?\s*([A-ZÇĞİÖŞÜa-zçğışöşü]+(?:\s+[A-ZÇĞİÖŞÜa-zçğışöşü]+)+)(?:\s+(\d{11}))?/i,
+    );
+    if (!m) return null;
+
+    const nameParts = m[1].trim().split(/\s+/);
+    if (nameParts.length < 2) return null;
+
+    const lastName = nameParts[nameParts.length - 1].toUpperCase();
+    const firstName = nameParts.slice(0, -1).map(p => p.toUpperCase()).join(' ');
+    return { firstName, lastName, tcPassportNo: m[2] };
+  }
+
   private buildAutopilotTripData(
     message: string,
     vehicles: Vehicle[],
@@ -1198,8 +1213,10 @@ export class TripsService {
     const selectedDriver = this.inferAutopilotDriver(message, vehiclePlate, vehicles, drivers, user);
     const origin = this.inferAutopilotLocation(message, 'origin');
     const dest = this.inferAutopilotLocation(message, 'dest');
+    const guide = this.inferAutopilotGuide(message);
 
     return {
+      guide,
       trip: {
         firmTripNumber: `${AI_TRIP_PREFIX}-${Date.now()}`,
         vehiclePlate,
@@ -1228,7 +1245,10 @@ export class TripsService {
         selectedDriver
           ? `Şoför ${selectedDriver.firstName} ${selectedDriver.lastName} olarak seçildi.`
           : 'Şoför bulunamadı.',
-      ],
+        guide
+          ? `Rehber ${guide.firstName} ${guide.lastName}${guide.tcPassportNo ? ` (TC: ${guide.tcPassportNo})` : ' (TC yok)'} eklendi.`
+          : null,
+      ].filter(Boolean) as string[],
       selectedDriver,
     };
   }
@@ -1569,6 +1589,21 @@ Yalnızca geçerli JSON dizisi döndür, başka açıklama yapma.
     const defaultGroup = trip.groups?.[0];
     if (!defaultGroup) {
       throw new BadRequestException('AI Autopilot varsayılan yolcu grubu oluşturamadı');
+    }
+
+    if (inferred.guide) {
+      try {
+        await this.addPersonnel(trip.id, tenantId, {
+          firstName: inferred.guide.firstName,
+          lastName: inferred.guide.lastName,
+          tcPassportNo: inferred.guide.tcPassportNo || '',
+          nationalityCode: 'TR',
+          gender: 'E',
+          personnelType: 5,
+        } as any);
+      } catch {
+        // Guide add failed (e.g. duplicate) — non-fatal
+      }
     }
 
     const savedPassengers = await this.addPassengersBulk(defaultGroup.id, tenantId, passengers);
