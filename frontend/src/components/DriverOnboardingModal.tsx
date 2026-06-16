@@ -13,10 +13,13 @@ export default function DriverOnboardingModal() {
   const [saving, setSaving] = useState(false);
 
   if (!user || user.role !== 'driver') return null;
-  if (user.phone && user.plateNumber) return null;
 
-  const missingPhone = !user.phone;
-  const missingPlate = !user.plateNumber;
+  const hasPhone = (user.phone || '').replace(/\D/g, '').length > 6;
+  const hasPlate = !!user.plateNumber;
+  if (hasPhone && hasPlate) return null;
+
+  const missingPhone = !hasPhone;
+  const missingPlate = !hasPlate;
 
   async function handleSave() {
     if (!user) return;
