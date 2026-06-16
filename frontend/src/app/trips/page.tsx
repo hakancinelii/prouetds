@@ -917,6 +917,7 @@ export default function TripsPage() {
                   <tr className="text-left text-xs theme-table-head uppercase tracking-wider border-b theme-divider-bottom">
                     <th className="px-5 py-3.5">Sefer No</th>
                     <th className="px-5 py-3.5">Plaka</th>
+                    <th className="px-5 py-3.5">Şoför</th>
                     <th className="px-5 py-3.5">Hareket</th>
                     <th className="px-5 py-3.5">Bitiş</th>
                     <th className="px-5 py-3.5">Yolcu</th>
@@ -944,6 +945,13 @@ export default function TripsPage() {
                         </td>
                         <td className="px-5 py-3.5 text-sm theme-table-code font-mono">
                           {trip.vehiclePlate}
+                        </td>
+                        <td className="px-5 py-3.5 text-sm theme-table-cell">
+                          {(() => {
+                            const driver = trip.personnel?.find((p: any) => p.personnelType === 0)?.driver;
+                            if (!driver) return <span className="theme-text-soft">–</span>;
+                            return `${driver.firstName} ${driver.lastName}`;
+                          })()}
                         </td>
                         <td className="px-5 py-3.5 text-sm theme-table-cell">
                           {trip.departureDate} {trip.departureTime}

@@ -945,6 +945,7 @@ export class TripsService {
       .leftJoinAndSelect('trip.groups', 'groups')
       .leftJoinAndSelect('groups.passengers', 'passengers')
       .leftJoinAndSelect('trip.personnel', 'personnel')
+      .leftJoinAndSelect('personnel.driver', 'driver')
       .where('trip.tenantId = :tenantId', { tenantId });
 
     if (user && user.role !== 'company_admin' && user.role !== 'super_admin') {
