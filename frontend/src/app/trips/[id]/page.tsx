@@ -223,6 +223,9 @@ export default function TripDetailPage() {
   const [savingTrip, setSavingTrip] = useState(false);
   const [addingPersonnelId, setAddingPersonnelId] = useState<string | null>(null);
   const [selectedPersonnelType, setSelectedPersonnelType] = useState(0);
+  const [newGuideMode, setNewGuideMode] = useState<'list' | 'form'>('list');
+  const [newGuideForm, setNewGuideForm] = useState({ firstName: '', lastName: '', tcPassportNo: '', nationalityCode: 'TR', gender: 'E', phone: '' });
+  const [addingNewGuide, setAddingNewGuide] = useState(false);
   const [editTripForm, setEditTripForm] = useState(() => getEditTripForm(null));
   const [editOriginDistricts, setEditOriginDistricts] = useState<Array<{ code: number; name: string }>>([]);
   const [editDestDistricts, setEditDestDistricts] = useState<Array<{ code: number; name: string }>>([]);
@@ -280,6 +283,8 @@ export default function TripDetailPage() {
 
   const openPersonnelModal = () => {
     setSelectedPersonnelType(0);
+    setNewGuideMode('list');
+    setNewGuideForm({ firstName: '', lastName: '', tcPassportNo: '', nationalityCode: 'TR', gender: 'E', phone: '' });
     setShowAddPersonnel(true);
   };
 
@@ -430,6 +435,34 @@ export default function TripDetailPage() {
   };
 
   const handleAddPersonnel = addPersonnel;
+
+  const handleAddNewGuide = async () => {
+    if (!newGuideForm.firstName.trim() || !newGuideForm.lastName.trim() || !newGuideForm.tcPassportNo.trim()) {
+      toast.error('Ad, Soyad ve TC/Pasaport No zorunludur');
+      return;
+    }
+    setAddingNewGuide(true);
+    try {
+      await tripsApi.addPersonnel(tripId, {
+        firstName: newGuideForm.firstName.trim(),
+        lastName: newGuideForm.lastName.trim(),
+        tcPassportNo: newGuideForm.tcPassportNo.trim(),
+        nationalityCode: newGuideForm.nationalityCode,
+        gender: newGuideForm.gender,
+        phone: newGuideForm.phone.trim() || undefined,
+        personnelType: 5,
+      });
+      toast.success('Rehber eklendi');
+      setShowAddPersonnel(false);
+      setNewGuideMode('list');
+      setNewGuideForm({ firstName: '', lastName: '', tcPassportNo: '', nationalityCode: 'TR', gender: 'E', phone: '' });
+      fetchTrip();
+    } catch (err: any) {
+      toast.error(err.response?.data?.message || 'Rehber eklenemedi');
+    } finally {
+      setAddingNewGuide(false);
+    }
+  };
 
   const selectedGroup = trip?.groups?.find((g: any) => g.id === selectedGroupId);
   void selectedGroup;
@@ -1712,7 +1745,7 @@ Her satıra bir yolcu yazın.
                   title="Personel türü"
                   aria-label="Personel türü"
                   value={selectedPersonnelType}
-                  onChange={(e) => setSelectedPersonnelType(Number(e.target.value))}
+                  onChange={(e) => { setSelectedPersonnelType(Number(e.target.value)); setNewGuideMode('list'); }}
                   className="input-field"
                 >
                   {personnelTypeOptions.map((option) => (
@@ -1723,33 +1756,139 @@ Her satıra bir yolcu yazın.
                 </select>
                 <p className="text-xs text-slate-500">{getDriverRoleHint()}</p>
               </div>
-              <div className="space-y-2 max-h-80 overflow-y-auto">
-                {drivers.length === 0 ? (
-                  <div className="p-4 text-center text-slate-400">
-                    Kayıtlı personel bulunamadı. Önce Şoförler sayfasından personel kaydı ekleyin.
+              {selectedPersonnelType === 5 && (
+                <div className="flex rounded-lg overflow-hidden border border-slate-700/50 text-xs font-medium">
+                  <button
+                    type="button"
+                    onClick={() => setNewGuideMode('list')}
+                    className={`flex-1 py-2 transition ${newGuideMode === 'list' ? 'bg-emerald-600 text-white' : 'theme-text-soft hover:bg-slate-700/40'}`}
+                  >
+                    Kayıtlı Personelden Seç
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setNewGuideMode('form')}
+                    className={`flex-1 py-2 transition ${newGuideMode === 'form' ? 'bg-emerald-600 text-white' : 'theme-text-soft hover:bg-slate-700/40'}`}
+                  >
+                    Yeni Rehber Ekle
+                  </button>
+                </div>
+              )}
+
+              {selectedPersonnelType === 5 && newGuideMode === 'form' ? (
+                <div className="space-y-3">
+                  <div className="grid grid-cols-2 gap-3">
+                    <div className="space-y-1">
+                      <label className="text-xs text-slate-400">Ad <span className="text-red-400">*</span></label>
+                      <input
+                        type="text"
+                        placeholder="Ad"
+                        value={newGuideForm.firstName}
+                        onChange={(e) => setNewGuideForm(f => ({ ...f, firstName: e.target.value }))}
+                        className="w-full px-3 py-2 rounded-lg theme-input text-sm"
+                      />
+                    </div>
+                    <div className="space-y-1">
+                      <label className="text-xs text-slate-400">Soyad <span className="text-red-400">*</span></label>
+                      <input
+                        type="text"
+                        placeholder="Soyad"
+                        value={newGuideForm.lastName}
+                        onChange={(e) => setNewGuideForm(f => ({ ...f, lastName: e.target.value }))}
+                        className="w-full px-3 py-2 rounded-lg theme-input text-sm"
+                      />
+                    </div>
                   </div>
-                ) : (
-                  drivers.map((d) => (
-                    <button
-                      type="button"
-                      key={d.id}
-                      onClick={() => handleAddPersonnel(d)}
-                      disabled={addingPersonnelId !== null}
-                      className="w-full flex items-center justify-between p-3 rounded-lg theme-card-soft hover:bg-[rgb(var(--surface-elevated-rgb))]/80 border theme-border transition group disabled:opacity-60 disabled:cursor-not-allowed"
-                    >
-                      <div className="text-left">
-                        <p className="text-sm font-medium theme-text-strong group-hover:text-emerald-400">
-                          {d.firstName} {d.lastName}
-                        </p>
-                        <p className="text-xs text-slate-500 font-mono">
-                          {d.tcKimlikNo}
-                        </p>
-                      </div>
-                      <Plus size={16} className="text-slate-500 group-hover:text-emerald-400" />
-                    </button>
-                  ))
-                )}
-              </div>
+                  <div className="space-y-1">
+                    <label className="text-xs text-slate-400">TC Kimlik / Pasaport No <span className="text-red-400">*</span></label>
+                    <input
+                      type="text"
+                      placeholder="11 haneli TC veya pasaport no"
+                      value={newGuideForm.tcPassportNo}
+                      onChange={(e) => setNewGuideForm(f => ({ ...f, tcPassportNo: e.target.value }))}
+                      className="w-full px-3 py-2 rounded-lg theme-input text-sm font-mono"
+                    />
+                  </div>
+                  <div className="grid grid-cols-2 gap-3">
+                    <div className="space-y-1">
+                      <label className="text-xs text-slate-400">Uyruk</label>
+                      <select
+                        title="Uyruk"
+                        value={newGuideForm.nationalityCode}
+                        onChange={(e) => setNewGuideForm(f => ({ ...f, nationalityCode: e.target.value }))}
+                        className="w-full px-3 py-2 rounded-lg theme-input text-sm"
+                      >
+                        <option value="TR">Türkiye (TR)</option>
+                        <option value="DE">Almanya (DE)</option>
+                        <option value="FR">Fransa (FR)</option>
+                        <option value="GB">İngiltere (GB)</option>
+                        <option value="RU">Rusya (RU)</option>
+                        <option value="US">ABD (US)</option>
+                        <option value="OTHER">Diğer</option>
+                      </select>
+                    </div>
+                    <div className="space-y-1">
+                      <label className="text-xs text-slate-400">Cinsiyet</label>
+                      <select
+                        title="Cinsiyet"
+                        value={newGuideForm.gender}
+                        onChange={(e) => setNewGuideForm(f => ({ ...f, gender: e.target.value }))}
+                        className="w-full px-3 py-2 rounded-lg theme-input text-sm"
+                      >
+                        <option value="E">Erkek (E)</option>
+                        <option value="K">Kadın (K)</option>
+                      </select>
+                    </div>
+                  </div>
+                  <div className="space-y-1">
+                    <label className="text-xs text-slate-400">Telefon</label>
+                    <input
+                      type="tel"
+                      placeholder="05XX XXX XX XX"
+                      value={newGuideForm.phone}
+                      onChange={(e) => setNewGuideForm(f => ({ ...f, phone: e.target.value }))}
+                      className="w-full px-3 py-2 rounded-lg theme-input text-sm"
+                    />
+                  </div>
+                  <button
+                    type="button"
+                    onClick={handleAddNewGuide}
+                    disabled={addingNewGuide}
+                    className="w-full py-2.5 rounded-lg bg-gradient-to-r from-emerald-500 to-cyan-500 text-white font-semibold text-sm shadow-lg shadow-emerald-500/20 hover:opacity-90 transition disabled:opacity-50 flex items-center justify-center gap-2"
+                  >
+                    {addingNewGuide ? <Loader2 size={14} className="animate-spin" /> : <Plus size={14} />}
+                    Rehber Ekle
+                  </button>
+                </div>
+              ) : (
+                <div className="space-y-2 max-h-80 overflow-y-auto">
+                  {drivers.length === 0 ? (
+                    <div className="p-4 text-center text-slate-400">
+                      Kayıtlı personel bulunamadı. Önce Şoförler sayfasından personel kaydı ekleyin.
+                    </div>
+                  ) : (
+                    drivers.map((d) => (
+                      <button
+                        type="button"
+                        key={d.id}
+                        onClick={() => handleAddPersonnel(d)}
+                        disabled={addingPersonnelId !== null}
+                        className="w-full flex items-center justify-between p-3 rounded-lg theme-card-soft hover:bg-[rgb(var(--surface-elevated-rgb))]/80 border theme-border transition group disabled:opacity-60 disabled:cursor-not-allowed"
+                      >
+                        <div className="text-left">
+                          <p className="text-sm font-medium theme-text-strong group-hover:text-emerald-400">
+                            {d.firstName} {d.lastName}
+                          </p>
+                          <p className="text-xs text-slate-500 font-mono">
+                            {d.tcKimlikNo}
+                          </p>
+                        </div>
+                        <Plus size={16} className="text-slate-500 group-hover:text-emerald-400" />
+                      </button>
+                    ))
+                  )}
+                </div>
+              )}
             </div>
             <div className="pt-4">
               <button
