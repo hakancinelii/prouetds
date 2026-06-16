@@ -1744,7 +1744,7 @@ Yalnızca geçerli JSON dizisi döndür, başka açıklama yapma.
         '';
       if (!sessionId) return;
 
-      // Use senderJid (WhatsApp autopilot sender) if provided, else fall back to driver's stored phone
+      // Use senderJid (WhatsApp autopilot sender) if provided, else fall back to driver/creator phone
       let sendTarget: string | null = null;
       if (senderJid) {
         sendTarget = senderJid;
@@ -1753,6 +1753,12 @@ Yalnızca geçerli JSON dizisi döndür, başka açıklama yapma.
         sendTarget = this.whatsappService.normalizePhone(
           person?.phone || person?.driver?.phone,
         );
+        // Fallback: trip creator's whatsappJid or phone
+        if (!sendTarget && trip.createdBy) {
+          sendTarget =
+            (trip.createdBy as any).whatsappJid ||
+            this.whatsappService.normalizePhone((trip.createdBy as any).phone);
+        }
       }
       if (!sendTarget) {
         this.logger.warn(`[WhatsApp] trip ${trip.id}: no send target, skipping`);
