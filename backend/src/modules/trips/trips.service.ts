@@ -1024,6 +1024,39 @@ export class TripsService {
   }
 
   
+  private inferAutopilotTime(message: string): string {
+    // "Saat: 18:00", "saat 20.30", "hareket: 09:00" gibi etiketli
+    const labeled = message.match(/(?:saat|hareket\s*saati?|kalkış\s*saati?)\s*[:：]?\s*(\d{1,2})[:.h](\d{2})/i);
+    if (labeled) {
+      const h = labeled[1].padStart(2, '0');
+      const m = labeled[2].padStart(2, '0');
+      if (parseInt(h) < 24 && parseInt(m) < 60) return `${h}:${m}`;
+    }
+    // Satır başında veya tek başına HH:MM / HH.MM
+    const lines = message.split(/\n/);
+    for (const line of lines) {
+      const m = line.match(/^\s*(\d{1,2})[:.h](\d{2})\s*$/);
+      if (m) {
+        const h = m[1].padStart(2, '0');
+        const mn = m[2].padStart(2, '0');
+        if (parseInt(h) < 24 && parseInt(mn) < 60) return `${h}:${mn}`;
+      }
+    }
+    // Mesajın herhangi bir yerinde HH:MM
+    const anywhere = message.match(/\b(\d{1,2})[:.h](\d{2})\b/g);
+    if (anywhere) {
+      for (const match of anywhere) {
+        const parts = match.match(/(\d{1,2})[:.h](\d{2})/);
+        if (parts) {
+          const h = parseInt(parts[1]);
+          const mn = parseInt(parts[2]);
+          if (h < 24 && mn < 60) return `${String(h).padStart(2,'0')}:${String(mn).padStart(2,'0')}`;
+        }
+      }
+    }
+    return '23:00';
+  }
+
   private inferAutopilotDate(message: string) {
     // Priority: explicit "Transfer Tarihi: DD/MM/YYYY HH:MM" label
     const labeled = message.match(/(?:transfer\s*tarihi|tarih)\s*[:：]\s*(\d{1,2}[\/.\-]\d{1,2}[\/.\-]\d{2,4})/i);
@@ -1160,6 +1193,7 @@ export class TripsService {
   ) {
     const now = new Date();
     const departureDate = this.inferAutopilotDate(message);
+    const departureTime = this.inferAutopilotTime(message);
     const vehiclePlate = this.inferAutopilotPlate(message, vehicles);
     const selectedDriver = this.inferAutopilotDriver(message, vehiclePlate, vehicles, drivers, user);
     const origin = this.inferAutopilotLocation(message, 'origin');
@@ -1172,7 +1206,7 @@ export class TripsService {
         vehicleId: vehicles.find((vehicle) => normalizePlate(vehicle.plateNumber) === vehiclePlate)?.id,
         selectedDriverId: selectedDriver?.id,
         departureDate,
-        departureTime: '23:00',
+        departureTime,
         endDate: departureDate,
         endTime: '23:59',
         // Keep this short and single-line: it is sent to UETDS as the trip/group
@@ -1187,7 +1221,7 @@ export class TripsService {
         destPlace: dest.place,
       },
       decisions: [
-        `Hareket zamanı ${departureDate} 23:00 olarak alındı.`,
+        `Hareket zamanı ${departureDate} ${departureTime} olarak alındı.`,
         `Bitiş zamanı ${departureDate} 23:59 olarak alındı.`,
         `Kalkış ${origin.label}, varış ${dest.label} olarak eşleşti.`,
         vehiclePlate ? `Araç plakası ${vehiclePlate} olarak seçildi.` : 'Araç plakası bulunamadı.',
