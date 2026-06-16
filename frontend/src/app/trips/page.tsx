@@ -418,7 +418,7 @@ export default function TripsPage() {
     try {
       const res = await tripsApi.list({
         page,
-        limit: 15,
+        limit: 50,
         status: statusFilter || undefined,
         search: search.trim() || undefined,
       });
@@ -607,7 +607,7 @@ export default function TripsPage() {
   const canSendDriverWhatsapp = (trip: any) =>
     user?.role === 'company_admin' && trip?.status === 'sent';
 
-  const totalPages = Math.ceil(total / 15);
+  const totalPages = Math.ceil(total / 50);
 
   return (
     <div className="p-6 lg:p-8 space-y-6 animate-fade-in">

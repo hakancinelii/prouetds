@@ -938,7 +938,7 @@ export class TripsService {
 
   async findAll(tenantId: string, query: any = {}, user?: any) {
     const page = Number(query.page) > 0 ? Number(query.page) : 1;
-    const limit = Number(query.limit) > 0 ? Number(query.limit) : 20;
+    const limit = Number(query.limit) > 0 ? Number(query.limit) : 50;
 
     const qb = this.tripRepo
       .createQueryBuilder('trip')
