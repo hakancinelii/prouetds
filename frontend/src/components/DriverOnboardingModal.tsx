@@ -35,7 +35,7 @@ export default function DriverOnboardingModal() {
       if (missingPhone) patch.phone = phone.trim();
       if (missingPlate) patch.plateNumber = plateNumber.trim().toUpperCase();
 
-      await usersApi.update(user.id, patch);
+      await usersApi.updateProfile(patch);
       updateUser(patch);
       toast.success('Bilgiler kaydedildi');
     } catch {

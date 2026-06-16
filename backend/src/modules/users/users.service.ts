@@ -305,6 +305,26 @@ export class UsersService {
     };
   }
 
+  async updateSelfProfile(userId: string, tenantId: string, data: { phone?: string; plateNumber?: string }) {
+    const user = await this.getUserEntity(userId, tenantId);
+    if (data.phone !== undefined) user.phone = normalizeText(data.phone);
+    if (data.plateNumber !== undefined) {
+      user.plateNumber = normalizeText(data.plateNumber)?.toUpperCase() || null;
+    }
+    await this.userRepo.save(user);
+
+    if (user.driverId) {
+      const driver = await this.driversService.findByIdOptional(user.driverId, tenantId);
+      if (driver) {
+        if (data.phone !== undefined) driver.phone = normalizeText(data.phone);
+        if (data.plateNumber !== undefined) driver.plateNumber = normalizeText(data.plateNumber)?.toUpperCase() || null;
+        await this.driversService.updateDriverRecord(driver.id, tenantId, driver);
+      }
+    }
+
+    return { ok: true };
+  }
+
   async toggleActive(id: string, tenantId: string) {
     const user = await this.getUserEntity(id, tenantId);
     user.isActive = !user.isActive;

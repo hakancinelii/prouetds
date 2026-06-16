@@ -50,6 +50,16 @@ export class UsersController {
     return this.usersService.createDriverUser(effectiveTenantId, body);
   }
 
+  @Patch('profile')
+  @Roles(UserRole.DRIVER, UserRole.COMPANY_ADMIN, UserRole.SUPER_ADMIN)
+  updateProfile(
+    @TenantId() tenantId: string,
+    @CurrentUser('id') userId: string,
+    @Body() body: { phone?: string; plateNumber?: string },
+  ) {
+    return this.usersService.updateSelfProfile(userId, tenantId, body);
+  }
+
   @Patch(':id')
   @Roles(UserRole.COMPANY_ADMIN, UserRole.SUPER_ADMIN)
   update(

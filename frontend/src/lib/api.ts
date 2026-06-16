@@ -213,6 +213,8 @@ export const usersApi = {
     api.post('/api/users/driver', data, { params: tenantId ? { tenantId } : undefined }),
   update: (id: string, data: any, tenantId?: string) =>
     api.patch(`/api/users/${id}`, data, { params: tenantId ? { tenantId } : undefined }),
+  updateProfile: (data: { phone?: string; plateNumber?: string }) =>
+    api.patch('/api/users/profile', data),
   toggleActive: (id: string, tenantId?: string) =>
     api.post(`/api/users/${id}/toggle-active`, {}, { params: tenantId ? { tenantId } : undefined }),
 };
